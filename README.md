@@ -1,6 +1,6 @@
 # MitoGeneExtractor
 
-MitoGeneExtractor can conveniently extract mitochondrial genes from sequencing libraries.
+MitoGeneExtractor can be used to conveniently extract mitochondrial genes from sequencing libraries.
 
 Mitochondrial reads are often found as byproduct in sequencing libraries, e.g. from ... .
 
@@ -23,12 +23,16 @@ This program has been tested on Linux and MacOS.
 
 ## Installation:
 
+
 ## Basic usage:
 
 
 
-## Citing MitoGeneExtractor
-When using MitoGeneExtractor please cite:
+## Reference: Please cite when using MitoGeneExtractor
+For more information see:
 Brasseur ... 2022 ...
+
+Please cite this paper when using MitoGeneExtractor.
+
 
 
