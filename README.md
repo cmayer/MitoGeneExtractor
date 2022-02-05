@@ -1,14 +1,12 @@
 # MitoGeneExtractor
 
 MitoGeneExtractor can be used to conveniently extract mitochondrial genes from sequencing libraries.
-
-Mitochondrial reads are often found as byproduct in sequencing libraries, e.g. from ... .
+Mitochondrial reads are often found as byproduct in sequencing libraries, in particular in hybrid enrichment libraries.
 
 ## Authors:
 
 - Marie Brasseur, ZFMK, Bonn, Germany: Snakemake pipeline and anylses for publication.
 - Christoph Mayer, ZFMK, Bonn, Germany: MitoGeneExtractor program.
-
 
 ## How MitoGeneExtractor works:
 MitoGeneExtractor aligns all given nucleotide sequences against a
@@ -88,7 +86,7 @@ MitoGeneExtractor -h
 
 **-f, --frameshift_penalty** The frameshift penalty passed to exonerate. Default: -9. Higher values lead to lower scores and by this can have the following effects: (i) hit regions are trimmed since trimming can lead to a better final alignment score, (ii) they can also lead to excluding a read as a whole if the final score is too low and trimming does lead to a higher score. The default of the exonerate program is -28. A value of -9 (or other values lower than -28) lead to more reads in which the best alignment has a frameshift. In order to remove reads that do not align well, one can use a smaller frameshift penalty and then exclude hits with a frameshift, see -F option). (Not required)
 
-**-C, --genetic_code:** The number of the genetic code to use in exonerate, if this step is required. Default: 2, i.e. vertebrate mitochondrial code. (Type: integer). [See genetic code list at NCBI.](https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi). (Not required but recommended). **Misspecification leads to unusable output.**
+**-C, --genetic_code:** The number of the genetic code to use in exonerate, if this step is required. Default: 2, i.e. vertebrate mitochondrial code. (Type: integer). [See genetic code list at NCBI.](https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi). (Not required but recommended). ** A misspecification of the genetic code leads to unusable results. Make sure the default is correct, or specify the genetic code.**
 
 **-r, --relative_score_threshold:** Specified the relative alignment score threshold for exonerate hits to be considered. The relative score is the score reported by exonerate divided by the alignment length. Default 0. Reasonable thresholds are between 1 and 2. Type: decimal number (Not required)
 
