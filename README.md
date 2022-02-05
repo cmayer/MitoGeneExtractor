@@ -64,72 +64,36 @@ xxxx
 A full list of the command line options is avaiable when typing
 MitoGeneExtractor -h
 
- --verbosity: Specifies how much run time information is printed to the console. Values: 0: minimal output, 1: important notices, 2: more notices, 3: basic progress, 4: detailed progress, 50-100: debug output, 1000: all output. Type: integer, optional parameter.
+ **--verbosity:** Specifies how much run time information is printed to the console. Values: 0: minimal output, 1: important notices, 2: more notices, 3: basic progress, 4: detailed progress, 50-100: debug output, 1000: all output. Type: integer, optional parameter.
 
--s, --minExonerateScoreThreshold: The score threshold used by exonerate to decide whether to include or not include the hit in the output. Typ: integer, optional parameter.
+**-s, --minExonerateScoreThreshold:** The score threshold passed to exonerate to decide whether to include or not include the hit in the output. Typ: integer, optional parameter.
 
---minSeqCoverageInAlignment_uppercase: Specifies the absolute value of the minimum alignment coverage for computing the consensus sequence. As coverage, only upper case nucleotides are taken into account, i.e. no nucleotides are counted that have been added beyond the exonerate alignment region. Bases beyond the exonerate alignment are added with the -n or --numberOfBpBeyond option. If no bases are added beyond the exonerate alignment (default), the effect of this option is identical to the minSeqCoverageInAlignment_total option. Default: 1. Increasing this value increases the number of unknown nucleotides in the consensus sequence."
+**--minSeqCoverageInAlignment_uppercase:** Specifies the absolute value of the minimum alignment coverage for computing the consensus sequence. As coverage, only upper case nucleotides are taken into account, i.e. no nucleotides are counted that have been added beyond the exonerate alignment region. Bases beyond the exonerate alignment are added with the -n or --numberOfBpBeyond option. If no bases are added beyond the exonerate alignment (default), the effect of this option is identical to the minSeqCoverageInAlignment_total option. Default: 1. Increasing this value increases the number of unknown nucleotides in the consensus sequence."
 
---minSeqCoverageInAlignment_total: Specifies the absolute value of the minimum alignment coverage for computing the consensus sequence. For the coverage, all nucleotides count, also those lower case nucleotides that have been added beyond the exonerate alingmnet region. Default: 1. Increasing this value increases the number of unknown nucleotides in the consensus sequence.
+**--minSeqCoverageInAlignment_total:** Specifies the absolute value of the minimum alignment coverage for computing the consensus sequence. For the coverage, all nucleotides count, also those lower case nucleotides that have been added beyond the exonerate alingmnet region. Default: 1. Increasing this value increases the number of unknown nucleotides in the consensus sequence.
     
--r, --relative_score_threshold: Specified the relative alignment score threshold for exonerate hits to be considered. The relative score is the score reported by exonerate divided by the alignment length. Default 0. Reasonable thresholds are between 1 and 2. 
+**-r, --relative_score_threshold:** Specified the relative alignment score threshold for exonerate hits to be considered. The relative score is the score reported by exonerate divided by the alignment length. Default 0. Reasonable thresholds are between 1 and 2. 
 
--C, --genetic_code: The number of the genetic code to use in exonerate, if this step is required. Default: 2, i.e. vertebrate mitochondrial code. (Type: integer). [See genetic code list at NCBI.](https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi)
+**-C, --genetic_code:** The number of the genetic code to use in exonerate, if this step is required. Default: 2, i.e. vertebrate mitochondrial code. (Type: integer). [See genetic code list at NCBI.](https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi)
 
+**-f, --frameshift_penalty** The frameshift penalty passed to exonerate. Default: -9. Higher values lead to lower scores and by this can have the following effects: (i) hit regions are trimmed since trimming can lead to a better final alignment score, (ii) they can also lead to excluding a read as a whole if the final score is too low and trimming does lead to a higher score. The default of the exonerate program is -28. A value of -9 (or other values lower than -28) lead to more reads in which the best alignment has a frameshift. In order to remove reads that do not align well, one can use a smaller frameshift penalty and then exclude hits with a frameshift, see -F option).
+**-F, --includeFrameshift:** Include reads which aligned with a frameshift. Default: false. The number of reads excluded is listed at the end of the output. If this number is particularly large, the problem should be investigated.
 
-ValueArg<int> frameshift_penalty_Arg("f", "frameshift_penalty",
-"The frameshift penalty used by exonerate. Default: -9. Higher values can have two different effects: (i) trimmed alignment regions, since they have a better final alignment score, (ii) not considering this read, since the alignment score is too low. The default of the exonerate program is -28. A value of -9 or other lower values lead to more reads in which the best alignment has a frameshift. The goal of a smaller value is to identify these reads rather than to clip the alignment."
+**-G, --includeGap:** Include reads which aligned with a gap.
 
-"vertebrate mitochondrial code.",
-	false, global_frameshift_penalty, "int");
-    cmd.add(frameshift_penalty_Arg);
+**-D, --includeDoubleHits:** Include reads with two alignment results found by exonerate.
 
-    SwitchArg include_F_Arg("F", "includeFrameshift",
-			 "Include reads which aligned with a frameshift. Default: false.",
-			 false);
-    cmd.add(include_F_Arg);
+**-t, --consensus_threshold:** This option modifies the consensus threshold. Default: 0.7 which corresponds to 70%.
 
-    SwitchArg include_G_Arg("G", "includeGap",
-			 "Include reads which aligned with a gap.",
-			 false);
-    cmd.add(include_G_Arg);
+**-c, --consensus_file:** If this option is specified, a consensus sequence of all aligned reads is written to the file with the specified name. Normally, this is the intended output. Default: No consensus is written, since no good default output file is known.
 
-    SwitchArg include_D_Arg("D", "includeDoubleHits",
-			 "Include reads with two alignment results found by exonerate.",
-			 false);
-    cmd.add(include_D_Arg);
+ **-n, --numberOfBpBeyond:** Specifies the number of base pairs that are shown beyond the exonerate alignment. A value of 0 means that the sequence is clipped at the point the exonerate alignment ends. Values of 1 and 2 make sense, since exonerate does not consider partial matches of the DNA to the amino acid sequence, so that partial codons would always be clipped, even if the additional base pairs would match with the expected amino acid. Values >0 lead to the inclusion of sequence segments that do not align well with the amino acid sequence and have to be treated with caution. They might belong to chimera, numts, or other problematic sequences. Larger values might be included e.g. if problematic sequences with a well matching seed alignment are of interest. CAUTION: Bases included with this option might not be aligned well or could even belong to stop codons! They should be considered as of lower quality compared to other bases. Bases that are added with this option are added as lower case characters to the output alignment file. A sequence coverage of bases not belonging to these extra bases can be requested with the --minSeqCoverageInAlignment_uppercase option. Default: 0.
 
-    ValueArg<float> consensus_threshold_Arg("t", "consensus_threshold",
-	"This option modifies the consensus threshold. Default: 0.7 which corresponds to 70%.",
-	false, global_consensus_threshold, "float");
-    cmd.add(consensus_threshold_Arg);
+**-e, --exonerate_program:**Name of the exonerate program in the system path OR the path to the exonerate program including the program name. Default: exonerate
 
-    ValueArg<string> consensus_output_file_Arg("c", "consensus_file",
-	"If this option is specified, a consensus sequence of all aligned reads is written to the file with the specified name. Normally, this is the intended output. "
-	"Default: No consensus is written, since no good default output file is known.",
-	false, global_consensus_sequence_output_filename, "string");
-    cmd.add(consensus_output_file_Arg);
+**-V, --vulgar_file:** Name of exonerate vulgar file. If the specified file exists, it will be used for this analysis. If it does not exist, MitoGeneExtractor will run exonerate in order to create the file. The created file will then be used to proceed. If no file is specified with this option, a temporary file called tmp-vulgar.txt will be created and removed after the program run. In this case a warning will be printed to the console, since the vulgar file cannot be used again.
 
-    ValueArg<unsigned> bp_beyond_Arg("n", "numberOfBpBeyond",
-	"Specifies the number of base pairs that are shown beyond the exonerate alignment. A value of 0 means that the sequence is clipped at the point the exonerate alignment ends. Values of 1 and 2 make sense, since exonerate does not consider partial matches of the DNA to the amino acid sequence, so that partial codons would always be clipped, even if the additional base pairs would match with the expected amino acid. Values >0 lead to the inclusion of sequence segments that do not align well with the amino acid sequence and have to be treated with caution. They might belong to chimera, numts, or other problematic sequences. Larger values might be included e.g. if problematic sequences with a well matching seed alignment are of interest. CAUTION: Bases included with this option might not be aligned well or could even belong to stop codons! They should be considered as of lower quality compared to other bases. Bases that are added with this option are added as lower case characters to the output alignment file. A sequence coverage of bases not belonging to these extra bases can be requested with the --minSeqCoverageInAlignment_uppercase option. Default: 0.",
-	false, global_num_bp_beyond_exonerate_alignment_if_at_start_or_end, "int");
-    cmd.add(bp_beyond_Arg);
-
-    ValueArg<string> exonerate_path_Arg("e", "exonerate_program",
-     				        "Name of exonerate program in path or path to exonerate program including the name "
-				        "of the executable. "
-				        "Default: exonerate",
-				        false, global_exonerate_binary, "string");
-    cmd.add(exonerate_path_Arg);
-
-    ValueArg<string> vulgar_file_Arg("V", "vulgar_file",
-				     "Name of exonerate vulgar file. If the specified file exists, it will be used for the analysis. "
-				     "If it does not exist " PROGNAME " will run exonerate in order to create the file. The created file will then be used to proceed. If no file is specified with this option, a temporary file called tmp-vulgar.txt will be created and removed after the program run. In this case a warning will be printed to the console.",
-				     false, global_vulgar_file, "string");
-    cmd.add(vulgar_file_Arg);
-
-    ValueArg<string> alignment_output_file_name_Arg("o", "",
-	"Name of alignment output file. ",
+**-o** Name of alignment output file. ",
 	true, global_alignment_output_file, "string");
     cmd.add(alignment_output_file_name_Arg);
 
