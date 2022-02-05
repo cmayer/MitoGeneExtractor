@@ -64,9 +64,9 @@ xxxx
 A full list of the command line options is avaiable when typing
 MitoGeneExtractor -h
 
- --verbosity: Specifies how much run time information is printed to the console. Values: 0: minimal output, 1: important notices, 2: more notices, 3: basic progress, 4: detailed progress, 50-100: debug output, 1000: all output.
+ --verbosity: Specifies how much run time information is printed to the console. Values: 0: minimal output, 1: important notices, 2: more notices, 3: basic progress, 4: detailed progress, 50-100: debug output, 1000: all output. Type: integer, optional parameter.
 
--s, --minExonerateScoreThreshold: The score threshold used by exonerate to decide whether to include or not include the hit in the output.
+-s, --minExonerateScoreThreshold: The score threshold used by exonerate to decide whether to include or not include the hit in the output. Typ: integer, optional parameter.
 
 --minSeqCoverageInAlignment_uppercase: Specifies the absolute value of the minimum alignment coverage for computing the consensus sequence. As coverage, only upper case nucleotides are taken into account, i.e. no nucleotides are counted that have been added beyond the exonerate alignment region. Bases beyond the exonerate alignment are added with the -n or --numberOfBpBeyond option. If no bases are added beyond the exonerate alignment (default), the effect of this option is identical to the minSeqCoverageInAlignment_total option. Default: 1. Increasing this value increases the number of unknown nucleotides in the consensus sequence."
 
@@ -77,9 +77,10 @@ MitoGeneExtractor -h
 -C, --genetic_code: The number of the genetic code to use in exonerate, if this step is required. Default: 2, i.e. vertebrate mitochondrial code. (Type: integer). [See genetic code list at NCBI.](https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi)
 
 
-    ValueArg<int> frameshift_penalty_Arg("f", "frameshift_penalty",
-	"The frameshift penalty used by exonerate. Default: -9. Higher values can have two different effects: (i) trimmed alignment regions, since they have a better final alignment score, (ii) not considering this read, since the alignment score is too low. The default of the exonerate program is -28. A value of -9 or other lower values lead to more reads in which the best alignment has a frameshift. The goal of a smaller value is to identify these reads rather than to clip the alignment."
-	"vertebrate mitochondrial code.",
+ValueArg<int> frameshift_penalty_Arg("f", "frameshift_penalty",
+"The frameshift penalty used by exonerate. Default: -9. Higher values can have two different effects: (i) trimmed alignment regions, since they have a better final alignment score, (ii) not considering this read, since the alignment score is too low. The default of the exonerate program is -28. A value of -9 or other lower values lead to more reads in which the best alignment has a frameshift. The goal of a smaller value is to identify these reads rather than to clip the alignment."
+
+"vertebrate mitochondrial code.",
 	false, global_frameshift_penalty, "int");
     cmd.add(frameshift_penalty_Arg);
 
@@ -142,7 +143,6 @@ MitoGeneExtractor -h
 	true, global_input_dna_fasta_file, "string");
     cmd.add(dna_fasta_input_file_name_Arg);
 
-    cmd.parse( argc, argv );
 
 
 
