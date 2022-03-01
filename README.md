@@ -3,16 +3,21 @@
 MitoGeneExtractor can be used to conveniently extract mitochondrial genes from sequencing libraries.
 Mitochondrial reads are often found as byproduct in sequencing libraries, in particular in hybrid enrichment libraries.
 
-## Authors of the software project:
-
-- Christoph Mayer, ZFMK, Bonn, Germany: MitoGeneExtractor program.
-- Marie Brasseur, ZFMK, Bonn, Germany: Snakemake pipeline and anylses for publication.
-
 ## Authors of the publication:
 - Marie Brasseur, ZFMK, Bonn, Germany
 - Jonas Astrin, ZFMK, Bonn, Germany
 - Matthias Geiger, ZFMK, Bonn, Germany
 - Christoph Mayer, ZFMK, Bonn, Germany
+
+## Authors of the software project:
+- Christoph Mayer, ZFMK, Bonn, Germany: MitoGeneExtractor program.
+- Marie Brasseur, ZFMK, Bonn, Germany: Snakemake pipeline and anylses for publication.
+
+## Reference: Please cite when using MitoGeneExtractor
+Brasseur ... 2022 ...
+
+
+
 
 ## How MitoGeneExtractor works:
 MitoGeneExtractor aligns all given nucleotide sequences against a
@@ -105,11 +110,6 @@ MitoGeneExtractor -h
 **--verbosity:** Specifies how much run time information is printed to the console. Values: 0: minimal output, 1: important notices, 2: more notices, 3: basic progress, 4: detailed progress, 50-100: debug output, 1000: all output. Type:integer, (Not required)
 
 
-## Reference: Please cite when using MitoGeneExtractor
-For more information see:
-Brasseur ... 2022 ...
-
-Please cite this paper when using MitoGeneExtractor.
 
 
 
