@@ -5,7 +5,7 @@ Mitochondrial reads are often found as byproduct in sequencing libraries, in par
 
 ## Authors:
 
-- Marie Brasseur, ZFMK, Bonn, Germany: Snakemake pipeline and anylses for publication.
+- Marie Brasseur, ZFMK, Bonn, Germany: Snakemake pipeline and analyses for publication.
 - Christoph Mayer, ZFMK, Bonn, Germany: MitoGeneExtractor program.
 
 ## How MitoGeneExtractor works:
@@ -23,7 +23,7 @@ minutes using a single CPU core. Therefore, this approach can be used for projec
 
 ## Supported Platforms:
 MitoGeneExtractor: All platforms are supported for which a C++ compiler is available.
-It can be compiled by users without root previliges.
+It can be compiled by users without root privileges.
 This program has been tested on Linux, HPC Unix platforms and MacOS. It should be possible in principle to compile it on windows. However, there is not support from the authors for this platform.
 
 Snakemake workflow: Linux, HPC Unix platforms and MacOS, (Windows - without support).
@@ -41,10 +41,10 @@ To install MitoGeneExtractor, do one of the following:
 - Download the zipped project folder and extract the folder. The link can be found by klicking on the "Code" pulldown menu at the top of this page.  
 
 Now enter the MitoGeneExractor-vx.x folder on the command line and run the make program by typing "make" and hitting return. The make program should be preinstalled on all Linux distributions. On MacOS it is included in the command line developer tools (see above). 
-This will generate an executable called MitoGeneExtractor. Either copy this to a directory in your path, to reference it by its full path on the command line.
+This will generate an executable called MitoGeneExtractor. Either copy this to a directory in your path or reference it by its full path on the command line.
 
 PUT THIS SOMEWHERE ELSE:
-In rare cases, the Exonerate program  quits/crashes unexpectedly.  Interestingly, when rerunning Exonerate, there is a good chance that it will not abort. Why rerunning Exonerate can be successful is a mystery. It has been checked that successful runs always create the same expected output. MitoGeneExtractor can identify, if Exonerate aborted the run and will try upto 10 times by rerunning Exonerate.  The log output of MitoGeneExtractor will report the run count for the succesfull run.
+In rare cases, the Exonerate program  quits/crashes unexpectedly.  Interestingly, when rerunning Exonerate, there is a good chance that it will not abort. Why rerunning Exonerate can be successful is a mystery. It has been checked that successful runs always create the same expected output. MitoGeneExtractor can identify, if Exonerate aborted the run and will try upto 10 times by rerunning Exonerate. The log output of MitoGeneExtractor will report the run count for the succesfull run.
 
 ## Get help and a full list of command line options:
 Type MitoGeneExtractor -h (if MitoGeneExtractor is in your path) or Path-to-MitoGeneExtractor/MitoGeneExtractor -h to list all command line options of MitoGeneExtractor. 
@@ -59,10 +59,10 @@ xxxx
 
 
 ## Command line options:
-A full list of the command line options is avaiable when typing
+A full list of the command line options is available when typing
 MitoGeneExtractor -h
 
-**-d, --dna_sequences_file:** Name (potentially including the path) of the nucleotide sequence file in the fasta format. Sequences are expected to be unaligned without gaps. Typcially, these are short or long reads. (Required) 
+**-d, --dna_sequences_file:** Name (potentially including the path if not in the same directory) of the nucleotide sequence file in the fasta format. Sequences are expected to be unaligned without gaps. Typcially, these are short or long reads. (Required) 
 
 **-p, --prot_refernce_file:** Protein sequence file in the fasta format. This is the sequence used to align the reads against. File is expected to have exactly one reference sequence. (Required) 
 
@@ -72,19 +72,19 @@ MitoGeneExtractor -h
 
 **-e, --exonerate_program:** Name of the exonerate program in the system path OR the path to the exonerate program including the program name. Default: exonerate. (Not required)
 
-**-n, --numberOfBpBeyond:** Specifies the number of base pairs that are shown beyond the exonerate alignment. A value of 0 means that the sequence is clipped at the point the exonerate alignment ends. Values of 1 and 2 make sense, since exonerate does not consider partial matches of the DNA to the amino acid sequence, so that partial codons would always be clipped, even if the additional base pairs would match with the expected amino acid. Values >0 lead to the inclusion of sequence segments that do not align well with the amino acid sequence and have to be treated with caution. They might belong to chimera, numts, or other problematic sequences. Larger values might be included e.g. if problematic sequences with a well matching seed alignment are of interest. CAUTION: Bases included with this option might not be aligned well or could even belong to stop codons! They should be considered as of lower quality compared to other bases. Bases that are added with this option are added as lower case characters to the output alignment file. A sequence coverage of bases not belonging to these extra bases can be requested with the --minSeqCoverageInAlignment_uppercase option. Default: 0. Type: integer. (Not required)
+**-n, --numberOfBpBeyond:** Specifies the number of base pairs that are shown beyond the exonerate alignment. A value of 0 means that the sequence is clipped at the point the exonerate alignment ends. Values of 1 and 2 make sense, since exonerate does not consider partial matches of the DNA to the amino acid sequence, so that partial codons would always be clipped, even if the additional base pairs would match with the expected amino acid. Values >0 lead to the inclusion of sequence segments that do not align well with the amino acid sequence and have to be treated with caution. They might belong to chimeras, numts, or other problematic sequences. Larger values might be included e.g. if problematic sequences with a well matching seed alignment are of interest. CAUTION: Bases included with this option might not be aligned well or could even belong to stop codons! They should be considered as of lower quality compared to other bases. Bases that are added with this option are added as lower case characters to the output alignment file. A sequence coverage of bases not belonging to these extra bases can be requested with the --minSeqCoverageInAlignment_uppercase option. Default: 0. Type: integer. (Not required)
 
 **-c, --consensus_file:** If this option is specified, a consensus sequence of all aligned reads is written to the file with the specified name. Normally, this is the intended output. Default: No consensus is written, since no good default output file is known. (Not required)
 
-**-t, --consensus_threshold:** This option modifies the consensus threshold. Default: 0.7 which corresponds to 70%. Type: Decimal number. (Not required)
+**-t, --consensus_threshold:** This option modifies the consensus threshold. Default: 0.7 which corresponds to 70% nucleotide agreement required to be incorporated in the consensus sequence. Type: Decimal number. (Not required)
 
 **-D, --includeDoubleHits:** Include reads with two alignment results found by exonerate. Default: No. (Not required)
 
 **-G, --includeGap:** Include reads which aligned with a gap. Default: No. (Not required)
 
-**-F, --includeFrameshift:** Include reads which aligned with a frameshift. Default: false. The number of reads excluded is listed at the end of the output. If this number is particularly large, the problem should be investigated. Default: No. (Not required)
+**-F, --includeFrameshift:** Include reads which aligned with a frameshift. The number of reads excluded is listed at the end of the output. If this number is particularly large, the problem should be investigated. Default: No. (Not required)
 
-**-f, --frameshift_penalty** The frameshift penalty passed to exonerate. Default: -9. Higher values lead to lower scores and by this can have the following effects: (i) hit regions are trimmed since trimming can lead to a better final alignment score, (ii) they can also lead to excluding a read as a whole if the final score is too low and trimming does lead to a higher score. The default of the exonerate program is -28. A value of -9 (or other values lower than -28) lead to more reads in which the best alignment has a frameshift. In order to remove reads that do not align well, one can use a smaller frameshift penalty and then exclude hits with a frameshift, see -F option). (Not required)
+**-f, --frameshift_penalty** The frameshift penalty passed to exonerate. Default: -9. Higher values lead to lower scores and by this can have the following effects: (i) hit regions are trimmed since trimming can lead to a better final alignment score, (ii) they can also lead to excluding a read as a whole if the final score is too low and trimming does lead to a higher score. The default of the exonerate program is -28. A value of -9 (or other values higher than -28) lead to more reads in which the best alignment has a frameshift. In order to remove reads that do not align well, one can use a smaller frameshift penalty and then exclude hits with a frameshift, see -F option). (Not required)
 
 **-C, --genetic_code:** The number of the genetic code to use in exonerate, if this step is required. Default: 2, i.e. vertebrate mitochondrial code. (Type: integer). [See genetic code list at NCBI.](https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi). (Not required but recommended). ** A misspecification of the genetic code leads to unusable results. Make sure the default is correct, or specify the genetic code.**
 
