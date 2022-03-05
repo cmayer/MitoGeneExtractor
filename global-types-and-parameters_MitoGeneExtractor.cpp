@@ -1,5 +1,5 @@
 #include "global-types-and-parameters_MitoGeneExtractor.h"
-#include "tclap/CmdLine.h"
+#include "CmdLine.h"
 #include "climits"
 
 using namespace TCLAP;
@@ -72,7 +72,7 @@ void read_and_init_parameters(int argc, char** argv)
 		' ', VERSION);
     /*
     ValueArg<string> path_exonerate_binary_Arg("E", "exonerateBinary",
-	"Path and filenname or only the filename of the exonerate program. Alternatively, to letting "
+	"Path and filename or only the filename of the exonerate program. Alternatively, to letting "
 	PROGNAME " call exonerate, the user can provide an existing vulgar output file. "
         "If " PROGNAME " has to call exonerate, which is the case if specified vulgar file does not exist, "
 	"a Protein reference sequence has to be specified. If no executable is specified with this command, "
@@ -87,7 +87,7 @@ void read_and_init_parameters(int argc, char** argv)
     cmd.add(verbosity_Arg);
 
     ValueArg<unsigned> min_exonerate_score_threshold_Arg("s", "minExonerateScoreThreshold",
-						       "The score threshold used by exonerate to decide whether to include or not include the hit in the output.",
+						       "The score threshold passed to exonerate to decide whether to include or not include the hit in the output.",
 						       false, UINT_MAX, "int");
     cmd.add(min_exonerate_score_threshold_Arg);
 
@@ -110,14 +110,13 @@ void read_and_init_parameters(int argc, char** argv)
     cmd.add(relative_score_threshold_Arg);
 
     ValueArg<int> genetic_code_number_Arg("C", "genetic_code",
-	"The number of the genetic code to use in exonerate, if this step is required. Default: 2, i.e. "
+	 "The number of the genetic code to use in exonerate, if this step is required. Default: 2, i.e. "
 	"vertebrate mitochondrial code.",
 	false, global_genetic_code_number, "int");
     cmd.add(genetic_code_number_Arg);
 
     ValueArg<int> frameshift_penalty_Arg("f", "frameshift_penalty",
-	"The frameshift penalty used by exonerate. Default: -9. Higher values can have two different effects: (i) trimmed alignment regions, since they have a better final alignment score, (ii) not considering this read, since the alignment score is too low. The default of the exonerate program is -28. A value of -9 or other lower values lead to more reads in which the best alignment has a frameshift. The goal of a smaller value is to identify these reads rather than to clip the alignment."
-	"vertebrate mitochondrial code.",
+	 "The frameshift penalty passed to exonerate. Default: -9. Higher values lead to lower scores and by this can have the following effects: (i) hit regions are trimmed since trimming can lead to a better final alignment score, (ii) they can also lead to excluding a read as a whole if the final score is too low and trimming does lead to a higher score. The default of the exonerate program is -28. A value of -9 (or other values lower than -28) lead to more reads in which the best alignment has a frameshift. In order to remove reads that do not align well, one can use a smaller frameshift penalty and then exclude hits with a frameshift, see -F option).",
 	false, global_frameshift_penalty, "int");
     cmd.add(frameshift_penalty_Arg);
 
@@ -153,9 +152,7 @@ void read_and_init_parameters(int argc, char** argv)
     cmd.add(bp_beyond_Arg);
 
     ValueArg<string> exonerate_path_Arg("e", "exonerate_program",
-     				        "Name of exonerate program in path or path to exonerate program including the name "
-				        "of the executable. "
-				        "Default: exonerate",
+     				        "Name of the exonerate program in system path OR the path to the exonerate program including the program name. Default: exonerate",
 				        false, global_exonerate_binary, "string");
     cmd.add(exonerate_path_Arg);
 
@@ -170,7 +167,7 @@ void read_and_init_parameters(int argc, char** argv)
 	true, global_alignment_output_file, "string");
     cmd.add(alignment_output_file_name_Arg);
 
-    ValueArg<string> prot_fasta_input_file_name_Arg("p", "prot_refernce_file",
+    ValueArg<string> prot_fasta_input_file_name_Arg("p", "prot_reference_file",
 	"Protein sequence file in the fasta format. This is the sequence used to align the reads against. File is expected to have exactly one reference sequence. ",
 	false, global_input_prot_reference_sequence, "string");
     cmd.add(prot_fasta_input_file_name_Arg);
