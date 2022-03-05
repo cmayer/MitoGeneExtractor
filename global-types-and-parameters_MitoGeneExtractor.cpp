@@ -116,7 +116,7 @@ void read_and_init_parameters(int argc, char** argv)
     cmd.add(genetic_code_number_Arg);
 
     ValueArg<int> frameshift_penalty_Arg("f", "frameshift_penalty",
-	 "The frameshift penalty passed to exonerate. Default: -9. Higher values lead to lower scores and by this can have the following effects: (i) hit regions are trimmed since trimming can lead to a better final alignment score, (ii) they can also lead to excluding a read as a whole if the final score is too low and trimming does lead to a higher score. The default of the exonerate program is -28. A value of -9 (or other values lower than -28) lead to more reads in which the best alignment has a frameshift. In order to remove reads that do not align well, one can use a smaller frameshift penalty and then exclude hits with a frameshift, see -F option).",
+	 "The frameshift penalty passed to exonerate. The option value has to be a negative integer. Default: -9. Higher values lead to lower scores and by this can have the following effects: (i) hit regions are trimmed since trimming can lead to a better final alignment score, (ii) they can also lead to excluding a read as a whole if the final score is too low and trimming does lead to a higher score. The default of the exonerate program is -28. A value of -9 (or other values lower than -28) lead to more reads in which the best alignment has a frameshift. In order to remove reads that do not align well, one can use a smaller frameshift penalty and then exclude hits with a frameshift, see -F option).",
 	false, global_frameshift_penalty, "int");
     cmd.add(frameshift_penalty_Arg);
 
