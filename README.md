@@ -64,7 +64,7 @@ MitoGeneExtractor -h
 
 **-d, --dna_sequences_file:** Name (potentially including the path if not in the same directory) of the nucleotide sequence file in the fasta format. Sequences are expected to be unaligned without gaps. Typcially, these are short or long reads. (Required) 
 
-**-p, --prot_refernce_file:** Protein sequence file in the fasta format. This is the sequence used to align the reads against. File is expected to have exactly one reference sequence. (Required) 
+**-p, --prot_reference_file:** Protein sequence file in the fasta format. This is the sequence used to align the reads against. File is expected to have exactly one reference sequence. (Required) 
 
 **-o** Name of alignment output file. (Required) 
 
