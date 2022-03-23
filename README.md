@@ -1,7 +1,7 @@
 # MitoGeneExtractor
 
-MitoGeneExtractor can be used to conveniently extract mitochondrial genes from sequencing libraries.
-Mitochondrial reads are often found as byproduct in sequencing libraries, in particular in hybrid enrichment libraries.
+MitoGeneExtractor can be used to conveniently extract mitochondrial genes from sequencing libraries, genome and transcriptome analyses.
+Mitochondrial reads are often found as byproduct in sequencing libraries or assemblies, in particular when originating from hybrid enrichment libraries, but often also from transcriptomes and low coverage genomic sequences.
 
 ## Prepared Snakemake workflows
 
