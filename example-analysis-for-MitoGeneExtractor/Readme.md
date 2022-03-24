@@ -27,7 +27,7 @@ This runs the analysis twice, for two amino acid reference sequences for COI. (i
 
 ../MitoGeneExtractor-v1.9.1 -d SRR12554985_trimmed_reduced.fas -p ../Amino-Acide-references-for-tanomic-groups/COI-vertebrata-protein-consensus-50_whole.fasta -V vulgar-SRR12554985_vertebrateReference.txt -o SRR12554985_align_vertebrateReference.fas -n 0 -c SRR12554985_cons_vertebrateReference.fas -t 0.5 -r 1 -C 2
 
-Note that if you move the example folder, the path to the MitoGeneExtractor-v1.9.1 has to be changed accordingly.
+Note that if you move the example folder, the path to the MitoGeneExtractor-v1.9.1 and the path to the reference sequences have to be changed accordingly.
 
 The options used in this example are descrived in detail in the main readme or when calling the program with the option -h:
 ../MitoGeneExtractor-v1.9.1 -h
