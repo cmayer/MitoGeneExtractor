@@ -65,6 +65,7 @@ An example analysis for the MitoGeneExtractor program can be found in the **exam
 
 An example analysis using a Snakemake workflow can be found in the **example-analysis-with-Snakemake-workflow** folder.
 
+***Quick start:***
 Assume the input file (sequencing reads in fasta format, transcriptome assembly, genome assembly) are stored in the file: query-input.fas.
 Furthermore assume that the amino acid reference sequence is stored in the COI-reference.fas file.
 Then the following command could be used to attempt to reconstruct the COI sequence from the query-input.fas file sequences:
