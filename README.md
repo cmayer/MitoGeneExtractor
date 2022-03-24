@@ -48,9 +48,9 @@ In rare cases, the Exonerate program  quits/crashes unexpectedly.  Interestingly
 
 ## Get help and a full list of command line options:
 Type  
-'''
+```{r, eval=TRUE}
 MitoGeneExtractor -h
-'''
+```
 (if MitoGeneExtractor is in your path) or Path-to-MitoGeneExtractor/MitoGeneExtractor -h to list all command line options of MitoGeneExtractor. 
 
 In order to run MitoGeneExtractor you need your input sequences in fasta format as well as an amino acid reference sequence of your mitochondrial gene of interest. Example references are included in the reference-sequence-examples folder of this project. For the COI gene, one can specify as a reference the amino acid sequence of the barcode region, or if intended, the full COI sequence. If the full COI sequence shall be extracted, we suggest to create a reference specific for your taxonomic group, since the COI gene can differ considerably in the first and last few amino acids for specific groups with respect to references designed for larger groups. For the barcode region of COI this is normally not a problem. In principle all mitochondrial genes can be extracted with this approach.
