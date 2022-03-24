@@ -144,7 +144,7 @@ MitoGeneExtractor -h
 **-s, --minExonerateScoreThreshold:** The score threshold passed to exonerate to decide whether to include or not include the hit in the output. Typ: integer, optional parameter. Type:integer, (Optional parameter)
 
 **--verbosity:** Specifies how much run time information is printed to the console. Values: 0: minimal output, 1: important notices, 2: more notices, 3: basic progress, 4: detailed progress, 50-100: debug output, 1000: all output. Type:integer, (Optional parameter)
->>>>>>> last-reviews-before-publication
+
 
 
 
