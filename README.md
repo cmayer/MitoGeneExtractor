@@ -71,11 +71,6 @@ MitoGeneExtractor  -d query-input.fas -p COI-reference.fas -V vulgar.txt -o out-
 ```
 Specifying the name of the vulgar file is optional, but recommended. If the file exists, it is used as input instead of calling exonerate to create it. If it does not exist, the name is used to story the vulgar file. The -C 2 option specifies the genetic code, the -t 0.5 option specifies the consensus threshold and the -r 1 and -n 0 options are used for a stricter alignment quality (see options for details).
 
-Let us assume that you want to extract sequences from a short read file called input-reads.fas and that your amino acid reference file is called COI-whole-xxx.fas. Files with these names are found in the "example-analysis" folder.
-
-Run the example analysis with the command (see run-analysis.sh):
-xxxx
-
 
 ## Command line options:
 A full list of the command line options is available when typing
