@@ -60,6 +60,17 @@ to display a full list of command line options of MitoGeneExtractor.
 In order to run MitoGeneExtractor you need your input sequences in fasta format as well as an amino acid reference sequence of your mitochondrial gene of interest. Example references are included in the reference-sequence-examples folder of this project. For the COI gene, one can specify as a reference the amino acid sequence of the barcode region, or if intended, the full COI sequence. If the full COI sequence shall be extracted, we suggest to create a reference specific for your taxonomic group, since the COI gene can differ considerably in the first and last few amino acids for specific groups with respect to references designed for larger groups. For the barcode region of COI this is normally not a problem. In principle all mitochondrial genes can be extracted with this approach.
 
 ## Example analysis:
+
+An example analysis for the MitoGeneExtractor program can be found in the **example-analysis-for-MitoGeneExtractor** folder. The Readme.md file in this folder provided the necessary information to run the example analysis. 
+
+Assume the input file (sequencing reads in fasta format, transcriptome assembly, genome assembly) are stored in the file: query-input.fas.
+Furthermore assume that the amino acid reference sequence is stored in the COI-reference.fas file.
+Then the following command could be used to attempt to reconstruct the COI sequence from the query-input.fas file sequences:
+```{r, eval=TRUE}
+MitoGeneExtractor  -d query-input.fas -p COI-reference.fas -V vulgar.txt -o out-alignment.fas -n 0 -c out-consensus.fas -t 0.5 -r 1 -C 2
+```
+Specifying the name of the vulgar file is optional, but recommended. If the file exists, it is used as input instead of calling exonerate to create it. If it does not exist, the name is used to story the vulgar file. The -C 2 option specifies the genetic code, the -t 0.5 option specifies the consensus threshold and the -r 1 and -n 0 options are used for a stricter alignment quality (see options for details).
+
 Let us assume that you want to extract sequences from a short read file called input-reads.fas and that your amino acid reference file is called COI-whole-xxx.fas. Files with these names are found in the "example-analysis" folder.
 
 Run the example analysis with the command (see run-analysis.sh):
