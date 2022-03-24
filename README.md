@@ -49,7 +49,7 @@ To install MitoGeneExtractor, do one of the following:
 - Download the zipped project folder and extract the folder. The link can be found by klicking on the "Code" pulldown menu at the top of this page.  
 
 Now enter the MitoGeneExractor-vx.x folder on the command line and run the make program by typing "make" and hitting return. The make program should be preinstalled on all Linux distributions. On MacOS it is included in the command line developer tools (see above). 
-This will generate an executable called MitoGeneExtractor. Either copy this to a directory in your path or reference it by its full path on the command line.
+The make program will generate an executable called MitoGeneExtractor_. Either copy this to a directory in your path or reference it by its full path on the command line.
 
 <!---
 In rare cases, the Exonerate program  quits/crashes unexpectedly.  Interestingly, when rerunning Exonerate, there is a good chance that it will not abort. Why rerunning Exonerate can be successful is a mystery. It has been checked that successful runs always create the same expected output. MitoGeneExtractor can identify, if Exonerate aborted the run and will try upto 10 times by rerunning Exonerate. The log output of MitoGeneExtractor will report the run count for the succesfull run. --->
@@ -69,6 +69,15 @@ In order to run MitoGeneExtractor you need your input sequences in fasta format 
 
 ## Example analysis:
 An example analysis for the MitoGeneExtractor program can be found in the **example-analysis-for-MitoGeneExtractor** folder. The Readme.md file in this folder provided the necessary information to run the example analysis.
+
+***Quick start:***
+Assume the input file (sequencing reads in fasta format, transcriptome assembly, genome assembly) are stored in the file: query-input.fas.
+Furthermore assume that the amino acid reference sequence is stored in the COI-reference.fas file.
+Then the following command could be used to attempt to reconstruct the COI sequence from the query-input.fas file sequences:
+```{r, eval=TRUE}
+MitoGeneExtractor  -d query-input.fas -p COI-reference.fas -V vulgar.txt -o out-alignment.fas -n 0 -c out-consensus.fas -t 0.5 -r 1 -C 2
+```
+Specifying the name of the vulgar file is optional, but recommended. If the file exists, it is used as input instead of calling exonerate to create it. If it does not exist, the name is used to story the vulgar file. The -C 2 option specifies the genetic code, the -t 0.5 option specifies the consensus threshold and the -r 1 and -n 0 options are used for a stricter alignment quality (see options for details).
 
 ## Prepared Snakemake workflows
 An example analysis using a Snakemake workflow can be found in the **example-analysis-with-Snakemake-workflow** folder.
