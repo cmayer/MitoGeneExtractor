@@ -43,8 +43,8 @@ To install MitoGeneExtractor, do one of the following:
 Now enter the MitoGeneExractor-vx.x folder on the command line and run the make program by typing "make" and hitting return. The make program should be preinstalled on all Linux distributions. On MacOS it is included in the command line developer tools (see above). 
 This will generate an executable called MitoGeneExtractor. Either copy this to a directory in your path or reference it by its full path on the command line.
 
-PUT THIS SOMEWHERE ELSE:
-In rare cases, the Exonerate program  quits/crashes unexpectedly.  Interestingly, when rerunning Exonerate, there is a good chance that it will not abort. Why rerunning Exonerate can be successful is a mystery. It has been checked that successful runs always create the same expected output. MitoGeneExtractor can identify, if Exonerate aborted the run and will try upto 10 times by rerunning Exonerate. The log output of MitoGeneExtractor will report the run count for the succesfull run.
+<!---
+In rare cases, the Exonerate program  quits/crashes unexpectedly.  Interestingly, when rerunning Exonerate, there is a good chance that it will not abort. Why rerunning Exonerate can be successful is a mystery. It has been checked that successful runs always create the same expected output. MitoGeneExtractor can identify, if Exonerate aborted the run and will try upto 10 times by rerunning Exonerate. The log output of MitoGeneExtractor will report the run count for the succesfull run. --->
 
 ## Get help and a full list of command line options:
 Type  
