@@ -14,9 +14,14 @@ This file has been downloaded and extracted as described in Brasseur et al. 2022
 version 1.10, it has been preprocessed and converted to fasta as described in Brasseur et al. 2022. 
 The resulting fasta file has been analysed with the first command of the runner.sh file.
 
-Run the analysis:
+In order not to exceed total file size limits of github and still be able to include the example file in the repository, the example input file SRR12554985_trimmed_reduced.fas.zip was created by extracting from the original file exactly those reads that match with the COI sequence.
+Still, wenn running the example here, the sequences are extracted and aligned.
+You can also recreate the full fasta file by downloading the the SRR12554985.sra file and following Brasseur et al. 2022 to prepare the fasta file.
+
+## Running the analysis:
 ./runner.sh
 
-This runs the analysis with two amino acid reference sequences for COI. The general vertebrate reference for COI and the specific COI reference for Passeriformes.
+This runs the analysis twice, for two amino acid reference sequences for COI. (i) with the general vertebrate reference for COI and (ii) with the specific COI reference for Passeriformes.
+
 The results are almost identical. ....
 
