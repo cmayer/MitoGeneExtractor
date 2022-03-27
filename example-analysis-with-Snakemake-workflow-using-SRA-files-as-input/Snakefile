@@ -1,5 +1,6 @@
 #Snakefile
 configfile: "config.yaml"
+
 rule all:
     input:
         expand("/home/usr/{sample}_out_alignment.fas", sample=config["samples"]),
@@ -11,7 +12,7 @@ rule fastq_dump_concat:
     output:
         "{sample}_concat.fastq"
     shell:
-        "module load sratoolkit/2.10.8 \n fastq-dump --split-e --readids {input} \n cat {wildcards.sample}*.fastq > {output}"
+        "fastq-dump --split-e --readids {input} \n cat {wildcards.sample}*.fastq > {output}"
 
 rule TrimGalore:
     input:
@@ -19,7 +20,7 @@ rule TrimGalore:
     output:
         "{sample}_concat_trimmed.fq"
     shell:
-        "perl /home/usr/bin/TrimGalore-0.6.6/trim_galore --no_report_file --dont_gzip --output_dir ./ {input}"
+        "perl TrimGalore-0.6.6/trim_galore --no_report_file --dont_gzip --output_dir ./ {input}"
 
 rule fasta2fas:
     input:
@@ -35,7 +36,8 @@ rule f2f_newname:
     output:
         "{sample}_trimmed_newname.fas"
     shell:
-        "~/bin/fasta2fasta-v1.4 -r ' _' -u {input} {output}"
+# Call a program that replaces spaces with underscores in the sequence headers of a given fasta file:
+        "fasta2fasta-v1.4 -r ' _' -u {input} {output}"
 
 rule MitoGeneExtractor:
     input:
@@ -47,4 +49,4 @@ rule MitoGeneExtractor:
         c = "{sample}_vulgar.txt",
         d = "{sample}_vulgar.txt.log"
     shell:
-        "/home/usr/bin/MitoGeneExtractor -d {input.DNA} -p {input.AA} -o {output.a} -c {output.b} -V {output.c} -n 0 -t 0.5 -r 1 -e /home/usr/bin/exonerate"
+        "MitoGeneExtractor -d {input.DNA} -p {input.AA} -o {output.a} -c {output.b} -V {output.c} -n 0 -t 0.5 -r 1 -e /home/usr/bin/exonerate"
