@@ -1,7 +1,9 @@
 # Example analysis using a Snakemake workflow and MitoGeneExtractor to search for mitochondrial genes in multiple SRA files:
 
-Snakemake is not a prerequisite to use MitoGeneExtractor, but it provides a convenient method to to analyse a large number of data sets.
-Snakemake is a workflow management system which allows upscaling of data analyses in a reproducible way. 
+IMPORTANT: This example analysis is still under construction. The only example analysis that is fully implemented and documented can be found in the folder "example-analysis-for-MitoGeneExtractor".
+
+Snakemake is a workflow management system which allows upscaling of data analyses in a reproducible way.
+The usage of Snakemake is not required when using MitoGeneExtractor, but it is comparatively convenient to use if the user wants to extract mitochondrial genes from a large number of datasets. 
 
 ### Installation:
 Snakemake relies on Python3, which must be installed. You can install Snakemake in various ways, but the usage of a package manager such as Anaconda is recommended. 
@@ -15,7 +17,7 @@ Before starting the analyses, the user needs to provide all necessary input data
 https://www.ncbi.nlm.nih.gov/sra/?term=SRR12554982
 https://www.ncbi.nlm.nih.gov/sra/?term=SRR12554985
 
-The recommended way to download this data is to use the "prefetch" command from the [SRA toolkidt](https://trace.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?view=software).
+The recommended way to download this data is to use the "prefetch" command from the [SRA toolkit](https://trace.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?view=software).
 
 ```{r, eval=TRUE}
 prefetch SRR12554982

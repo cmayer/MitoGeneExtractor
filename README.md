@@ -45,14 +45,14 @@ https://osxdaily.com/2014/02/12/install-command-line-tools-mac-os-x/.
 
 
 To install MitoGeneExtractor, do one of the following:
-- Clone the MitoGeneExtractor project to your computer. The link can be found by klicking on the "Code" pulldown menu at the top of this page.
-- Download the zipped project folder and extract the folder. The link can be found by klicking on the "Code" pulldown menu at the top of this page.  
+- Clone the MitoGeneExtractor project to your computer. The link can be found by clicking on the "Code" pulldown menu at the top of this page.
+- Download the zipped project folder and extract the folder. The link can be found by clicking on the "Code" pulldown menu at the top of this page.  
 
 Now enter the MitoGeneExractor-vx.x folder on the command line and run the make program by typing "make" and hitting return. The make program should be preinstalled on all Linux distributions. On MacOS it is included in the command line developer tools (see above). 
 The make program will generate an executable called MitoGeneExtractor_. Either copy this to a directory in your path or reference it by its full path on the command line.
 
 <!---
-In rare cases, the Exonerate program  quits/crashes unexpectedly.  Interestingly, when rerunning Exonerate, there is a good chance that it will not abort. Why rerunning Exonerate can be successful is a mystery. It has been checked that successful runs always create the same expected output. MitoGeneExtractor can identify, if Exonerate aborted the run and will try upto 10 times by rerunning Exonerate. The log output of MitoGeneExtractor will report the run count for the succesfull run. --->
+In rare cases, the Exonerate program  quits/crashes unexpectedly.  Interestingly, when rerunning Exonerate, there is a good chance that it will not abort. Why rerunning Exonerate can be successful is a mystery. It has been checked that successful runs always create the same expected output. MitoGeneExtractor can identify, if Exonerate aborted the run and will try up to 10 times by rerunning Exonerate. The log output of MitoGeneExtractor will report the run count for the successful run. --->
 
 ## Get help and a full list of command line options:
 Type  
@@ -70,7 +70,7 @@ In order to run MitoGeneExtractor you need your input sequences in fasta format 
 ## Example analysis:
 An example analysis for the MitoGeneExtractor program can be found in the **example-analysis-for-MitoGeneExtractor** folder. The Readme.md file in this folder provided the necessary information to run the example analysis.
 
-***Quick start:***
+***Quickstart:***
 Assume the input file (sequencing reads in fasta format, transcriptome assembly, genome assembly) are stored in the file: query-input.fas.
 Furthermore assume that the amino acid reference sequence is stored in the COI-reference.fas file.
 Then the following command could be used to attempt to reconstruct the COI sequence from the query-input.fas file sequences:
@@ -85,7 +85,7 @@ An example analysis using a Snakemake workflow can be found in the **example-ana
 
 
 ## Command line options:
-A full list of the command line options is avaiable when typing
+A full list of the command line options is available when typing
 MitoGeneExtractor -h
 
 **-d, --dna_sequences_file:** Name (potentially including the path) of the nucleotide sequence file in the fasta format. Sequences are expected to be unaligned without gaps. Typcially, these are short or long reads. (Required parameter) 
@@ -117,7 +117,7 @@ MitoGeneExtractor -h
 
 **-r, --relative_score_threshold:** Specified the relative alignment score threshold for Exonerate hits to be considered. The relative score is the score reported by Exonerate divided by the alignment length. Default 0. Reasonable thresholds are between 1 and 2. Type: decimal number (Optional parameter)
 
-**--minSeqCoverageInAlignment_total:** Specifies the absolute value of the minimum alignment coverage for computing the consensus sequence. For the coverage, all nucleotides count, also those lower case nucleotides that have been added beyond the exonerate alingmnet region. Default: 1. Increasing this value increases the number of unknown nucleotides in the consensus sequence. Type:integer, (Optional parameter)
+**--minSeqCoverageInAlignment_total:** Specifies the absolute value of the minimum alignment coverage for computing the consensus sequence. For the coverage, all nucleotides count, also those lower case nucleotides that have been added beyond the exonerate alignment region. Default: 1. Increasing this value increases the number of unknown nucleotides in the consensus sequence. Type:integer, (Optional parameter)
 
 **--minSeqCoverageInAlignment_uppercase:** Specifies the absolute value of the minimum alignment coverage for computing the consensus sequence. As coverage, only upper case nucleotides are taken into account, i.e. no nucleotides are counted that have been added beyond the Exonerate alignment region. Bases beyond the Exonerate alignment are added with the -n or --numberOfBpBeyond option. If no bases are added beyond the Exonerate alignment (default), the effect of this option is identical to the minSeqCoverageInAlignment_total option. Default: 1. Increasing this value increases the number of unknown nucleotides in the consensus sequence. Type:integer, (Optional parameter)
 
