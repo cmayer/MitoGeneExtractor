@@ -1,5 +1,8 @@
 # Example analysis using a Snakemake workflow and MitoGeneExtractor to search for mitochondrial genes in multiple fastq files:
 
+IMPORTANT: This example analysis is still under construction. The only example analysis that is fully implemented and documented can be found in the folder "example-analysis-for-MitoGeneExtractor".
+
+
 Snakemake is not a prerequisite to use MitoGeneExtractor, but it provides a convenient method to to analyse a large number of data sets.
 Snakemake is a workflow management system which allows upscaling of data analyses in a reproducible way. 
 
