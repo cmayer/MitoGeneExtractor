@@ -9,13 +9,12 @@ option -e /path-to-exonerate-program/exonerate-program-name so that MitoGeneExtr
 
 ## The example data
 One of the sequencing libraries analysed in Brasseur et al. 2022 was:
-https://www.ncbi.nlm.nih.gov/sra/?term=SRR12554985
+https://www.ncbi.nlm.nih.gov/sra/?term=SRR12554985 .
 This file has been downloaded and extracted as described in Brasseur et al. 2022 using the NCBI SRA-tools 
 version 1.10. Then it has been preprocessed and converted to the fasta format as described in Brasseur et al. 2022. 
 The resulting fasta file has been analysed with the first command of the runner.sh file.
 
 In order not to exceed total file size limits of github and still be able to include the example file in the repository, the example input file SRR12554985_trimmed_reduced.fas.gz was created by extracting from the original file exactly those reads that match with the COI sequence.
-Still, wenn running the example here, the sequences are extracted and aligned.
 You can also recreate the full fasta file by downloading the the SRR12554985.sra file and following Brasseur et al. 2022 to prepare the fasta file.
 
 ## Running the analysis:
