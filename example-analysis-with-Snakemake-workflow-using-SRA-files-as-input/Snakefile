@@ -1,11 +1,14 @@
 #Snakefile
 configfile: "config.yaml"
 
+## Adapt this file for your own needs. /path/ needs to be changed according to your setup.
+
 rule all:
     input:
-        expand("/home/usr/{sample}_out_alignment.fas", sample=config["samples"]),
-        expand("/home/usr/{sample}_out_consensus.fas", sample=config["samples"])
+        expand("/path/{sample}_out_alignment.fas", sample=config["samples"]),
+        expand("/path/{sample}_out_consensus.fas", sample=config["samples"])
 
+# Decompress the sra file and split it in 1, 2, or 3 parts. Finally concatenate the parts.
 rule fastq_dump_concat:
     input:
         "{sample}.sra"
@@ -13,6 +16,9 @@ rule fastq_dump_concat:
         "{sample}_concat.fastq"
     shell:
         "fastq-dump --split-e --readids {input} \n cat {wildcards.sample}*.fastq > {output}"
+
+# (Optional but recommended) Trim adaptors and low quality regions from input.
+# Please comment out if not required.
 
 rule TrimGalore:
     input:
@@ -22,7 +28,8 @@ rule TrimGalore:
     shell:
         "perl TrimGalore-0.6.6/trim_galore --no_report_file --dont_gzip --output_dir ./ {input}"
 
-rule fasta2fas:
+# Convert fastq to fasta
+rule fastq2fas:
     input:
         "{sample}_concat_trimmed.fq"
     output:
@@ -30,6 +37,7 @@ rule fasta2fas:
     shell:
         "awk '(NR-1)%4 == 0 || (NR-2)%4==0' {input} | tr '@' '>' > {output}"
 
+# Replace spaces in fasta sequence names with underscores
 rule f2f_newname:
     input:
         "{sample}_trimmed.fas"
