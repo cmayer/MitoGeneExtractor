@@ -25,10 +25,10 @@ prefetch SRR12554982
 prefetch SRR12554985
 ```
 
-Convert the SRA files to the fastq format:
+Convert the SRA files to the fastq format while retaining unique reads IDs:
 ```{r, eval=TRUE}
-fasterq-dump --split-e SRR12554982.sra
-fasterq-dump --split-e SRR12554985.sra
+fasterq-dump --split-e --readids SRR12554982.sra
+fasterq-dump --split-e --readids SRR12554985.sra
 ```
 
 ...
