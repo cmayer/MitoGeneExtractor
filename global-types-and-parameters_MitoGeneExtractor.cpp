@@ -15,7 +15,8 @@ string                      global_alignment_output_file;
 float                       global_consensus_threshold;
 string                      global_consensus_sequence_output_filename;
 char                        global_include_frameshift_alignments;
-char                        global_include_gap_alignments;
+char                        global_notinclude_gap_alignments;
+char                        global_include_only_gap_alignments;
 char                        global_include_double_hits;
 float                       global_relative_score_threshold;
 // Not implemented as parameters yet:
@@ -25,6 +26,19 @@ char                        global_run_mode;  // default: normal run, 'd' exoner
 unsigned                    global_minimum_seq_coverage_uppercase;
 unsigned                    global_minimum_seq_coverage_total;
 unsigned                    global_exonerate_score_threshold;
+//bool                        global_report_internal_gaps_as_tilde;
+
+int                         global_gap_frameshift_mode; // 0: No gaps or frameshift
+                                                        // 1: Gaps allowed (default)
+                                                        // 2: Only gaps allowed
+
+int                         global_report_gap_mode;     // 1: all with '-'
+                                                        // 2: leading, trailing with '-', internal with '~'
+                                                        // 3: remove all gaps in output sequence
+unsigned                    global_ends_width;
+unsigned                    global_weight_fraction_in_ends;
+
+
 
 void good_bye_and_exit(int error)
 {
@@ -40,15 +54,19 @@ void init_param()
   global_num_bp_beyond_exonerate_alignment_if_at_start_or_end = 0;
   global_consensus_threshold = 0.5;
   global_verbosity = 1;
-  global_include_gap_alignments = 0;
+  global_notinclude_gap_alignments = 0;
   global_include_frameshift_alignments = 0;
   global_include_double_hits  = 0;
-  global_relative_score_threshold = 0;
+  global_relative_score_threshold = 1;
   global_genetic_code_number = 2;
   global_frameshift_penalty  = -9;
   global_run_mode = 0;
   global_minimum_seq_coverage_uppercase = 1;
   global_minimum_seq_coverage_total = 1;
+  global_report_gap_mode = 1;
+
+  global_ends_width = 9;
+  global_weight_fraction_in_ends = 20;
 }
 
 
@@ -61,6 +79,9 @@ void read_and_init_parameters(int argc, char** argv)
 
   try
   {
+
+
+    
     CmdLine cmd("Description: This program aligns multiple nucleotide sequences against a protein reference "
 		"sequence to obtain a multiple sequence alignment. The recommended use case is to extract mitochondrial genes from sequencing libraries, "
                 "e.g. from hybrid enrichment libraries sequenced on the Illumina platform."
@@ -104,32 +125,58 @@ void read_and_init_parameters(int argc, char** argv)
     
     ValueArg<float> relative_score_threshold_Arg("r", "relative_score_threshold",
 	"Specified the relative alignment score threshold for exonerate hits to be considered. "
-	"The relative score is the score reported by exonerate divided by the alignment length. Default 0. "
-	"Reasonable thresholds are between 1 and 2.",
+	"The relative score is the score reported by exonerate divided by the alignment length. Default 1. "
+	"Reasonable thresholds are between 0.7 and 2.0.",
 	false, global_relative_score_threshold, "float");
     cmd.add(relative_score_threshold_Arg);
 
     ValueArg<int> genetic_code_number_Arg("C", "genetic_code",
-	 "The number of the genetic code to use in exonerate, if this step is required. Default: 2, i.e. "
+	 "The number of the genetic code to use in exonerate, if this step is required. See https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi for details. Default: 2, i.e. "
 	"vertebrate mitochondrial code.",
 	false, global_genetic_code_number, "int");
     cmd.add(genetic_code_number_Arg);
 
     ValueArg<int> frameshift_penalty_Arg("f", "frameshift_penalty",
-	 "The frameshift penalty passed to exonerate. The option value has to be a negative integer. Default: -9. Higher values lead to lower scores and by this can have the following effects: (i) hit regions are trimmed since trimming can lead to a better final alignment score, (ii) they can also lead to excluding a read as a whole if the final score is too low and trimming does lead to a higher score. The default of the exonerate program is -28. A value of -9 (or other values lower than -28) lead to more reads in which the best alignment has a frameshift. In order to remove reads that do not align well, one can use a smaller frameshift penalty and then exclude hits with a frameshift, see -F option).",
+	 "The frameshift penalty passed to exonerate. Default: -9. Higher values lead to lower scores and by this can have the following effects: (i) hit regions are trimmed since trimming can lead to a better final alignment score, (ii) they can also lead to excluding a read as a whole if the final score is too low and trimming does lead to a higher score. The default of the exonerate program is -28. A value of -9 (or other values lower than -28) lead to more reads in which the best alignment has a frameshift. In order to remove reads that do not align well, one can use a smaller frameshift penalty and then exclude hits with a frameshift, see -F option).",
 	false, global_frameshift_penalty, "int");
     cmd.add(frameshift_penalty_Arg);
 
+    ValueArg<int> report_gaps_mode_Arg("", "report_gaps_mode",
+				       "Gaps can be reported in different ways. With this option the reporting mode can be specified: 1: report leading and trailing gaps with \'-\' character. Report internal gaps (introduced with options -G or -g) with \'~\' character. 2: report leading and trainling gaps with \'-\' character. Report internal gaps (introduced with options -G or -g) with \'-\' characters. 3: Remove all gap characters in output. In this case sequences are extracted but are reported with respect to the reference. Default: 1.",
+	false, global_report_gap_mode, "int");
+    cmd.add(report_gaps_mode_Arg);
+
+    
+    //    SwitchArg report_internal_gaps_as_tilde_Arg("", "report_internal_gaps_as_tilde",
+    //			 "Report gaps included with -G or -g option as tilde characters. Default: false.",
+    //			 false);
+    //    cmd.add(report_internal_gaps_as_tilde_Arg);
+
+    
+    
+    /*
     SwitchArg include_F_Arg("F", "includeFrameshift",
 			 "Include reads which aligned with a frameshift. Default: false.",
 			 false);
     cmd.add(include_F_Arg);
+    */
 
-    SwitchArg include_G_Arg("G", "includeGap",
-			 "Include reads which aligned with a gap.",
+    SwitchArg notinclude_Gaps_Arg("", "noGaps",
+				  "Do not include reads for which the alignment with the reference contains gaps.",
+				  false);
+    cmd.add(notinclude_Gaps_Arg);
+
+    //    SwitchArg include_G_Arg("G", "includeGap",
+    //			 "Include reads which aligned with a gap.",
+    //			 false);
+    //    cmd.add(include_G_Arg);
+
+
+    SwitchArg include_g_only_Arg("g", "onlyGap",
+			 "Include only reads which aligned with a gap.",
 			 false);
-    cmd.add(include_G_Arg);
-
+    cmd.add(include_g_only_Arg);
+    
     SwitchArg include_D_Arg("D", "includeDoubleHits",
 			 "Include reads with two alignment results found by exonerate.",
 			 false);
@@ -191,8 +238,9 @@ void read_and_init_parameters(int argc, char** argv)
     global_consensus_threshold                         = consensus_threshold_Arg.getValue();
 
     global_include_double_hits                         = include_D_Arg.getValue();
-    global_include_frameshift_alignments               = include_F_Arg.getValue();
-    global_include_gap_alignments                      = include_G_Arg.getValue();
+    //    global_include_frameshift_alignments               = include_F_Arg.getValue();
+    global_notinclude_gap_alignments                   = notinclude_Gaps_Arg.getValue();
+    global_include_only_gap_alignments                 = include_g_only_Arg.getValue();
     global_relative_score_threshold                    = relative_score_threshold_Arg.getValue();
 
     option_set_consensus_sequence_output_filename      = consensus_output_file_Arg.isSet();
@@ -204,6 +252,8 @@ void read_and_init_parameters(int argc, char** argv)
     global_minimum_seq_coverage_uppercase              = min_seq_coverage_upper_case_Arg.getValue();
 
     global_exonerate_score_threshold                   = min_exonerate_score_threshold_Arg.getValue();
+    //    global_report_internal_gaps_as_tilde               = report_internal_gaps_as_tilde_Arg.getValue();
+    global_report_gap_mode                             = report_gaps_mode_Arg.getValue();
   }
   catch (ArgException &e)
   {
@@ -211,6 +261,20 @@ void read_and_init_parameters(int argc, char** argv)
     good_bye_and_exit(-1);
   }
 
+  if (global_include_only_gap_alignments && global_notinclude_gap_alignments)
+  {
+    cerr << "Error: Conflicting command line parameters. It is not possible to specify the include only sequences "
+            "that align with a gap and at the same time no reads that align with a gap in the output.\n";
+    good_bye_and_exit(-2);
+  }
+
+  global_gap_frameshift_mode = 1;
+  if (global_notinclude_gap_alignments)
+    global_gap_frameshift_mode = 0;
+  else if (global_include_only_gap_alignments)
+    global_gap_frameshift_mode = 2;
+
+  
   if (global_vulgar_file.empty())
   {
     cerr << "WARNING: You did not specify a vulgar file, so a temporary vulgar file will be created for this run that will be removed at the end of this program run. Therefor the vulgar file cannot be reused in other runs.\n"; 
@@ -228,9 +292,10 @@ void read_and_init_parameters(int argc, char** argv)
   
   if (option_set_consensus_threshold && !option_set_consensus_sequence_output_filename ) 
   {
-    cerr << "You specified a consensus threshold but you do not request to write a consensus sequence file. In order to request to write a consensus sequence file, you have to specify the -c or --consensus_file option followed by a file name";
+    cerr << "ERROR: You specified a consensus threshold but you do not request to write a consensus sequence file. In order to request to write a consensus sequence file, you have to specify the -c or --consensus_file option followed by a file name";
     exit(-1);
   }
+
 }
 
 
@@ -293,13 +358,37 @@ void print_parameters(std::ostream &os, const char *s)
     os << s << "Exonerate score threshold:                              " << global_exonerate_score_threshold
        << std::endl;    
 
+  if (global_gap_frameshift_mode == 0)
+  {
+    os << s <<   "Gappy reads used:                                       no\n";
+    os << s <<   "Frameshift reads used:                                  no\n";
+  }
+  else if (global_gap_frameshift_mode == 1)
+  {
+    os << s <<   "Gappy reads used:                                       yes\n";
+    //    os << s <<   "Report internal gaps as tilde:                          " << (report_internal_gaps_as_tilde_Arg ? "yes\n" : "no\n");
+    os << s <<   "Frameshift reads used:                                  no\n";
+  }
+  else if (global_gap_frameshift_mode == 2)
+  {
+    os << s <<   "Only gappy reads used:                                  yes\n";
+    //    os << s <<   "Report internal gaps as tilde:                          " << (report_internal_gaps_as_tilde_Arg ? "yes\n" : "no\n");
+    os << s <<   "Frameshift reads used:                                  no\n";
+  }
+
+  if (global_report_gap_mode == 1)
+    os << s <<   "Report gaps mode:                                       Report all (leading, trailing, internal) gaps with \'-\' character.\n";
+  else if (global_report_gap_mode == 2)
+    os << s <<   "Report gaps mode:                                       Report leading and trailing gaps with \'-\' character and internal gaps with \'~\' character.\n";
+  else if (global_report_gap_mode == 3)
+    os << s <<   "Report gaps mode:                                       Remove all gaps in output.\n";
+
+  //  os << s << "\n";
+
   os << s <<   "Verbosity:                                              " << global_verbosity
      << std::endl;
   os << s <<   "===================" 
      << std::endl;
-  
-
-
 }
 
 

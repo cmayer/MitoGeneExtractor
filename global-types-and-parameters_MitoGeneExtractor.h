@@ -5,7 +5,7 @@
 #define DEBUG
 
 #define PROGNAME "MitoGeneExtractor"
-#define VERSION  "1.9.1"
+#define VERSION  "1.9.3"
 
 #define macromax(x,y) ((x)<(y) ? (y) : (x))
 #define macromin(x,y) ((x)<(y) ? (x) : (y))
@@ -38,7 +38,8 @@ extern std::string                 global_alignment_output_file;
 extern float                       global_consensus_threshold;
 extern std::string                 global_consensus_sequence_output_filename;
 extern char                        global_include_frameshift_alignments;
-extern char                        global_include_gap_alignments;
+extern char                        global_notinclude_gap_alignments;
+extern char                        global_include_only_gap_alignments;
 extern char                        global_include_double_hits;
 extern float                       global_relative_score_threshold;
 extern char                        global_genetic_code_number;
@@ -47,3 +48,10 @@ extern char                        global_run_mode; // Exonerate run mode. Suppo
 extern unsigned                    global_minimum_seq_coverage_uppercase;
 extern unsigned                    global_minimum_seq_coverage_total;
 extern unsigned                    global_exonerate_score_threshold;
+extern int                         global_gap_frameshift_mode;
+extern int                         global_report_gap_mode;
+
+extern unsigned                    global_ends_width;
+extern unsigned                    global_weight_fraction_in_ends;
+
+//extern bool                        global_report_internal_gaps_as_tilde;

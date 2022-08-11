@@ -9,29 +9,29 @@ rule all:
         expand("/path/{sample}_out_consensus.fas", sample=config["samples"])
 
 # Decompress the sra file and split it in 1, 2, or 3 parts. Finally concatenate the parts.
-rule fastq_dump_concat:
+rule fastq_ungzip:
     input:
-        "{sample}.sra"
+        "{sample}.fastq.gz"
     output:
-        "{sample}_concat.fastq"
+        "{sample}.fastq"
     shell:
-        "fastq-dump --split-e --readids {input} \n cat {wildcards.sample}*.fastq > {output}"
+        "gunzip {input}"
 
 # (Optional but recommended) Trim adaptors and low quality regions from input.
 # Please comment out if not required.
 
 rule TrimGalore:
     input:
-        "{sample}_concat.fastq"
+        "{sample}t.fastq"
     output:
-        "{sample}_concat_trimmed.fq"
+        "{sample}_trimmed.fq"
     shell:
         "perl TrimGalore-0.6.6/trim_galore --no_report_file --dont_gzip --output_dir ./ {input}"
 
 # Convert fastq to fasta
 rule fastq2fas:
     input:
-        "{sample}_concat_trimmed.fq"
+        "{sample}_trimmed.fq"
     output:
         "{sample}_trimmed.fas"
     shell:
@@ -57,4 +57,4 @@ rule MitoGeneExtractor:
         c = "{sample}_vulgar.txt",
         d = "{sample}_vulgar.txt.log"
     shell:
-        "MitoGeneExtractor -d {input.DNA} -p {input.AA} -o {output.a} -c {output.b} -V {output.c} -n 0 -t 0.5 -r 1 -e /home/usr/bin/exonerate"
+        "MitoGeneExtractor -d {input.DNA} -p {input.AA} -o {output.a} -c {output.b} -V {output.c} -n 0 -t 0.5 -r 1 
