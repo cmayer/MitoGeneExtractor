@@ -107,15 +107,15 @@ MitoGeneExtractor -h
 **-D, --includeDoubleHits:** Include reads with two alignment results found by exonerate. Default: No. (Optional parameter)
 <<<<<<< HEAD
 
-**-G, --includeGap:** Include reads which aligned with a gap. Default: No. (Optional parameter)
+**--noGaps:** Do not include reads which aligned with a gap. Default: No. (Optional parameter)
 
-**-F, --includeFrameshift:** Include reads which aligned with a frameshift. The number of reads excluded is listed at the end of the output. If this number is particularly large, the problem should be investigated. Default: No. (Optional parameter)
+**-g:** Include only reads that have a gap in alignment to reference sequence. This option is mainly used for data exploration.
 
 **-f, --frameshift_penalty** The frameshift penalty passed to exonerate. The option value has to be a negative integer. Default: -9. More negative values lead to lower scores and by this can have the following effects: (i) hit regions are trimmed since trimming can lead to a better final alignment score, (ii) they can also lead to excluding a read as a whole if the final score is too low and trimming does lead to a higher score. The default of the exonerate program is -28. A value of -9 (or other values less negative than -28) lead to more reads in which the best alignment has a frameshift. In order to remove reads that do not align well, one can use a less negative value for the frameshift penalty and then exclude hits with a frameshift, see -F option). (Optional parameter)
 
 **-C, --genetic_code:** The number of the genetic code to use in Exonerate, if this step is required. Default: 2, i.e. vertebrate mitochondrial code. (Type: integer). [See genetic code list at NCBI.](https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi). (Not required but recommended). ** A misspecification of the genetic code leads to unusable results. Make sure the default is correct, or specify the genetic code.** (Optional parameter)
 
-**-r, --relative_score_threshold:** Specified the relative alignment score threshold for Exonerate hits to be considered. The relative score is the score reported by Exonerate divided by the alignment length. Default 0. Reasonable thresholds are between 1 and 2. Type: decimal number (Optional parameter)
+**-r, --relative_score_threshold:** Specified the relative alignment score threshold for Exonerate hits to be considered. The relative score is the score reported by Exonerate divided by the alignment length. Default 1. Reasonable thresholds are between 0.7 and 2.0. Type: decimal number (Optional parameter)
 
 **--minSeqCoverageInAlignment_total:** Specifies the absolute value of the minimum alignment coverage for computing the consensus sequence. For the coverage, all nucleotides count, also those lower case nucleotides that have been added beyond the exonerate alignment region. Default: 1. Increasing this value increases the number of unknown nucleotides in the consensus sequence. Type:integer, (Optional parameter)
 
@@ -127,15 +127,13 @@ MitoGeneExtractor -h
 
 =======
 
-**-G, --includeGap:** Include reads which aligned with a gap. Default: No. (Optional parameter)
-
 **-F, --includeFrameshift:** Include reads which aligned with a frameshift. The number of reads excluded is listed at the end of the output. If this number is particularly large, the problem should be investigated. Default: No. (Optional parameter)
 
 **-f, --frameshift_penalty** The frameshift penalty passed to exonerate. The option value has to be a negative integer. Default: -9. More negative values lead to lower scores and by this can have the following effects: (i) hit regions are trimmed since trimming can lead to a better final alignment score, (ii) they can also lead to excluding a read as a whole if the final score is too low and trimming does lead to a higher score. The default of the exonerate program is -28. A value of -9 (or other values less negative than -28) lead to more reads in which the best alignment has a frameshift. In order to remove reads that do not align well, one can use a less negative value for the frameshift penalty and then exclude hits with a frameshift, see -F option). (Optional parameter)
 
 **-C, --genetic_code:** The number of the genetic code to use in Exonerate, if this step is required. Default: 2, i.e. vertebrate mitochondrial code. (Type: integer). [See genetic code list at NCBI.](https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi). (Not required but recommended). **A misspecification of the genetic code leads to unusable results. Make sure the default is correct, or specify the genetic code.** (Optional parameter)
 
-**-r, --relative_score_threshold:** Specified the relative alignment score threshold for Exonerate hits to be considered. The relative score is the score reported by Exonerate divided by the alignment length. Default 0. Reasonable thresholds are between 1 and 2. Type: decimal number (Optional parameter)
+**-r, --relative_score_threshold:** Specified the relative alignment score threshold for Exonerate hits to be considered. The relative score is the score reported by Exonerate divided by the alignment length. Default 1. Reasonable thresholds are between 0.7 and 2.0. Type: decimal number (Optional parameter)
 
 **--minSeqCoverageInAlignment_total:** Specifies the absolute value of the minimum alignment coverage for computing the consensus sequence. For the coverage, all nucleotides count, also those lower case nucleotides that have been added beyond the exonerate alingmnet region. Default: 1. Increasing this value increases the number of unknown nucleotides in the consensus sequence. Type:integer, (Optional parameter)
 
@@ -145,6 +143,11 @@ MitoGeneExtractor -h
 
 **--verbosity:** Specifies how much run time information is printed to the console. Values: 0: minimal output, 1: important notices, 2: more notices, 3: basic progress, 4: detailed progress, 50-100: debug output, 1000: all output. Type:integer, (Optional parameter)
 
+
+
+## Project outlook:
+
+Currently, we are exploring the utility of using HMMs, namely nhmmer as an alternative to exonerate.
 
 
 
