@@ -126,7 +126,7 @@ void read_and_init_parameters(int argc, char** argv)
     ValueArg<float> relative_score_threshold_Arg("r", "relative_score_threshold",
 	"Specified the relative alignment score threshold for exonerate hits to be considered. "
 	"The relative score is the score reported by exonerate divided by the alignment length. Default 1. "
-	"Reasonable thresholds are between 0.7 and 2.",
+	"Reasonable thresholds are between 0.7 and 2.0.",
 	false, global_relative_score_threshold, "float");
     cmd.add(relative_score_threshold_Arg);
 
