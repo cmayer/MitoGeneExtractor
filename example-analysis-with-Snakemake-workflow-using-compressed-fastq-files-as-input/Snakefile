@@ -9,7 +9,7 @@ rule all:
         expand("/path/{sample}_out_consensus.fas", sample=config["samples"])
 
 # Decompress the sra file and split it in 1, 2, or 3 parts. Finally concatenate the parts.
-rule fastq_dump_concat:
+rule fastq_ungzip:
     input:
         "{sample}.fastq.gz"
     output:
