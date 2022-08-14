@@ -183,7 +183,7 @@ void read_and_init_parameters(int argc, char** argv)
     cmd.add(include_D_Arg);
 
     ValueArg<float> consensus_threshold_Arg("t", "consensus_threshold",
-	"This option modifies the consensus threshold. Default: 0.7 which corresponds to 70%.",
+	"This option modifies the consensus threshold. Default: 0.5 which corresponds to 50%.",
 	false, global_consensus_threshold, "float");
     cmd.add(consensus_threshold_Arg);
 
