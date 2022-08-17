@@ -1384,7 +1384,7 @@ public:
 	//	if (consensusWeightMinimum < minimum_total_coverage)
 	//	  consensusWeightMinimum = minimum_total_coverage;
 
-	if (1)
+	if (0)
 	{
 	  std::cerr << "DEBUG call conensus at postions: " << pos << '\n';
 	  std::cerr << "cA:     " << cA      << '\n';

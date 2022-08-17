@@ -1250,14 +1250,20 @@ int main(int argc, char **argv)
       cout << setw(50) << "# skipped reads due to low rel. score:  " << skipped_relative_score << endl;
 
       cout << "Gap insertion sites and lengths suggested from reads for the reference:\n";
-      print_Mymap(cout, map_of_insertion_sites_suggested_in_reference);
+      if (map_of_insertion_sites_suggested_in_reference.size() > 0)
+	print_Mymap(cout, map_of_insertion_sites_suggested_in_reference);
+      else
+	cout << "-\n";
 
       cout << "Gap sites in query sequences:\n";
-      print_Mymap(cout, map_of_gap_sites_in_queries);
+      if (map_of_gap_sites_in_queries.size() > 0)
+	print_Mymap(cout, map_of_gap_sites_in_queries);
+      else
+	cout << "-\n";
       cout << '\n';
 
-      unsigned **coverage_profile = seqs_DNA_result.get_DNA_site_profile();
-      print_DNA_profile(cout, coverage_profile, seqs_DNA_result.GetPosNum());
+      //      unsigned **coverage_profile = seqs_DNA_result.get_DNA_site_profile();
+      //      print_DNA_profile(cout, coverage_profile, seqs_DNA_result.GetPosNum());
     }
 
     if (!global_consensus_sequence_output_filename.empty())

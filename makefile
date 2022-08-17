@@ -1,5 +1,5 @@
 # CFLAGS  = -g3 -ggdb -Wall
-CFLAGS = -O2 -Wall
+CFLAGS = -O2 # -Wall
 
 INCL =    -I . -I tclap
 #LIBS    = -lc -Wall
@@ -12,14 +12,14 @@ HEADER = CDnaString2.h CSequence_Mol2_1.h CSequences2.h CSplit2.h Ctriple.h \
          global-types-and-parameters_MitoGeneExtractor.h primefactors.h statistic_functions.h
 
 
-all:    MitoGeneExtractor
+all:    MitoGeneExtractor-v1.9.3
 
 
-MitoGeneExtractor: $(SRC) $(HEADER)
-	g++ $(CFLAGS) $(INCL) $(SRC) -o MitoGeneExtractor
+MitoGeneExtractor-v1.9.3: $(SRC) $(HEADER)
+	g++ $(CFLAGS) $(INCL) $(SRC) -o MitoGeneExtractor-v1.9.3
 
 
 clean:
-	rm -f MitoGeneExtractor
+	rm -f MitoGeneExtractor-v1.9.3
 
 
