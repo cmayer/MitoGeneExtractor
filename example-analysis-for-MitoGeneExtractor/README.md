@@ -22,17 +22,17 @@ You can also recreate the full fasta file by downloading the SRR12554985.sra fil
 ./runner.sh
 ```
 
-This runs the analysis twice, for two amino acid reference sequences for COI. (i) with the general vertebrate reference for COI and (ii) with the specific COI reference for Passeriformes. The two commands read as follows:
+This runs the analysis twice, for two amino acid reference sequences for COI.  (i) with the specific COI reference for Passeriformes and (ii) with the general vertebrate reference for COI. The two commands read as follows:
 
 ```{r, eval=TRUE}
-../MitoGeneExtractor-v1.9.1 -d SRR12554985_trimmed_reduced.fas -p ../Amino-Acide-references-for-tanomic-groups/xxx-need-to-be-added.fasta -V vulgar-SRR12554985_PasseriformesReference.txt -o SRR12554985_align_PasseriformesReference.fas -n 0 -c SRR12554985_cons_PasseriformesReference.fas -t 0.5 -r 1 -C 2
+../MitoGeneExtractor-v1.9.3 -d SRR12554985_trimmed_reduced.fas -p ../Amino-Acid-references-for-taxonomic-groups/COI-references/COI-fulllength-Passeriformes-protein-reference.fasta -V vulgar-SRR12554985_PasseriformesReference.txt -V vulgar-SRR12554985_PasseriformesReference.txt -o SRR12554985_align_PasseriformesReference.fas -n 0 -c SRR12554985_cons_PasseriformesReference.fas -t 0.5 -r 1 -C 2
 ```
 
 ```{r, eval=TRUE}
-../MitoGeneExtractor-v1.9.1 -d SRR12554985_trimmed_reduced.fas -p ../Amino-Acide-references-for-tanomic-groups/COI-vertebrata-protein-consensus-50_whole.fasta -V vulgar-SRR12554985_vertebrateReference.txt -o SRR12554985_align_vertebrateReference.fas -n 0 -c SRR12554985_cons_vertebrateReference.fas -t 0.5 -r 1 -C 2
+../MitoGeneExtractor-v1.9.3 -d SRR12554985_trimmed_reduced.fas -p ../Amino-Acid-references-for-taxonomic-groups/COI-references/COI-fulllength-general-vertebrata-protein-reference_from-consensus-50.fasta -V vulgar-SRR12554985_vertebrateReference.txt -o SRR12554985_align_vertebrateReference.fas -n 0 -c SRR12554985_cons_vertebrateReference.fas -t 0.5 -r 1 -C 2
 ```
 
-Note that if you move the example folder or your data to a different location, the path to the MitoGeneExtractor-v1.9.1 program and/or the path to the reference sequences have to be changed accordingly.
+Note that if you move the example folder or your data to a different location, the path to the MitoGeneExtractor-v1.9.3 program and/or the path to the reference sequences have to be changed accordingly.
 
 The options used in this example are described in detail in the [main README.md](https://github.com/cmayer/MitoGeneExtractor) or when calling the program with the option -h:
 ```{r, eval=TRUE}

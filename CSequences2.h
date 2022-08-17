@@ -14,12 +14,11 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-
+// Next general goal: Use size_t instead of unsigned int for array sizes.
 
 
 #ifndef  CSEQUENCES2_H
 #define  CSEQUENCES2_H
-
 #include <vector>
 #include <map>
 #include "faststring2.h"
@@ -336,7 +335,8 @@ private:
   std::vector<CSequence_Mol*>   seqData;             // The vector of pointers to sequences
 
   // Map of short names. Only makes sense if the short names are unique!
-  std::map<faststring, CSequence_Mol*> sn_map;       // Obtain pointer to the sequence by sequence name.
+  std::map<faststring, CSequence_Mol*> sn_map;       // Obtain pointer to the sequence by sequence name. Is map of short names.
+                                                     // Short names are normal names
   bool                      short_names_unique;  // The short_name is the name before the first space or the full name if the name has no spaces.
   
   void add_seq(CSequence_Mol* seq)
@@ -509,7 +509,7 @@ public:
   }
 
 
-  CSequence_Mol* get_seq_by_name(faststring name)
+  CSequence_Mol* get_seq_by_name(faststring name) // Must be short name.
   {
     // Test code:
     {
@@ -553,7 +553,7 @@ public:
     }
   }
 
- const char* get_Seq_Name(unsigned id)
+  const char* get_Seq_Name(unsigned id)
   {
     if (id >= seqData.size())
     {    
@@ -565,7 +565,7 @@ public:
     }
   }
 
- const char* get_Seq_FullName(unsigned id)
+  const char* get_Seq_FullName(unsigned id)
   {
     if (id >= seqData.size())
     {    
@@ -593,7 +593,7 @@ public:
     return seqData[TaxaIndex]->get_pos(PosIndex);
   }
   
-   void print_DEBUG(std::ostream &os, unsigned flag=1)
+  void print_DEBUG(std::ostream &os, unsigned flag=1)
   {
     if (flag & 1) // scalars:
     {
@@ -710,39 +710,39 @@ public:
      }
   }
   
-   // Returns the maximum sequence, length
-   void get_sequence_names(std::vector<faststring> &snames)
-   {
-     snames.clear();
-     snames.reserve(taxaNum);
-     unsigned  i;
-     //     unsigned  max=0;
+  // Returns the maximum sequence, length
+  void get_sequence_names(std::vector<faststring> &snames)
+  {
+    snames.clear();
+    snames.reserve(taxaNum);
+    unsigned  i;
+    //     unsigned  max=0;
 
-     for (i=0; i < taxaNum; ++i)
-     {
-       snames.push_back(seqData[i]->getFullName());
-/*        if (snames[i].size() > max) */
-/*        { */
-/* 	 max = snames[i].size(); */
-/*        } */
-     }
-     //     return max;
-   }
+    for (i=0; i < taxaNum; ++i)
+    {
+      snames.push_back(seqData[i]->getFullName());
+      /*        if (snames[i].size() > max) */
+      /*        { */
+      /* 	 max = snames[i].size(); */
+      /*        } */
+    }
+    //     return max;
+  }
 
-   // Not yet implemented
-/*    void unique_full_names(std::vector<faststring> &snames) */
-/*    { */
-     
-/*    } */
+  // Not yet implemented
+  /*    void unique_full_names(std::vector<faststring> &snames) */
+  /*    { */
+  
+  /*    } */
+  
+  // Not yet implemented
+  /*    void unique_short_names(std::vector<faststring> &snames) */
+  /*    { */
+  
+  /*    } */
 
-   // Not yet implemented
-/*    void unique_short_names(std::vector<faststring> &snames) */
-/*    { */
-     
-/*    } */
-
-
-/*
+  
+  /*
    void unique_maxlen_names(std::vector<faststring> &snames, int ulen=10)
    {
      snames.clear();
@@ -881,333 +881,608 @@ public:
    }
 */
 
-   unsigned PairwiseSequenceSymbolMatches(unsigned taxon1, unsigned taxon2,
-					  char     numDistCharacters,
-					  const signed char* pos_vec,
-					  signed char* match_vec) const
-   {
-     unsigned  count    = 0;
-     unsigned  pos;
+  unsigned PairwiseSequenceSymbolMatches(unsigned taxon1, unsigned taxon2,
+					 char     numDistCharacters,
+					 const signed char* pos_vec,
+					 signed char* match_vec) const
+  {
+    unsigned  count    = 0;
+    unsigned  pos;
      
-     for (pos = 0; pos < posNum; ++pos)
-     {
-       if (pos_vec[pos]  &&
-	   seqData[taxon1]->get_pos(pos) == seqData[taxon2]->get_pos(pos) &&
-	   seqData[taxon1]->get_pos(pos) < numDistCharacters)
-       {
-	 ++count;
-	 match_vec[pos] = 1;
-       }
-       else
-	 match_vec[pos] = 0;
-     }
-     return count;
-   }
+    for (pos = 0; pos < posNum; ++pos)
+    {
+      if (pos_vec[pos]  &&
+	  seqData[taxon1]->get_pos(pos) == seqData[taxon2]->get_pos(pos) &&
+	  seqData[taxon1]->get_pos(pos) < numDistCharacters)
+      {
+	++count;
+	match_vec[pos] = 1;
+      }
+      else
+	match_vec[pos] = 0;
+    }
+    return count;
+  }
    
  
-   unsigned PairwiseSequenceSymbolMatches(
-					  unsigned taxon1,
-					  const faststring & ref_seq,
-					  char               numDistCharacters,
-					  const signed char* pos_vec,
-					  signed char* match_vec) const
+  unsigned PairwiseSequenceSymbolMatches(
+					 unsigned taxon1,
+					 const faststring & ref_seq,
+					 char               numDistCharacters,
+					 const signed char* pos_vec,
+					 signed char* match_vec) const
   
-
-   // Ist hier alles OK?????????????????????????????????????????
-   {
-     unsigned  count    = 0;
-     unsigned  pos;
+  // Ist hier alles OK?????????????????????????????????????????
+  {
+    unsigned  count    = 0;
+    unsigned  pos;
      
-     for (pos = 0; pos < posNum; ++pos)
-     {
-       if (pos_vec[pos]  &&  seqData[taxon1]->get_pos(pos) == ref_seq[pos]
-	              &&  ref_seq[pos] < numDistCharacters)
-       {
-	 ++count;
-	 match_vec[pos] = 1;
-       }
-       else
-	 match_vec[pos] = 0;
-     }
-     return count;
-   }
+    for (pos = 0; pos < posNum; ++pos)
+    {
+      if (pos_vec[pos]  &&  seqData[taxon1]->get_pos(pos) == ref_seq[pos]
+	                &&  ref_seq[pos] < numDistCharacters)
+      { 
+	++count;
+	match_vec[pos] = 1;
+      } 
+      else
+	match_vec[pos] = 0;
+    }
+    return count;
+  }
    
-   // Only works for recoded sequences!!!!
-   void     ConsensusSequence(faststring&           conSeq,
-			      const CSplit&         setOfTaxa,
-			      char                  numDistCharacters,
-			      unsigned              numSymbols,
-			      double                consensusThreshold )
-   {
-     unsigned          pos;
-     unsigned          taxon, maxindex, equalindex;
-     unsigned          taxaCount = 0;
-     unsigned          consensusSymMinimum;
-     char              i;
+  // Only works for recoded sequences!!!!
+  void     ConsensusSequence(faststring&           conSeq,
+			     const CSplit&         setOfTaxa,
+			     char                  numDistCharacters,
+			     unsigned              numSymbols,
+			     double                consensusThreshold )
+  {
+    unsigned          pos;
+    unsigned          taxon, maxindex, equalindex;
+    unsigned          taxaCount = 0;
+    unsigned          consensusSymMinimum;
+    char              i;
 
-
-     std::vector<unsigned>  counterSymbolsVec(numSymbols,0);
+    std::vector<unsigned>  counterSymbolsVec(numSymbols,0);
      
-     for (pos=0; pos < posNum; ++pos)
-     {
-       // Initialise variable
-       taxaCount = 0;
-       for (i=0; i < numDistCharacters; ++i)
-	 counterSymbolsVec[i] = 0;
+    for (pos=0; pos < posNum; ++pos)
+    {
+      // Initialise variable
+      taxaCount = 0;
+      for (i=0; i < numDistCharacters; ++i)
+	counterSymbolsVec[i] = 0;
        
-       // Count number of occuring symbols for this position over all taxa
-       for (taxon = 0; taxon < taxaNum; ++taxon)
-       {
-	 if (setOfTaxa.test(taxon))
-	 {
-	   ++taxaCount;
-	   ++counterSymbolsVec[seqData[taxon]->get_pos(pos)];
-	 }
-       }
+      // Count number of occuring symbols for this position over all taxa
+      for (taxon = 0; taxon < taxaNum; ++taxon)
+      {
+	if (setOfTaxa.test(taxon))
+	{
+	  ++taxaCount;
+	  ++counterSymbolsVec[seqData[taxon]->get_pos(pos)];
+	}
+      }
        
-       consensusSymMinimum = (unsigned) std::ceil(consensusThreshold * taxaCount);
+      consensusSymMinimum = (unsigned) std::ceil(consensusThreshold * taxaCount);
        
-       maxindex = 0;
-       equalindex = numDistCharacters;
-       for (i = 1; i < numDistCharacters; ++i)
-       {
-	 if (counterSymbolsVec[i] >= counterSymbolsVec[maxindex])
-	 {
-	   if (counterSymbolsVec[i] == counterSymbolsVec[maxindex])
-	     equalindex = i;
-	   maxindex = i;
-	 }
-       }
-       if (counterSymbolsVec[maxindex] >= consensusSymMinimum &&
-	   maxindex != equalindex)
-	 conSeq[pos] = maxindex;
-       else // Default value, in case consensus cannot be determined
-	 conSeq[pos] = numDistCharacters;
-     }
-   }
+      maxindex = 0;
+      equalindex = numDistCharacters;
+      for (i = 1; i < numDistCharacters; ++i)
+      {
+	if (counterSymbolsVec[i] >= counterSymbolsVec[maxindex])
+	{
+	  if (counterSymbolsVec[i] == counterSymbolsVec[maxindex])
+	    equalindex = i;
+	  maxindex = i;
+	}
+      }
+      if (counterSymbolsVec[maxindex] >= consensusSymMinimum &&
+	  maxindex != equalindex)
+	conSeq[pos] = maxindex;
+      else // Default value, in case consensus cannot be determined
+	conSeq[pos] = numDistCharacters;
+    }
+  }
 
   // This version works for any kind of sequence, not only for recoded sequences.
   // See also special version for DNA sequences with additional features. 
   void     ConsensusSequence(faststring&           conSeq,
-			      double                consensusThreshold,
-			      char                  default_char = '\0')
-   {
-     unsigned          pos;
-     unsigned          taxon, maxindex, equalindex;
-     unsigned          taxaCount = 0;
-     unsigned          consensusSymMinimum;
-     unsigned char              i;
+			     double                consensusThreshold,
+			     char                  default_char = '\0')
+  {
+    unsigned          pos;
+    unsigned          taxon, maxindex, equalindex;
+    unsigned          taxaCount = 0;
+    unsigned          consensusSymMinimum;
+    unsigned char     i;
 
-     conSeq.clear();
+    // 
+    const char        **seq_strs;  
+    seq_strs = new const char* [taxaNum];
+    for (unsigned seq_index=0; seq_index<taxaNum; ++seq_index)
+    {
+      seq_strs[seq_index] =  get_Seq_Data(seq_index);
+    }
+    
+    conSeq.clear();
 
-     if (default_char == '\0')
-     {
-       if (get_datatype() == CSequence_Mol::dna && default_char == '\0')
-       {
-	 default_char = 'N';
-       }
-       else if (get_datatype() == CSequence_Mol::protein)
-       {
-	 default_char = 'X';
-       }
-     }
+    if (default_char == '\0')
+    {
+      if (get_datatype() == CSequence_Mol::dna && default_char == '\0')
+      {
+	default_char = 'N';
+      }
+      else if (get_datatype() == CSequence_Mol::protein)
+      {
+	default_char = 'X';
+      }
+    }
 
+    //     std::cout << "Default char is: " << default_char << '\n';
 
-     //     std::cout << "Default char is: " << default_char << '\n';
+    unsigned  *counterSymbolsVec = new unsigned[256];
 
-     unsigned  *counterSymbolsVec = new unsigned[256];
+    for (pos=0; pos < posNum; ++pos)
+    {
+      //       std::cout << "--- \n";
 
-     for (pos=0; pos < posNum; ++pos)
-     {
-       //       std::cout << "--- \n";
+      // Initialise variable
+      taxaCount = 0;
+      std::memset(counterSymbolsVec, 0, 256*sizeof(unsigned));
 
-       // Initialise variable
-       taxaCount = 0;
-       std::memset(counterSymbolsVec, 0, 256*sizeof(unsigned));
-       
-       // Count number of occuring symbols for this position over all taxa
-       for (taxon = 0; taxon < taxaNum; ++taxon)
-       {
-	 char c = toupper_lookup[(unsigned char)seqData[taxon]->get_pos(pos)];
-	 ++counterSymbolsVec[(unsigned char)c];
-	 //	 std::cout << "Counting << " << c << " in this column " << counterSymbolsVec[c] << '\n';
-       }
+      unsigned char c;
+      
+      // Count number of occuring symbols for this position over all taxa
+      for (taxon = 0; taxon < taxaNum; ++taxon)
+      {
+	//	char c = toupper_lookup[(unsigned char)seqData[taxon]->get_pos(pos)];
+	c = (unsigned char)seq_strs[taxon][pos];
+	++counterSymbolsVec[(unsigned char)c];
+	//	 std::cout << "Counting << " << c << " in this column " << counterSymbolsVec[c] << '\n';
+      }
 
-       // All gaps
-       if (taxaNum == counterSymbolsVec[(unsigned char)'-'])
-       {
-	 conSeq.push_back('-');
-       }
-       else
-       {
-	 taxaCount = taxaNum - counterSymbolsVec[(unsigned char)'-'];
-	 consensusSymMinimum = (unsigned) std::ceil(consensusThreshold * taxaCount);
+      // All gaps
+      if (taxaNum == counterSymbolsVec[(unsigned char)'-'])
+      {
+	conSeq.push_back('-');
+      }
+      else
+      {
+	taxaCount = taxaNum - counterSymbolsVec[(unsigned char)'-'];
+	consensusSymMinimum = (unsigned) std::ceil(consensusThreshold * taxaCount);
 
-	 maxindex = 0;
-	 equalindex = UINT_MAX;
+	maxindex = 0;
+	equalindex = UINT_MAX;
 
-	 for (i = 0; i < 254; ++i)
-	 {
-	   if (counterSymbolsVec[i] >= counterSymbolsVec[maxindex] && i != '-')
-	   {
-	     if (counterSymbolsVec[i] == counterSymbolsVec[maxindex])
-	       equalindex = i;
-	     maxindex = i;
-	   }
-	 }
-	 //	 std::cout << "Pos: " << pos << " maxindex: " << (char) maxindex << " equalindex " << (char)equalindex << '\n';
-	 if (counterSymbolsVec[maxindex] >= consensusSymMinimum && maxindex != equalindex)
-	   conSeq.push_back(maxindex);
-	 else // Default value, in case consensus cannot be determined
-	   conSeq.push_back(default_char);
-       }
-       //       std::cout << "conSeq: " << conSeq << '\n';
-     }
-     delete [] counterSymbolsVec;
-   }
+	for (i = 0; i < 254; ++i)
+	{
+	  if (counterSymbolsVec[i] >= counterSymbolsVec[maxindex] && i != '-')
+	  {
+	    if (counterSymbolsVec[i] == counterSymbolsVec[maxindex])
+	      equalindex = i;
+	    maxindex = i;
+	  }
+	}
+	//	 std::cout << "Pos: " << pos << " maxindex: " << (char) maxindex << " equalindex " << (char)equalindex << '\n';
+	if (counterSymbolsVec[maxindex] >= consensusSymMinimum && maxindex != equalindex)
+	  conSeq.push_back(maxindex);
+	else // Default value, in case consensus cannot be determined
+	  conSeq.push_back(default_char);
+      }
+      //       std::cout << "conSeq: " << conSeq << '\n';
+    }
+    delete [] counterSymbolsVec;
+  }
 
-   void     ConsensusSequence_DNA(faststring&           conSeq,
-				  double                consensusThreshold,
-				  unsigned              minimum_uppercase_coverage,
-				  unsigned              minimum_total_coverage,
-				  char                  default_char = '\0')
+  void     ConsensusSequence_DNA(faststring&           conSeq,
+				 double                consensusThreshold,
+				 unsigned              minimum_uppercase_coverage,
+				 unsigned              minimum_total_coverage,
+				 char                  default_char = '\0')
 
   {
     ConsensusSequence_DNA(conSeq, consensusThreshold, minimum_uppercase_coverage, minimum_total_coverage, NULL, default_char='\0');
   }
   
 
-   void     ConsensusSequence_DNA(faststring&           conSeq,
-				  double                consensusThreshold,
-				  unsigned              minimum_uppercase_coverage,
-				  unsigned              minimum_total_coverage,
-				  std::vector<unsigned> *Pointer_coverage_vec,
-				  char                  default_char = '\0')
+  void     ConsensusSequence_DNA(faststring&           conSeq,
+				 double                consensusThreshold,
+				 unsigned              minimum_uppercase_coverage,
+				 unsigned              minimum_total_coverage,
+				 std::vector<unsigned> *Pointer_coverage_vec,
+				 char                  default_char = '\0')
   {
-     unsigned          pos;
-     unsigned          taxon;
-     unsigned          taxaCount = 0;
-     unsigned          consensusSymMinimum;
+    unsigned          pos;
+    unsigned          taxon;
+    unsigned          taxaCount = 0;
+    unsigned          consensusSymMinimum;
 
-     conSeq.clear();
-     if (Pointer_coverage_vec)
-       Pointer_coverage_vec->clear();
+    // 
+    const char        **seq_strs;  
+    seq_strs = new const char* [taxaNum];
+    for (unsigned seq_index=0; seq_index<taxaNum; ++seq_index)
+    {
+      seq_strs[seq_index] =  get_Seq_Data(seq_index);
+    }
+    
+    conSeq.clear();
+    if (Pointer_coverage_vec)
+      Pointer_coverage_vec->clear();
+
+    if (default_char == '\0')
+    {
+      default_char = 'N';
+    }
+
+    //     std::cout << "Default char is: " << default_char << '\n';
+
+    unsigned  *counterSymbolsVec = new unsigned[256];
+    std::memset(counterSymbolsVec, 0, 256*sizeof(unsigned));
      
-     if (default_char == '\0')
-     {
-       default_char = 'N';
-     }
+    for (pos=0; pos < posNum; ++pos)
+    {
+      //       std::cout << "--- \n";
 
-     //     std::cout << "Default char is: " << default_char << '\n';
+      // Initialise variable
+      taxaCount = 0;
 
-     unsigned  *counterSymbolsVec = new unsigned[256];
-     std::memset(counterSymbolsVec, 0, 256*sizeof(unsigned));
-     
-     for (pos=0; pos < posNum; ++pos)
-     {
-       //       std::cout << "--- \n";
+      unsigned char c;
 
-       // Initialise variable
-       taxaCount = 0;
-       
-       // Count number of occuring symbols for this position over all taxa
-       for (taxon = 0; taxon < taxaNum; ++taxon)
-       {
-	 char c = (unsigned char)seqData[taxon]->get_pos(pos);
-	 ++counterSymbolsVec[(unsigned char)c];
-	 //	 std::cout << "Counting << " << c << " in this column " << counterSymbolsVec[c] << '\n';
-       }
+      // Count number of occuring symbols for this position over all taxa
+      for (taxon = 0; taxon < taxaNum; ++taxon)
+      {
+	//	char c = toupper_lookup[(unsigned char)seqData[taxon]->get_pos(pos)];
+	c = (unsigned char)seq_strs[taxon][pos];
+	++counterSymbolsVec[(unsigned char)c];
+	//	 std::cout << "Counting << " << c << " in this column " << counterSymbolsVec[c] << '\n';
+      }
 
-       // All gaps
-       if (taxaNum == counterSymbolsVec[(unsigned char)'-'])
-       {
-	 conSeq.push_back('-');
-       }
-       else
-       {
-	 unsigned cA = counterSymbolsVec[(unsigned char)'A']+counterSymbolsVec[(unsigned char)'a'];
-	 unsigned cC = counterSymbolsVec[(unsigned char)'C']+counterSymbolsVec[(unsigned char)'c'];
-	 unsigned cG = counterSymbolsVec[(unsigned char)'G']+counterSymbolsVec[(unsigned char)'g'];
-	 unsigned cT = counterSymbolsVec[(unsigned char)'T']+counterSymbolsVec[(unsigned char)'t'];
-	 //	 unsigned cN = counterSymbolsVec[(unsigned char)'N']+counterSymbolsVec[(unsigned char)'n'];
+      // All gaps
+      if (taxaNum == counterSymbolsVec[(unsigned char)'-'])
+      {
+	conSeq.push_back('-');
+      }
+      else
+      {
+	unsigned cA     = counterSymbolsVec[(unsigned char)'A']+counterSymbolsVec[(unsigned char)'a'];
+	unsigned cC     = counterSymbolsVec[(unsigned char)'C']+counterSymbolsVec[(unsigned char)'c'];
+	unsigned cG     = counterSymbolsVec[(unsigned char)'G']+counterSymbolsVec[(unsigned char)'g'];
+	unsigned cT     = counterSymbolsVec[(unsigned char)'T']+counterSymbolsVec[(unsigned char)'t'];
+	unsigned ctilde = counterSymbolsVec[(unsigned char)'~'];
+	//	 unsigned cN = counterSymbolsVec[(unsigned char)'N']+counterSymbolsVec[(unsigned char)'n'];
 
-	 /*	 
-	 if (verbosity > 0)
-	 {
-	   std::cout << "Consensus at index: " << pos << '\n';
-	   std::cout << cA << " " << cC << " " << cG << " " << cT << '\n';
-	   std::cout << counterSymbolsVec[(unsigned char)'A'] << " " << counterSymbolsVec[(unsigned char)'a'] << '\n';
-	   std::cout << counterSymbolsVec[(unsigned char)'C'] << " " << counterSymbolsVec[(unsigned char)'c'] << '\n';
-	   std::cout << counterSymbolsVec[(unsigned char)'G'] << " " << counterSymbolsVec[(unsigned char)'g'] << '\n';
-	   std::cout << counterSymbolsVec[(unsigned char)'T'] << " " << counterSymbolsVec[(unsigned char)'t'] << '\n';
-	 }
-	 */
-	 
-	 taxaCount = cA + cC + cG + cT;
-	 consensusSymMinimum = (unsigned) std::ceil(consensusThreshold * taxaCount);
+	/*	 
+		 if (verbosity > 0)
+		 {
+		 std::cout << "Consensus at index: " << pos << '\n';
+		 std::cout << cA << " " << cC << " " << cG << " " << cT << '\n';
+		 std::cout << counterSymbolsVec[(unsigned char)'A'] << " " << counterSymbolsVec[(unsigned char)'a'] << '\n';
+		 std::cout << counterSymbolsVec[(unsigned char)'C'] << " " << counterSymbolsVec[(unsigned char)'c'] << '\n';
+		 std::cout << counterSymbolsVec[(unsigned char)'G'] << " " << counterSymbolsVec[(unsigned char)'g'] << '\n';
+		 std::cout << counterSymbolsVec[(unsigned char)'T'] << " " << counterSymbolsVec[(unsigned char)'t'] << '\n';
+		 }
+	*/
 
-	 if (consensusSymMinimum < minimum_total_coverage)
-	   consensusSymMinimum = minimum_total_coverage;
-	 
-	 if (cA > cC && cA > cG && cA > cT)
-	 {
-	   if (cA >= consensusSymMinimum && counterSymbolsVec[(unsigned char)'A'] >= minimum_uppercase_coverage)
-	     conSeq.push_back('A');
-	   else
-	     conSeq.push_back(default_char);
-	 }
-	 else if (cC > cA && cC > cG && cC > cT)
-	 {
-	   if (cC >= consensusSymMinimum && counterSymbolsVec[(unsigned char)'C'] >= minimum_uppercase_coverage)
-	     conSeq.push_back('C');
-	   else
-	     conSeq.push_back(default_char);
-	 }
-	 else if (cG > cA && cG > cC && cG > cT)
-	 {
-	   if (cG >= consensusSymMinimum && counterSymbolsVec[(unsigned char)'G'] >= minimum_uppercase_coverage)
-	     conSeq.push_back('G');
-	   else
-	     conSeq.push_back(default_char);
-	 }
-	 else if (cT > cA && cT > cC && cT > cG)
-	 {
-	   if (cT >= consensusSymMinimum && counterSymbolsVec[(unsigned char)'T'] >= minimum_uppercase_coverage)
-	     conSeq.push_back('T');
-	   else
-	     conSeq.push_back(default_char);
-	 }
-	 else // No consensus, the larger two or more are equal
-	 {
-	   conSeq.push_back(default_char);
-	 }
-	 /*
-	 if (verbosity > 0)
-	 {
-	   std::cout << "Decision: " << conSeq.back() << '\n';
-	 }
-	 */
-       } // END else of all gaps
-       //       std::cout << "conSeq: " << conSeq << '\n';
+	taxaCount = cA + cC + cG + cT + ctilde;
+	consensusSymMinimum = (unsigned) std::ceil(consensusThreshold * taxaCount);
 
+	if (consensusSymMinimum < minimum_total_coverage)
+	  consensusSymMinimum = minimum_total_coverage;
 
-       if (Pointer_coverage_vec)
-	 Pointer_coverage_vec->push_back(taxaCount);
+	if (cA > cC && cA > cG && cA > cT && cA > ctilde)
+	{
+	  if (cA >= consensusSymMinimum && counterSymbolsVec[(unsigned char)'A'] >= minimum_uppercase_coverage)
+	    conSeq.push_back('A');
+	  else
+	    conSeq.push_back(default_char);
+	}
+	else if (cC > cA && cC > cG && cC > cT && cC > ctilde)
+	{
+	  if (cC >= consensusSymMinimum && counterSymbolsVec[(unsigned char)'C'] >= minimum_uppercase_coverage)
+	    conSeq.push_back('C');
+	  else
+	    conSeq.push_back(default_char);
+	}
+	else if (cG > cA && cG > cC && cG > cT && cG > ctilde)
+	{
+	  if (cG >= consensusSymMinimum && counterSymbolsVec[(unsigned char)'G'] >= minimum_uppercase_coverage)
+	    conSeq.push_back('G');
+	  else
+	    conSeq.push_back(default_char);
+	}
+	else if (cT > cA && cT > cC && cT > cG && cT > ctilde)
+	{
+	  if (cT >= consensusSymMinimum && counterSymbolsVec[(unsigned char)'T'] >= minimum_uppercase_coverage)
+	    conSeq.push_back('T');
+	  else
+	    conSeq.push_back(default_char);
+	}
+	else if (ctilde > cA && ctilde > cC && ctilde > cG && ctilde > cT)
+	{
+	  if (ctilde >= consensusSymMinimum && ctilde >= minimum_uppercase_coverage)
+	    conSeq.push_back('~');
+	  else
+	    conSeq.push_back(default_char);
+	}
+	else // No consensus, the larger two or more are equal
+	{
+	  conSeq.push_back(default_char);
+	}
+	/*
+	  if (verbosity > 0)
+	  {
+	  std::cout << "Decision: " << conSeq.back() << '\n';
+	  }
+	*/
+      } // END else of all gaps
+      //       std::cout << "conSeq: " << conSeq << '\n';
 
-       // Reset the counter array:
-       counterSymbolsVec[(unsigned char)'A'] = 0;
-       counterSymbolsVec[(unsigned char)'a'] = 0;
-       counterSymbolsVec[(unsigned char)'C'] = 0;
-       counterSymbolsVec[(unsigned char)'c'] = 0;
-       counterSymbolsVec[(unsigned char)'G'] = 0;
-       counterSymbolsVec[(unsigned char)'g'] = 0;
-       counterSymbolsVec[(unsigned char)'T'] = 0;
-       counterSymbolsVec[(unsigned char)'t'] = 0;
-       counterSymbolsVec[(unsigned char)'-'] = 0;
+      if (Pointer_coverage_vec)
+	Pointer_coverage_vec->push_back(taxaCount);
 
-     } // END for (pos=0; pos < posNum; ++pos)
-     delete [] counterSymbolsVec;
-   } // END  void     ConsensusSequence_DNA(...)
+      // Reset the counter array:
+      counterSymbolsVec[(unsigned char)'A'] = 0;
+      counterSymbolsVec[(unsigned char)'a'] = 0;
+      counterSymbolsVec[(unsigned char)'C'] = 0;
+      counterSymbolsVec[(unsigned char)'c'] = 0;
+      counterSymbolsVec[(unsigned char)'G'] = 0;
+      counterSymbolsVec[(unsigned char)'g'] = 0;
+      counterSymbolsVec[(unsigned char)'T'] = 0;
+      counterSymbolsVec[(unsigned char)'t'] = 0;
+      counterSymbolsVec[(unsigned char)'-'] = 0;
+      counterSymbolsVec[(unsigned char)'~'] = 0;
+
+    } // END for (pos=0; pos < posNum; ++pos)
+    delete [] counterSymbolsVec;
+  } // END  void     ConsensusSequence_DNA(...)
+
+  
+  void     WeightedConsensusSequence_DNA(faststring&           conSeq,
+					 float                 consensusThreshold,
+					 unsigned              minimum_uppercase_coverage,
+					 unsigned              minimum_total_coverage,
+					 std::vector<unsigned> *Pointer_coverage_vec,
+					 unsigned char         ends_width_with_lower_weight,
+					 unsigned char         fraction_ends_weight,
+					 char                  default_char = '\0')
+  {
+    //    size_t            pos;
+    //    size_t            taxon;
+    size_t            taxaCount = 0;
+    float             weightCount = 0;
+    float             consensusWeightMinimum;
+
+    char              *weights;
+    const char        **seq_strs;  
+    int               count_ends_nuc;
+
+    float             one_over_fractiion_ends_weight = 1.0/fraction_ends_weight;
+
+    size_t            tNum = taxaNum;
+    size_t            pNum = posNum;
+    size_t            weights_size = tNum*pNum;
+    
+    weights = new char [weights_size];
+    std::memset(weights, 1, weights_size);
+
+    seq_strs = new const char* [tNum];
+    for (size_t seq_index=0; seq_index<tNum; ++seq_index)
+    {
+      seq_strs[seq_index] =  get_Seq_Data(seq_index);
+
+      count_ends_nuc=0;
+      for (size_t pos=0; pos < pNum; ++pos)
+      {
+	weights[seq_index * pNum + pos] = fraction_ends_weight;
+	if (seq_strs[seq_index][pos] != '-')
+	  ++count_ends_nuc;
+	if (count_ends_nuc == ends_width_with_lower_weight)
+	  break;
+      }
+
+      count_ends_nuc=0;
+      for (size_t pos=pNum-1; pos > 0; --pos) // pos > 0 is correct. We will break before pos == 0.
+      {
+	weights[seq_index * pNum + pos] = fraction_ends_weight;
+	if (seq_strs[seq_index][pos] != '-')
+	  ++count_ends_nuc;
+	if (count_ends_nuc == ends_width_with_lower_weight)
+	  break;
+      }
+    }
+
+    if (0)
+    {
+      std::cerr << "DEBUG OUTPUT: Weight matrix:\n"; 
+      for (size_t seq_index=0; seq_index<tNum; ++seq_index)
+      {
+	for (size_t pos=0; pos < pNum; ++pos)
+	{
+	  std::cerr << ((int)weights[seq_index*pNum+pos])%2;
+	}
+	std::cerr << '\n';
+      }
+      std::cerr << '\n';
+    }
+
+    conSeq.clear();
+    if (Pointer_coverage_vec)
+      Pointer_coverage_vec->clear();
+
+    if (default_char == '\0')
+    {
+      default_char = 'N';
+    }
+
+    //     std::cout << "Default char is: " << default_char << '\n';
+
+    unsigned  *counterSymbolsVec   = new unsigned[256];
+    float     *weightedCoverageVec = new float[256];
+    std::memset(counterSymbolsVec,   0, 256*sizeof(unsigned));
+    std::memset(weightedCoverageVec, 0, 256*sizeof(float));
+   
+    for (size_t pos=0; pos < pNum; ++pos)
+    {
+      //       std::cout << "--- \n";
+
+      // Initialise variable
+      taxaCount = 0;
+      weightCount = 0;
+
+      unsigned char c;
+      
+      // Count number of occuring symbols for this position over all taxa
+      for (size_t taxon = 0; taxon < tNum; ++taxon)
+      {
+	//	char c = (unsigned char)seqData[taxon]->get_pos(pos);
+	c = (unsigned char)seq_strs[taxon][pos];
+	++counterSymbolsVec[(unsigned char)c];
+	if (weights[taxon * pNum + pos] == fraction_ends_weight) // Use the weights:
+	  weightedCoverageVec[(unsigned char)c] += one_over_fractiion_ends_weight;
+	else
+	  weightedCoverageVec[(unsigned char)c] += 1;
+	//	 std::cout << "Counting << " << c << " in this column " << counterSymbolsVec[c] << '\n';
+      }
+
+      // All gaps
+      if (taxaNum == counterSymbolsVec[(unsigned char)'-'])
+      {
+	conSeq.push_back('-');
+      }
+      else
+      {
+	unsigned cA     = counterSymbolsVec[(unsigned char)'A']+counterSymbolsVec[(unsigned char)'a'];
+	unsigned cC     = counterSymbolsVec[(unsigned char)'C']+counterSymbolsVec[(unsigned char)'c'];
+	unsigned cG     = counterSymbolsVec[(unsigned char)'G']+counterSymbolsVec[(unsigned char)'g'];
+	unsigned cT     = counterSymbolsVec[(unsigned char)'T']+counterSymbolsVec[(unsigned char)'t'];
+	unsigned ctilde = counterSymbolsVec[(unsigned char)'~'];
+
+	float    wA     = weightedCoverageVec[(unsigned char)'A']+counterSymbolsVec[(unsigned char)'a'];
+	float    wC     = weightedCoverageVec[(unsigned char)'C']+counterSymbolsVec[(unsigned char)'c'];
+	float    wG     = weightedCoverageVec[(unsigned char)'G']+counterSymbolsVec[(unsigned char)'g'];
+	float    wT     = weightedCoverageVec[(unsigned char)'T']+counterSymbolsVec[(unsigned char)'t'];
+	float    wtilde = weightedCoverageVec[(unsigned char)'~'];
+
+	//	 unsigned cN = counterSymbolsVec[(unsigned char)'N']+counterSymbolsVec[(unsigned char)'n'];
+	/*	 
+		 if (verbosity > 0)
+		 {
+		 std::cout << "Consensus at index: " << pos << '\n';
+		 std::cout << cA << " " << cC << " " << cG << " " << cT << '\n';
+		 std::cout << counterSymbolsVec[(unsigned char)'A'] << " " << counterSymbolsVec[(unsigned char)'a'] << '\n';
+		 std::cout << counterSymbolsVec[(unsigned char)'C'] << " " << counterSymbolsVec[(unsigned char)'c'] << '\n';
+		 std::cout << counterSymbolsVec[(unsigned char)'G'] << " " << counterSymbolsVec[(unsigned char)'g'] << '\n';
+		 std::cout << counterSymbolsVec[(unsigned char)'T'] << " " << counterSymbolsVec[(unsigned char)'t'] << '\n';
+		 }
+	*/
+
+	taxaCount   = cA + cC + cG + cT + ctilde;
+	weightCount = wA + wC + wG + wT + wtilde;
+
+	consensusWeightMinimum = consensusThreshold * weightCount;
+
+	//	if (consensusWeightMinimum < minimum_total_coverage)
+	//	  consensusWeightMinimum = minimum_total_coverage;
+
+	if (0)
+	{
+	  std::cerr << "DEBUG call conensus at postions: " << pos << '\n';
+	  std::cerr << "cA:     " << cA      << '\n';
+	  std::cerr << "cC:     " << cC      << '\n';
+	  std::cerr << "cG:     " << cG      << '\n';
+	  std::cerr << "cT:     " << cT      << '\n';
+	  std::cerr << "ctilde: " << ctilde  << '\n';
+	  std::cerr << "wA:     " << wA      << '\n';
+	  std::cerr << "wC:     " << wC      << '\n';
+	  std::cerr << "wG:     " << wG      << '\n';
+	  std::cerr << "wT:     " << wT      << '\n';
+	  std::cerr << "wtilde: " << wtilde  << '\n';
+	  std::cerr << "taxaCount:                  " << taxaCount           << '\n';
+	  std::cerr << "weightCount:                " << weightCount         << '\n';
+	  std::cerr << "consensusWeightMinimum:     " << consensusWeightMinimum << '\n';
+	  std::cerr << "minimum_uppercase_coverage: " << minimum_uppercase_coverage << '\n';
+	  std::cerr << "minimum_total_coverage:     " << minimum_total_coverage << '\n';
+	}
+
+	
+	if (wA > wC && wA > wG && wA > wT && wA > wtilde)
+	{
+	  if (wA >= consensusWeightMinimum && counterSymbolsVec[(unsigned char)'A'] >= minimum_uppercase_coverage && cA >= minimum_total_coverage)
+	    conSeq.push_back('A');
+	  else
+	    conSeq.push_back(default_char);
+	}
+	else if (wC > wA && wC > wG && wC > wT && wC > wtilde)
+	{
+	  if (wC >= consensusWeightMinimum && counterSymbolsVec[(unsigned char)'C'] >= minimum_uppercase_coverage && cC >= minimum_total_coverage)
+	    conSeq.push_back('C');
+	  else
+	    conSeq.push_back(default_char);
+	}
+	else if (wG > wA && wG > wC && wG > wT && wG > wtilde)
+	{
+	  if (wG >= consensusWeightMinimum && counterSymbolsVec[(unsigned char)'G'] >= minimum_uppercase_coverage && cG >= minimum_total_coverage)
+	    conSeq.push_back('G');
+	  else
+	    conSeq.push_back(default_char);
+	}
+	else if (wT > wA && wT > wC && wT > wG && wT > wtilde)
+	{
+	  if (wT >= consensusWeightMinimum && counterSymbolsVec[(unsigned char)'T'] >= minimum_uppercase_coverage && cT >= minimum_total_coverage)
+	    conSeq.push_back('T');
+	  else
+	    conSeq.push_back(default_char);
+	}
+	else if (wtilde > wA && wtilde > wC && wtilde > wG && wtilde > wT)
+	{
+	  if (wtilde >= consensusWeightMinimum && ctilde >= minimum_uppercase_coverage && ctilde >= minimum_total_coverage)
+	    conSeq.push_back('~');
+	  else
+	    conSeq.push_back(default_char);
+	}
+	else // No consensus, the larger two or more are equal
+	{
+	  conSeq.push_back(default_char);
+	}
+	/*
+	  if (verbosity > 0)
+	  {
+	  std::cout << "Decision: " << conSeq.back() << '\n';
+	  }
+	*/
+      } // END else of all gaps
+      //       std::cout << "conSeq: " << conSeq << '\n';
+
+      if (Pointer_coverage_vec)
+	Pointer_coverage_vec->push_back(taxaCount);
+
+      // Reset the counter array:
+      counterSymbolsVec[(unsigned char)'A'] = 0;
+      counterSymbolsVec[(unsigned char)'a'] = 0;
+      counterSymbolsVec[(unsigned char)'C'] = 0;
+      counterSymbolsVec[(unsigned char)'c'] = 0;
+      counterSymbolsVec[(unsigned char)'G'] = 0;
+      counterSymbolsVec[(unsigned char)'g'] = 0;
+      counterSymbolsVec[(unsigned char)'T'] = 0;
+      counterSymbolsVec[(unsigned char)'t'] = 0;
+      counterSymbolsVec[(unsigned char)'-'] = 0;
+      counterSymbolsVec[(unsigned char)'~'] = 0;
+
+      weightedCoverageVec[(unsigned char)'A'] = 0;
+      weightedCoverageVec[(unsigned char)'a'] = 0;
+      weightedCoverageVec[(unsigned char)'C'] = 0;
+      weightedCoverageVec[(unsigned char)'c'] = 0;
+      weightedCoverageVec[(unsigned char)'G'] = 0;
+      weightedCoverageVec[(unsigned char)'g'] = 0;
+      weightedCoverageVec[(unsigned char)'T'] = 0;
+      weightedCoverageVec[(unsigned char)'t'] = 0;
+      weightedCoverageVec[(unsigned char)'-'] = 0;
+      weightedCoverageVec[(unsigned char)'~'] = 0;
+
+    } // END for (pos=0; pos < pNum; ++pos)
+    delete [] counterSymbolsVec;
+    delete [] weightedCoverageVec;
+  } // END  void     ConsensusSequence_DNA(...)
 
 
   // For unknown reasons, this version is slower. The differences were introduced with the intention to speed up
@@ -1215,102 +1490,100 @@ public:
   // Since we loop over the array anyway and compare all values once anyway, it could have been faster
   // to reset only the values that are !=0, but this does not seem to be the case.
   // This version works for any kind of sequence, not only for recoded sequences.
-   void     ConsensusSequence_slow(faststring&           conSeq,
-				   double                consensusThreshold,
-				   char                  default_char = '\0')
-   {
-     unsigned          pos;
-     unsigned          taxon, maxindex, equalindex, maxvalue;
-     unsigned          taxaCount = 0;
-     unsigned          consensusSymMinimum;
-     unsigned char              i;
+  void     ConsensusSequence_slow(faststring&           conSeq,
+				  double                consensusThreshold,
+				  char                  default_char = '\0')
+  {
+    //    unsigned          pos;
+    unsigned          taxon, maxindex, equalindex, maxvalue;
+    unsigned          taxaCount = 0;
+    unsigned          consensusSymMinimum;
+    unsigned char              i;
 
-     conSeq.clear();
+    conSeq.clear();
 
-     if (default_char == '\0')
-     {
-       if (get_datatype() == CSequence_Mol::dna && default_char == '\0')
-       {
-	 default_char = 'N';
-       }
-       else if (get_datatype() == CSequence_Mol::protein)
-       {
-	 default_char = 'X';
-       }
-     }
+    if (default_char == '\0')
+    {
+      if (get_datatype() == CSequence_Mol::dna && default_char == '\0')
+      {
+	default_char = 'N';
+      }
+      else if (get_datatype() == CSequence_Mol::protein)
+      {
+	default_char = 'X';
+      }
+    }
 
-     //     std::cout << "Default char is: " << default_char << '\n';
+    //     std::cout << "Default char is: " << default_char << '\n';
 
-     unsigned  *counterSymbolsVec = new unsigned[256];
-     std::memset(counterSymbolsVec, 0, 256*sizeof(unsigned));
-     
-     for (pos=0; pos < posNum; ++pos)
-     {
-       //       std::cout << "--- \n";
+    unsigned  *counterSymbolsVec = new unsigned[256];
+    std::memset(counterSymbolsVec, 0, 256*sizeof(unsigned));
 
-       // Initialise variable
-       taxaCount = 0;
+    for (size_t pos=0; pos < posNum; ++pos)
+    {
+      //       std::cout << "--- \n";
+
+      // Initialise variable
+      taxaCount = 0;
        
-       // Count number of occuring symbols for this position over all taxa
-       for (taxon = 0; taxon < taxaNum; ++taxon)
-       {
-	 char c = toupper_lookup[(unsigned char)seqData[taxon]->get_pos(pos)];
-	 ++counterSymbolsVec[(unsigned char)c];
-	 //	 std::cout << "Counting << " << c << " in this column " << counterSymbolsVec[c] << '\n';
-       }
+      // Count number of occuring symbols for this position over all taxa
+      for (taxon = 0; taxon < taxaNum; ++taxon)
+      {
+	char c = toupper_lookup[(unsigned char)seqData[taxon]->get_pos(pos)];
+	++counterSymbolsVec[(unsigned char)c];
+	//	 std::cout << "Counting << " << c << " in this column " << counterSymbolsVec[c] << '\n';
+      }
 
-       // All gaps
-       if (taxaNum == counterSymbolsVec[(unsigned char)'-'])
-       {
-	 conSeq.push_back('-');
-       }
-       else
-       {
-	 taxaCount = taxaNum - counterSymbolsVec[(unsigned char)'-'];
-	 consensusSymMinimum = (unsigned) std::ceil(consensusThreshold * taxaCount);
+      // All gaps
+      if (taxaNum == counterSymbolsVec[(unsigned char)'-'])
+      {
+	conSeq.push_back('-');
+      }
+      else
+      {
+	taxaCount = taxaNum - counterSymbolsVec[(unsigned char)'-'];
+	consensusSymMinimum = (unsigned) std::ceil(consensusThreshold * taxaCount);
 
-	 maxindex = 0;
+	maxindex = 0;
 	 
-	 equalindex = UINT_MAX;
+	equalindex = UINT_MAX;
 
-	 for (i = 0; i < 255; ++i)
-	 {
-	   if (counterSymbolsVec[i] != 0)
-	   {
-	     if (counterSymbolsVec[i] >= maxvalue && i != '-')
-	     {
-	       if (counterSymbolsVec[i] == maxvalue)
-		 equalindex = i;
-	       maxindex = i;
-	       maxvalue = counterSymbolsVec[i];
-	     }
-	     counterSymbolsVec[i] = 0;
-	   }
-	 }
-	 //	 std::cout << "Pos: " << pos << " maxindex: " << (char) maxindex << " equalindex " << (char)equalindex << '\n';
-	 if (maxvalue >= consensusSymMinimum && maxindex != equalindex)
-	   conSeq.push_back(maxindex);
-	 else // Default value, in case consensus cannot be determined
-	   conSeq.push_back(default_char);
-       }
-       //       std::cout << "conSeq: " << conSeq << '\n';
-     }
-     delete [] counterSymbolsVec;
-   }
-
+	for (i = 0; i < 255; ++i)
+	{
+	  if (counterSymbolsVec[i] != 0)
+	  {
+	    if (counterSymbolsVec[i] >= maxvalue && i != '-')
+	    {
+	      if (counterSymbolsVec[i] == maxvalue)
+		equalindex = i;
+	      maxindex = i;
+	      maxvalue = counterSymbolsVec[i];
+	    }
+	    counterSymbolsVec[i] = 0;
+	  }
+	}
+	//	 std::cout << "Pos: " << pos << " maxindex: " << (char) maxindex << " equalindex " << (char)equalindex << '\n';
+	if (maxvalue >= consensusSymMinimum && maxindex != equalindex)
+	  conSeq.push_back(maxindex);
+	else // Default value, in case consensus cannot be determined
+	  conSeq.push_back(default_char);
+      }
+      //       std::cout << "conSeq: " << conSeq << '\n';
+    }
+    delete [] counterSymbolsVec;
+  }
 
   
-
-   void GetSymbolFrequenciesAtPosition(unsigned pos, const CSplit &taxaSet,
-				       unsigned numSymbols,
-				       std::vector<unsigned>& frequencies)
-   {
-     unsigned i;
-     //  chartype sym;
+  void GetSymbolFrequenciesAtPosition(unsigned pos, const CSplit &taxaSet,
+				      unsigned numSymbols,
+				      std::vector<unsigned>& frequencies)
+  {
+    unsigned i;
+    //  chartype sym;
      
-     //  assert(frequencies.size() <= numDistCharacters);
+    //  assert(frequencies.size() <= numDistCharacters);
      
-     for (i=0; i<numSymbols; ++i)
+    for (i=0; i<numSymbols; ++i)
        frequencies[i]=0;
      
      for (i=0; i<taxaNum; ++i)
@@ -2713,11 +2986,15 @@ public:
    }
 
   // Determines unfiltered SNP sites: 
-  void determine_SNP_site(std::map<unsigned, faststring> &m, bool remove_gap_ambig_sites=true)
+  void determine_SNP_site(std::map<unsigned, std::pair<int, faststring> > &m, bool remove_gap_ambig_sites=true, int ref_seq=0)
   {
     m.clear();
     unsigned i, j;
-     
+    int      pos_in_ref;
+
+    unsigned gap_ambig_site_count = 0;
+    unsigned non_gap_ambig_site_count = 0;
+    
     // Here we will store pointers to all sequences for fast access:
     const char **tax = new const char* [taxaNum];
 
@@ -2730,22 +3007,29 @@ public:
       tax[j] = seqData[j]->getSeqStr();
     }
 
-    faststring tmp;
+    faststring pattern;
     bool contains_gap_ambig;
     bool is_SNP_site;
     char c0, c;
-
+    bool is_ref_gap_site;
+    
     // For all positions in alignment
-    for (i=0; i<posNum; ++i)
+    for (i=0, pos_in_ref=1; i<posNum; ++i)
     {
-      //      tmp.clear();
+      //      pattern.clear();
       contains_gap_ambig = false;
-      is_SNP_site = false;
-
+      is_SNP_site        = false;
+      is_ref_gap_site    = false;
+      
       // Faster version:
       if (datatype == CSequence_Mol::dna)
       {
 	c0 = tax[0][i];
+	if (tax[ref_seq][i] != '-')
+	  ++pos_in_ref;
+	else
+	  is_ref_gap_site = true;
+	
 	if (is_DNA_ambig(c0) || c0 == '-')
 	{
 	  contains_gap_ambig = true;
@@ -2767,6 +3051,11 @@ public:
       else if (datatype == CSequence_Mol::protein)
       {
 	c0 = tax[0][i];
+	if (tax[ref_seq][i] != '-')
+	  ++pos_in_ref;
+	else
+	  is_ref_gap_site = true;
+	
 	if (is_DNA_ambig(c0) || c0 == '-')
 	{
 	  contains_gap_ambig = true;
@@ -2787,19 +3076,33 @@ public:
       }
       else
       {
-	std::cout << "ERROR: Incompatible data type in determine_SNP_site member function of the CSequences class. Exiting.\n";
+	std::cout << "ERROR: Incompatible data type in determine_SNP_site member function of "
+	             "the CSequences class. Exiting.\n";
 	std::exit(0);
       }
 
+      std::pair<int, faststring> index_pattern_pair;
       if (is_SNP_site && !(contains_gap_ambig && remove_gap_ambig_sites) )
       {
-	tmp.clear();
+	pattern.clear();
 	for (j=0; j < taxaNum; ++j) // Copy all symbols to site pattern vector
 	{
 	  c = tax[j][i];
-	  tmp.push_back(c);
+	  pattern.push_back(c);
 	}
-	m.insert(m.end(), std::make_pair(i, tmp));
+
+	// Map entries are:
+	// If position has no gap in reference:
+	// (0-based index in alignment, (         1-based index in reference, pattern))
+	// If position has gap in reference:
+	// (0-based index in alignment, (negative 1-based index in reference, pattern))
+	// 1-based index <=0 indicate gap in reference. 0 for first SNPs at beginning with gap in ref.
+	
+	if (is_ref_gap_site)
+	  index_pattern_pair = std::make_pair(-(pos_in_ref-1), pattern);
+	else
+	  index_pattern_pair = std::make_pair(pos_in_ref-1, pattern);
+	m.insert(m.end(), std::make_pair(i, index_pattern_pair));
       }
     } // END: for all positions in alignment 
   }
@@ -3066,7 +3369,7 @@ public:
     if (end > posNum)
       end = posNum;
     
-    for (site_index = start; site_index < posNum; ++site_index)
+    for (site_index = start; site_index < end; ++site_index)
     {
       std::memset(symbols, 0, 256*sizeof(unsigned));
 
@@ -3083,19 +3386,72 @@ public:
       unsigned T    = symbols[(unsigned char)'T']+symbols[(unsigned char)'U'];
       // unsigned gaps = symbols[(int)'-'];
 
-       unsigned all = A+C+G+T;
+      unsigned all = A+C+G+T;
 
-       if (count_ambig)
-       {
-	 unsigned amb  = symbols[(unsigned char)'R']+symbols[(unsigned char)'Y']+symbols[(unsigned char)'S']+symbols[(unsigned char)'W']
-  	                +symbols[(unsigned char)'K']+symbols[(unsigned char)'M']+symbols[(unsigned char)'B']+symbols[(unsigned char)'D']
-	                +symbols[(unsigned char)'H']+symbols[(unsigned char)'V']+symbols[(unsigned char)'N']+symbols[(unsigned char)'?'];
-	 all += amb;
-       }
-       coverage.push_back(all);
-     }
-     delete [] seq_strs;
-   }
+      if (count_ambig)
+      {
+	unsigned amb  = symbols[(unsigned char)'R']+symbols[(unsigned char)'Y']+symbols[(unsigned char)'S']+symbols[(unsigned char)'W']
+      	               +symbols[(unsigned char)'K']+symbols[(unsigned char)'M']+symbols[(unsigned char)'B']+symbols[(unsigned char)'D']
+	               +symbols[(unsigned char)'H']+symbols[(unsigned char)'V']+symbols[(unsigned char)'N']+symbols[(unsigned char)'?'];
+	all += amb;
+      }
+      coverage.push_back(all);
+    }
+    delete [] seq_strs;
+  }
+
+
+  //  Returns a pointer to a 2D matrix with length of sequence number of columns and rows containing the number counts of: A, C, G, (T or U), (gap), ambig, '~', other i.e. 8 rows. 
+  //  The 2D array has a size of (posNum,8)
+  unsigned **get_DNA_site_profile()
+  {
+    unsigned   **profile = new unsigned*[posNum];
+    unsigned   symbols[256];
+    const char **seq_strs;       
+
+    seq_strs = new const char* [taxaNum];
+
+    for (unsigned seq_index=0; seq_index<taxaNum; ++seq_index)
+    {
+      seq_strs[seq_index] =  get_Seq_Data(seq_index);
+    }
+
+    for (unsigned site_index = 0; site_index < posNum; ++site_index)
+    {
+      std::memset(symbols, 0, 256*sizeof(unsigned));
+
+      for (unsigned seq_index = 0; seq_index < taxaNum; ++seq_index)
+      {
+	unsigned char c = seq_strs[seq_index][site_index];
+	c = toupper_lookup[c];
+	++symbols[c];
+      }
+
+      unsigned A     = symbols[(unsigned char)'A'];
+      unsigned C     = symbols[(unsigned char)'C'];
+      unsigned G     = symbols[(unsigned char)'G'];
+      unsigned T     = symbols[(unsigned char)'T']+symbols[(unsigned char)'U'];
+      unsigned amb   = symbols[(unsigned char)'R']+symbols[(unsigned char)'Y']+symbols[(unsigned char)'S']+symbols[(unsigned char)'W']
+	               +symbols[(unsigned char)'K']+symbols[(unsigned char)'M']+symbols[(unsigned char)'B']+symbols[(unsigned char)'D']
+	               +symbols[(unsigned char)'H']+symbols[(unsigned char)'V']+symbols[(unsigned char)'N']+symbols[(unsigned char)'?'];
+      unsigned gaps  = symbols[(int)'-'];
+      unsigned tilde = symbols[(int)'~'];
+      //      unsigned all_DNA = A+C+G+T;
+
+      profile[site_index] = new unsigned [7];
+
+      profile[site_index][0] = A; 
+      profile[site_index][1] = C;
+      profile[site_index][2] = G;
+      profile[site_index][3] = T;
+      profile[site_index][4] = gaps;
+      profile[site_index][5] = amb;
+      profile[site_index][6] = tilde;
+    }
+    delete [] seq_strs;
+    return profile;
+  } // END unsigned **get_DNA_site_profile()
+
 
   
    // Gets the data from *this object and stores the new sequences in seqs.

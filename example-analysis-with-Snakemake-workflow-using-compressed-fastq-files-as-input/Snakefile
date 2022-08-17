@@ -57,4 +57,4 @@ rule MitoGeneExtractor:
         c = "{sample}_vulgar.txt",
         d = "{sample}_vulgar.txt.log"
     shell:
-        "MitoGeneExtractor -d {input.DNA} -p {input.AA} -o {output.a} -c {output.b} -V {output.c} -n 0 -t 0.5 -r 1 
+        "MitoGeneExtractor-v1.9.3 -d {input.DNA} -p {input.AA} -o {output.a} -c {output.b} -V {output.c} -n 0 -t 0.5 -r 1 

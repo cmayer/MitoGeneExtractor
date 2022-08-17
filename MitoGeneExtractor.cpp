@@ -13,8 +13,12 @@
 #include <iomanip>
 #include <cstdio>
 #include "statistic_functions.h"
+/// #include <utility>
 
 using namespace std;
+
+typedef pair<unsigned, unsigned> Key;
+typedef map< Key , unsigned> Mymap;
 
 // Verbosity rules:
 //      verbosity 0 -> only error messages that lead to exit() (goes to cerr). Welcome is printed to cout. Parameters are printed to cout.
@@ -38,6 +42,27 @@ using namespace std;
 
 unsigned num_WARNINGS = 0;
 
+inline void add_or_count(Mymap &m, Key k)
+{
+  if (m.find(k) == m.end())
+    m.insert(make_pair(k,1));
+  else
+    ++m[k];
+}
+
+void print_Mymap(ostream &os, Mymap &m)
+{
+  Mymap::iterator it, it_end;
+
+  it     = m.begin();
+  it_end = m.end();
+
+  while (it != it_end)
+  {
+    os << "(" << it->first.first << "," << it->first.second << "):" << it->second << endl;
+    ++it;
+  }
+}
 
 inline void add_or_count(std::map<faststring, unsigned> &m, faststring &x)
 {
@@ -51,6 +76,16 @@ inline void add_or_count(std::map<faststring, unsigned> &m, faststring &x)
   else
   {
     ++it->second;
+  }
+}
+
+void print_DNA_profile(ostream &os, unsigned **profile, unsigned N_sites)
+{
+  os << "pos\tA\tC\tG\tT\t-\tambig\ttilde\n";
+  for (unsigned i=0; i<N_sites; ++i)
+  {
+    os << i+1 << '\t' << profile[i][0] << '\t' << profile[i][1] << '\t' << profile[i][2]
+       << '\t' << profile[i][3] << '\t' << profile[i][4] << '\t' << profile[i][5] << '\t' << profile[i][6] << '\n';
   }
 }
 
@@ -296,7 +331,7 @@ public:
   {
     return query_start;
   }
-  
+
   unsigned get_target_start()
   {
     return target_start;
@@ -414,7 +449,7 @@ int main(int argc, char **argv)
   CSequences2 seqs_prot_query(CSequence_Mol::protein);
   CSequences2 seqs_DNA_result(CSequence_Mol::dna);
 
-  unsigned skipped_double_vulgar=0, skipped_G=0, skipped_F=0, skipped_relative_score=0;
+  unsigned skipped_double_vulgar=0, skipped_G=0, skipped_F=0, skipped_relative_score=0, skipped_no_G=0;
   
   //**************************
   // Read query sequences
@@ -699,9 +734,11 @@ int main(int argc, char **argv)
     
     bool consider_this_read;
     unsigned count_not_considered = 0;
+
+    map<pair<unsigned, unsigned>, unsigned> map_of_insertion_sites_suggested_in_reference, map_of_gap_sites_in_queries;
     
     l_it = list_exonerate_results.begin();
-    while (l_it !=  list_exonerate_results.end())
+    while (l_it !=  list_exonerate_results.end()) // For all hits:
     {
       consider_this_read = true;
 
@@ -760,11 +797,18 @@ int main(int argc, char **argv)
 	++skipped_F;
       }
       
-      if ((vul.has_G() && !global_include_gap_alignments) )
+      if ((vul.has_G() && global_gap_frameshift_mode == 0) )
       {
         consider_this_read = false;
 	if (!vul.has_F() )
 	  ++skipped_G;
+      }
+
+      if ((!vul.has_G() && global_gap_frameshift_mode == 2) )
+      {
+        consider_this_read = false;
+	if (!vul.has_F() )
+	  ++skipped_no_G;
       }
 
       if (global_relative_score_threshold && vul.relative_score() < global_relative_score_threshold)
@@ -776,7 +820,6 @@ int main(int argc, char **argv)
 	  ++skipped_relative_score;
       }
 
-      
       if (!consider_this_read)
       {
 	++count_not_considered;
@@ -785,7 +828,7 @@ int main(int argc, char **argv)
       {
         CDnaString seqDNA, newseqDNA;
         unsigned start_in_seqDNA, end_in_seqDNA;
-        
+
         // The query prot sequence start coordinate sets the number of gaps before:
         unsigned gaps_before = vul.query_start*3;
 
@@ -795,7 +838,7 @@ int main(int argc, char **argv)
           cerr << "ERROR: No sequence for key " << key << " found. This can only happen if the vulgar file does not correspond to the fasta file. Exiting.\n";
           exit(-13);
         }
-        
+
         unsigned length_this_nuc_seq = theSeq->length();
         // Compute the rev comp once, so we do not have to handle so many different cases.
         if (vul.is_revcomp())
@@ -820,7 +863,7 @@ int main(int argc, char **argv)
           start_in_seqDNA = vul.get_target_start();
           end_in_seqDNA   = vul.get_target_end();
         }
-        
+
         /* // TODO: What do we do with this code. Add options!!!
          if (vul.num_attributes() != 1) // if we have no non-M labels we expect only one attribute in the list of attributes.
          {
@@ -830,25 +873,25 @@ int main(int argc, char **argv)
          exit(-19);
          }
          */
-        
+
         // Problem: exonerate only aligns complete codons to amino acids
-        
+
         // Test for consistent bases in partial codons:
         
         // Exonerate aligns the reads to the amino acid sequence. Only complete codons are considered as alignment matches.
         // So using the coordinates obtained from exonerate, a partial codon is removed in 2/3 of the cases at the beginning as well as at the end.
         //
-        
+
         // We might want to add unmatched bp before and after, e.g. for partial codons or in order to see how much they differ from other sequences.
         // In order not to intervene with with multiple attributes, we treat that case
         // that we add unmatched residues before and after as special cases.
         // If would only expect to find a single M attribute, the logic would be much simpler.
-        
+
         faststring add_seq_before;
         faststring add_seq_after;
-        
+
 	//        global_num_bp_beyond_exonerate_alignment_if_at_start_or_end = 6;
-        
+
         // Code can still be simplified !!!
 	// Handling recomp is done by computing the reverse complement already for the template sequence.
 	// This makes the following code simpler! The final step, i.e. not to distinguishing the two cases any more could now be taken.
@@ -936,7 +979,7 @@ int main(int argc, char **argv)
             
 	  }  // END if (gaps_before > 0)
 	} // END if (global_num_bp_beyond_exonerate_alignment_if_at_end > 0)
-        
+
         //	cout << "Add gaps before: " << gaps_before << endl;
 	gaps_before -= add_seq_before.length();
         newseqDNA = faststring('-', gaps_before);
@@ -946,10 +989,11 @@ int main(int argc, char **argv)
 
         if (add_seq_before.size() > 0)
           newseqDNA += add_seq_before;
-        
-        unsigned pos   = start_in_seqDNA;
-        unsigned count = gaps_before + add_seq_before.length();
-        
+
+        unsigned DNA_pos   = start_in_seqDNA;
+	unsigned amino_pos = vul.query_start; // Only needed to store insertions with respect to reference.
+        unsigned count     = gaps_before + add_seq_before.length();
+
         // For all vulgar features: Usually only one: The M feature.
         for (unsigned i=0; i < vul.attributes.size(); ++i)
         {
@@ -965,17 +1009,19 @@ int main(int argc, char **argv)
             if (!vul.is_revcomp())
             {
               //	      cout << "non-revcomp" << endl;
-              newseqDNA += seqDNA.substr(pos, vul.attributes[i].third());
-              pos   += vul.attributes[i].third();
-              count += vul.attributes[i].third();
+              newseqDNA += seqDNA.substr(DNA_pos, vul.attributes[i].third());
+              DNA_pos   += vul.attributes[i].third();
+              count     += vul.attributes[i].third();
+	      amino_pos += vul.attributes[i].second();
             }
             else
             {
               //	      cout << "revcomp" << endl;
               //	      CDnaString revcompDNA = setToReverseComplementOf(seqDNA);
-              newseqDNA += seqDNA.substr(pos, vul.attributes[i].third());
-              pos   += vul.attributes[i].third();
+              newseqDNA += seqDNA.substr(DNA_pos, vul.attributes[i].third());
+              DNA_pos   += vul.attributes[i].third();
               count += vul.attributes[i].third();
+	      amino_pos += vul.attributes[i].second();
             }
           }
           else if (vul.attributes[i].first() == 'F')
@@ -1001,6 +1047,7 @@ int main(int argc, char **argv)
                 {
                   if (vul.attributes[i].second() > 0)
                   {
+		    amino_pos += vul.attributes[i].second();
                     ++num_WARNINGS;
                     if (global_verbosity >= 1)
                       cerr << "WARNING: Unhandled rare case: F x y with x > 0." << endl;
@@ -1010,13 +1057,14 @@ int main(int argc, char **argv)
                     ++num_WARNINGS;
                     if (global_verbosity >= 1)
                       cerr << "NOTE: Partial codons removed. F 0 x." << endl;
-                    pos   += vul.attributes[i].third();
+                    DNA_pos   += vul.attributes[i].third();
                   }
                 }
                 else
                 {
                   if (vul.attributes[i].second() > 0)
                   {
+		    amino_pos += vul.attributes[i].second();
                     ++num_WARNINGS;
                     if (global_verbosity >= 1)
                       cerr << "WARNING: Unhandled rare case: F x y with x > 0." << endl;
@@ -1026,7 +1074,7 @@ int main(int argc, char **argv)
                     ++num_WARNINGS;
                     if (global_verbosity >= 1)
                       cerr << "NOTE: Partial codons removed. F 0 x." << endl;
-                    pos   += vul.attributes[i].third();
+                    DNA_pos   += vul.attributes[i].third();
                   }
                 }
               }
@@ -1034,12 +1082,17 @@ int main(int argc, char **argv)
           }
           else if (vul.attributes[i].first() == 'G')
           {
-            if (global_include_gap_alignments)
+	    // Hits with gaps and without global_include_gap_alignments are not conidered at all, so we do not need this check here.
+	    //            if (global_include_gap_alignments)
             {
+	      // Gap in nucleotide sequence:
               if (vul.attributes[i].second() > 0)
               {
-                newseqDNA += faststring('-',vul.attributes[i].second()*3);
-                count += vul.attributes[i].second()*3;
+		unsigned gap_chars = vul.attributes[i].second()*3;
+                newseqDNA += faststring('~', gap_chars);
+                count += gap_chars;
+		add_or_count(map_of_gap_sites_in_queries, make_pair(3*amino_pos, 3*vul.attributes[i].second() ));
+		amino_pos += vul.attributes[i].second();
               }
               else if (vul.attributes[i].third() > 0)
               {
@@ -1049,7 +1102,8 @@ int main(int argc, char **argv)
                 ++num_WARNINGS;
                 if (global_verbosity >= 1)
                   cout << "WARNING: Rare gap case: G 0 x. Additional bases are skipped." << endl;
-                pos   += vul.attributes[i].third();
+                DNA_pos   += vul.attributes[i].third();
+		add_or_count(map_of_insertion_sites_suggested_in_reference, make_pair(3*amino_pos, 3*vul.attributes[i].third()));
               }
             }
           }
@@ -1188,21 +1242,53 @@ int main(int argc, char **argv)
       cout << setw(50) << "Number of sequences in result file: " << seqs_DNA_result.GetTaxaNum() << endl;
 
       cout << "-------------------------------------------\n";
-      cout << setw(50) << "# skipped reads due to gappy alignment: " << skipped_G << endl;
-      cout << setw(50) << "# skipped reads due to frameshift hits: " << skipped_F << endl;
+      if (global_gap_frameshift_mode == 0)
+	cout << setw(50) << "# skipped reads due to gappy alignment: " << skipped_G << endl;
+      if (global_gap_frameshift_mode == 2)
+      cout << setw(50) << "# skipped reads due to no gaps in aln.  : " << skipped_no_G << endl;
       cout << setw(50) << "# skipped reads due to multiple hits:   " << skipped_double_vulgar  << endl;
       cout << setw(50) << "# skipped reads due to low rel. score:  " << skipped_relative_score << endl;
-    }
 
-    vector<unsigned> coverage_vec;
+      cout << "Gap insertion sites and lengths suggested from reads for the reference:\n";
+      if (map_of_insertion_sites_suggested_in_reference.size() > 0)
+	print_Mymap(cout, map_of_insertion_sites_suggested_in_reference);
+      else
+	cout << "-\n";
+
+      cout << "Gap sites in query sequences:\n";
+      if (map_of_gap_sites_in_queries.size() > 0)
+	print_Mymap(cout, map_of_gap_sites_in_queries);
+      else
+	cout << "-\n";
+      cout << '\n';
+
+      //      unsigned **coverage_profile = seqs_DNA_result.get_DNA_site_profile();
+      //      print_DNA_profile(cout, coverage_profile, seqs_DNA_result.GetPosNum());
+    }
 
     if (!global_consensus_sequence_output_filename.empty())
     {
       faststring consensus_seq;
-      seqs_DNA_result.ConsensusSequence_DNA(consensus_seq, global_consensus_threshold,
-					    global_minimum_seq_coverage_uppercase, global_minimum_seq_coverage_total,
-					    &coverage_vec, 'N');
+      unsigned   replaced_tilde_gaps = 0;
+      vector<unsigned> coverage_vec;
 
+      seqs_DNA_result.WeightedConsensusSequence_DNA(consensus_seq, global_consensus_threshold,
+						    global_minimum_seq_coverage_uppercase, global_minimum_seq_coverage_total,
+						    &coverage_vec, global_ends_width, global_weight_fraction_in_ends,
+						    'N');
+      // Default: Internal gaps are encoded as tilde.
+      if (global_report_gap_mode == 0)
+      {
+	replaced_tilde_gaps = consensus_seq.replace_char_count('~', '-');      
+      }
+
+      if (global_report_gap_mode == 3)
+      {
+	consensus_seq.removeSpacesBack("-");
+	consensus_seq.removeSpaces("-~");
+      }
+
+      /*
       if (global_verbosity >= 50)
       {
 	cerr << "Coverage values obtained while determining the consensus sequence:\n";
@@ -1210,11 +1296,13 @@ int main(int argc, char **argv)
 	  cerr << i << "\t" << coverage_vec[i] << endl;
 	cerr << "=====================\n";
       }
-      
+      */
+
       ofstream os_con(global_consensus_sequence_output_filename.c_str());
       if (os_con.fail() )
       {
-        cerr << "ERROR when trying to write the consensus file. The output file could not be opened. Please make sure the specified path exists!" << endl;
+        cerr << "ERROR when trying to write the consensus file. The output file could not be opened. "
+	        "Please make sure the specified path exists!" << endl;
         exit(-23);
       }
       os_con << ">Consensus" << global_input_dna_fasta_file << endl;

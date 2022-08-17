@@ -83,7 +83,15 @@ const char tolower_lookup[] = {
 '\372','\373','\374','\375','\376','\377'
 };
 
+inline char char_toupper(char c)
+{
+  return toupper_lookup[c];
+}
 
+inline char char_lower(char c)
+{
+  return tolower_lookup[c];
+}
 
 #define macromin(x,y) ((x)<(y) ? (x) : (y))
 //#define macromax(x,y) ((x)>(y) ? (x) : (y))
@@ -106,7 +114,15 @@ template <typename Container>
 int
 split_strict (Container &l, const faststring &s, char const * const ws = " \t\n");
 
+inline char toupper_char(char c)
+{
+  return toupper_lookup[(int)c];
+}
 
+inline char tolower_char(char c)
+{
+  return tolower_lookup[(int)c];
+}
 
 namespace {
   inline bool is_in_symbol_list__(char c, const char* wstr="\r\n\t\v\f ")
@@ -373,7 +389,7 @@ protected:
     _len = strlen(_buf);
   }
 
-  // Automatically determines the precision.
+  // Default precision.
   faststring(float f, char c)
   {
     (void) c;
@@ -526,7 +542,7 @@ protected:
 /*     } */
 /*   } */
 
-// chomp in perl: (Removing a trailing \0 is not allowed.
+// chomp in perl: (Removing a trailing \0 is not allowed. Also consider removeSpacesBack()
   void pop_trailing_characters(char c)
   {
     // get_last() and pop_back() both ensure that _len>0
@@ -1610,23 +1626,23 @@ protected:
 
    void skip_symbols(size_t &pos, const char* delims="\r\n\t\v\f ") const
    {
-     const char *theend = end();
-     const char *it=begin()+pos;
+     const char *end_it = end();
+     const char *pos_it = begin()+pos;
 
-     while (it != theend && is_in_symbol_list__(*it, delims) )
-       ++it;
-     pos = it-begin();
+     while (pos_it != end_it && is_in_symbol_list__(*pos_it, delims) )
+       ++pos_it;
+     pos = pos_it-begin();
    }
 
 
    void skip_symbol(size_t &pos, char c) const
    {
-     const char *theend = end();
-     const char *it=begin()+pos;
+     const char *end_it = end();
+     const char *pos_it = begin()+pos;
 
-     while (it != theend && *it == c)
-       ++it;
-     pos = it-begin();
+     while (pos_it != end_it && *pos_it == c)
+       ++pos_it;
+     pos = pos_it-begin();
    }
   
 

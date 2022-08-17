@@ -305,6 +305,7 @@ class CSequence_Mol
     num = local_num;
   }
 
+  /*
   // Reads line of data and removes only white spaces
   void getRawLine_toupper(CFile& infile)
   {
@@ -318,11 +319,12 @@ class CSequence_Mol
 	c = infile.getchar();
 	continue;
       }
-      addCharToData(toupper(c));
+      //      addCharToData(toupper(c));
       c = infile.getchar();
     }
+    toupper_this_sequence();
   }
-
+  */
 
   // Called e.g. indirectly from Phobos
   void getLineOfDNA_toupper_ambig2N_removegaps (CFile& infile, unsigned &pos_in_seq)
@@ -338,7 +340,7 @@ class CSequence_Mol
       // if the char is a space or something we do not count, we subtract this further below
       ++number_raw_original_length;
 
-      c = toupper(c);
+      c = toupper_char(c);
 
       if ( c == 'A' || c == 'T' || c == 'G' || c == 'C')
       {
@@ -433,7 +435,7 @@ class CSequence_Mol
 
     //     ++pos;
     c = infile.getchar();
-    c_upper = toupper(c);
+    c_upper = toupper_char(c);
     while (!infile.fail() && c != '\n')
     {
       // if the char is a space or something we do not count, we subtract this further below
@@ -462,7 +464,7 @@ class CSequence_Mol
 	  if (c <='Z') // i.e. lower case.
 	    addCharToData(  tolower(local_general_ambig)  );
 	  else
-	    addCharToData(  toupper(local_general_ambig)  );
+	    addCharToData(  toupper_char(local_general_ambig)  );
 
 	  ++number_of_DNARNA_amgibs; // includes N and '?'
 	  if (local_general_ambig == '?' )
@@ -548,7 +550,7 @@ class CSequence_Mol
 	break;
       }
       c = infile.getchar();
-      c_upper = toupper(c);
+      c_upper = toupper_char(c);
       ++pos;
     }
     pos_in_seq = pos;
@@ -574,11 +576,11 @@ class CSequence_Mol
     // character is upper or lower case, as specified.
 
     if (convert_toupper_bool)
-      local_general_ambig = toupper(general_ambig);
+      local_general_ambig = toupper_char(general_ambig);
 
     //     ++pos;
     c = infile.getchar();
-    c_upper = toupper(c);
+    c_upper = toupper_char(c);
     while (!infile.fail() && c != '\n')
     {
       // if the char is a space or something we do not count, we subtract this further below
@@ -662,7 +664,7 @@ class CSequence_Mol
 	break;
       }
       c = infile.getchar();
-      c_upper = toupper(c);
+      c_upper = toupper_char(c);
       ++pos;
     }
     pos_in_seq = pos;
@@ -673,7 +675,7 @@ class CSequence_Mol
   {
     char       c;
     unsigned   pos = pos_in_seq;
-    char       local_general_ambig = toupper(general_ambig);
+    char       local_general_ambig = toupper_char(general_ambig);
 
     //     ++pos;
     c = infile.getchar();
@@ -681,7 +683,7 @@ class CSequence_Mol
     {
       // if the char is a space or something we do not count, we subtract this further below
       ++number_raw_original_length; 
-      c = toupper(c);
+      c = toupper_char(c);
 
       if ( c == 'A' || c == 'T' || c == 'G' || c == 'C')
       {
@@ -754,13 +756,13 @@ class CSequence_Mol
 
     //     ++pos;
     c = infile.getchar();
-    char local_general_ambig = toupper(general_ambig);
+    char local_general_ambig = toupper_char(general_ambig);
 
     while (!infile.fail() && c != '\n')
     {
       // if the char is a space or something we do not count, we subtract this further below
       ++number_raw_original_length;
-      c = toupper(c);
+      c = toupper_char(c);
 
       if (c == 'X' || c=='?')
       {
@@ -818,7 +820,7 @@ class CSequence_Mol
       // if the char is a space or something we do not count, we subtract this further below
       ++number_raw_original_length;
 
-      c = toupper(c);
+      c = toupper_char(c);
 
       if ( c == 'A' || c == 'T' || c == 'G' || c == 'C')
       {
@@ -973,7 +975,7 @@ class CSequence_Mol
     while (it != it_end)
     {
       char c       = *it;
-      char c_upper = toupper(c);
+      char c_upper = toupper_char(c);
 
       if ( c_upper == 'R' || c_upper == 'Y' || c_upper == 'K' || c_upper == 'M' ||
 	   c_upper == 'S' || c_upper == 'W' || c_upper == 'B' || c_upper == 'D' ||
@@ -1836,7 +1838,7 @@ class CSequence_Mol
     while (beg != end)
     {
       char c = *beg;
-      char c_toupper = toupper(c);
+      char c_toupper = toupper_char(c);
 
       if (c_toupper == 'N' || c_toupper == 'X')
       {
@@ -2419,9 +2421,10 @@ class CSequence_Mol
     while ( !infile.fail() && c != '>' )
     {
       //      std::cerr << data.capacity() << std::endl;
-      getRawLine_toupper(infile);
+      getRawLine(infile);
       c = infile.peekchar();
     }
+    toupper_this_sequence();
     if (data.length() > 0)
       infile.clear(infile.rdstate() & ~CFile::__fail_flag); // Unset the fail flag.
   }
