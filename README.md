@@ -35,6 +35,15 @@ Exonerate is a very efficient alignment program which allows to align protein an
 Nucleotide sequences which cannot be aligned to the protein reference will not be included in
 the output. Exonerate should be able to align several 100k short reads in a few
 minutes using a single CPU core. Therefore, this approach can be used for projects of any size.
+Exonerate can align amino acid sequences to much longer nucleotide sequences. For this reason,
+MitoGeneExtractor can also mine sequences from assemblies or from long read libraries. It can even be used to
+extract genes of interest from whole mitochondrial or ... genomes. 
+
+Input file formats:
+- The amino acid reference must be provided in a fasta file.
+- The nucleotide reads/assemblies/genomes must be provided in the fasta or the fastq format.
+If the input is a sequencing library, we recommend to pass quality trimmed reads to MitoGeneExtractor.
+
 
 ## Supported Platforms:
 MitoGeneExtractor: All platforms are supported for which a C++ compiler is available.
