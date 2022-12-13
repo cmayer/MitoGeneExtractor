@@ -319,7 +319,7 @@ class CSequence_Mol
 	c = infile.getchar();
 	continue;
       }
-      //      addCharToData(toupper(c));
+      addCharToData(toupper(c));
       c = infile.getchar();
     }
     toupper_this_sequence();
