@@ -5,7 +5,7 @@
 #define DEBUG
 
 #define PROGNAME "MitoGeneExtractor"
-#define VERSION  "1.9.3"
+#define VERSION  "1.9.4"
 
 #define macromax(x,y) ((x)<(y) ? (y) : (x))
 #define macromin(x,y) ((x)<(y) ? (x) : (y))

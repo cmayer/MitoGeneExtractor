@@ -118,7 +118,7 @@ void read_and_init_parameters(int argc, char** argv)
     cmd.add(min_seq_coverage_upper_case_Arg);
 
     ValueArg<unsigned> min_seq_coverage_total_Arg("", "minSeqCoverageInAlignment_total",
-						       "Specifies the absolute value of the minimum alignment coverage for computing the consensus sequence. For the coverage, all nucleotides count, also those lower case nucleotides that have been added beyond the exonerate alingmnet region. Default: 1. Increasing this value increases the number of unknown nucleotides in the consensus sequence.",
+						       "Specifies the absolute value of the minimum alignment coverage for computing the consensus sequence. For the coverage, all nucleotides count, also those lower case nucleotides that have been added beyond the exonerate alignment region. Default: 1. Increasing this value increases the number of unknown nucleotides in the consensus sequence.",
 						       false, global_minimum_seq_coverage_total, "int");
     cmd.add(min_seq_coverage_total_Arg);
     
@@ -142,7 +142,7 @@ void read_and_init_parameters(int argc, char** argv)
     cmd.add(frameshift_penalty_Arg);
 
     ValueArg<int> report_gaps_mode_Arg("", "report_gaps_mode",
-				       "Gaps can be reported in different ways. With this option the reporting mode can be specified: 1: report leading and trailing gaps with \'-\' character. Report internal gaps (introduced with options -G or -g) with \'~\' character. 2: report leading and trainling gaps with \'-\' character. Report internal gaps (introduced with options -G or -g) with \'-\' characters. 3: Remove all gap characters in output. In this case sequences are extracted but are reported with respect to the reference. Default: 1.",
+				       "Gaps can be reported in different ways. With this option the reporting mode can be specified: 1: report leading and trailing gaps with \'-\' character. Report internal gaps (introduced with options -G or -g) with \'~\' character. 2: report leading and trailing gaps with \'-\' character. Report internal gaps (introduced with options -G or -g) with \'-\' characters. 3: Remove all gap characters in output. In this case sequences are extracted but are reported with respect to the reference. Default: 1.",
 	false, global_report_gap_mode, "int");
     cmd.add(report_gaps_mode_Arg);
 
@@ -194,7 +194,7 @@ void read_and_init_parameters(int argc, char** argv)
     cmd.add(consensus_output_file_Arg);
 
     ValueArg<unsigned> bp_beyond_Arg("n", "numberOfBpBeyond",
-	"Specifies the number of base pairs that are shown beyond the exonerate alignment. A value of 0 means that the sequence is clipped at the point the exonerate alignment ends. Values of 1 and 2 make sense, since exonerate does not consider partial matches of the DNA to the amino acid sequence, so that partial codons would always be clipped, even if the additional base pairs would match with the expected amino acid. Values >0 lead to the inclusion of sequence segments that do not align well with the amino acid sequence and have to be treated with caution. They might belong to chimera, numts, or other problematic sequences. Larger values might be included e.g. if problematic sequences with a well matching seed alignment are of interest. CAUTION: Bases included with this option might not be aligned well or could even belong to stop codons! They should be considered as of lower quality compared to other bases. Bases that are added with this option are added as lower case characters to the output alignment file. A sequence coverage of bases not belonging to these extra bases can be requested with the --minSeqCoverageInAlignment_uppercase option. Default: 0.",
+	"Specifies the number of base pairs that are shown beyond the exonerate alignment. A value of 0 means that the sequence is clipped at the point the exonerate alignment ends. Values of 1 and 2 make sense, since exonerate does not consider partial matches of the DNA to the amino acid sequence, so that partial codons would always be clipped, even if the additional base pairs would match with the expected amino acid. Values >0 lead to the inclusion of sequence segments that do not align well with the amino acid sequence and have to be treated with caution. They might belong to chimera, Numts, or other problematic sequences. Larger values might be included e.g. if problematic sequences with a well matching seed alignment are of interest. CAUTION: Bases included with this option might not be aligned well or could even belong to stop codons! They should be considered as of lower quality compared to other bases. Bases that are added with this option are added as lower case characters to the output alignment file. A sequence coverage of bases not belonging to these extra bases can be requested with the --minSeqCoverageInAlignment_uppercase option. Default: 0.",
 	false, global_num_bp_beyond_exonerate_alignment_if_at_start_or_end, "int");
     cmd.add(bp_beyond_Arg);
 
@@ -263,7 +263,7 @@ void read_and_init_parameters(int argc, char** argv)
 
   if (global_include_only_gap_alignments && global_notinclude_gap_alignments)
   {
-    cerr << "Error: Conflicting command line parameters. It is not possible to specify the include only sequences "
+    cerr << "Error: Conflicting command line parameters. It is not possible to specify to include only sequences "
             "that align with a gap and at the same time no reads that align with a gap in the output.\n";
     good_bye_and_exit(-2);
   }
@@ -324,6 +324,9 @@ void print_parameters(std::ostream &os, const char *s)
     os << s << "Exonerate binary:                                       " << global_exonerate_binary
        << std::endl;
 
+  os << s <<   "Genetic code (NCBI genetic code number):                " << global_genetic_code_number
+     << std::endl;
+  
   os << s <<   "Print this number of bp beyond exonerate alignment:     " << global_num_bp_beyond_exonerate_alignment_if_at_start_or_end
      << std::endl;
 
