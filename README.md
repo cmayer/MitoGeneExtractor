@@ -1,7 +1,14 @@
 # MitoGeneExtractor
 
-MitoGeneExtractor can be used to conveniently extract mitochondrial genes from sequencing libraries, genome and transcriptome analyses.
+MitoGeneExtractor can be used to conveniently extract mitochondrial genes from sequencing libraries, as well as from genome and transcriptome assemblies.
 Mitochondrial reads are often found as byproduct in sequencing libraries or assemblies, in particular when originating from hybrid enrichment libraries, but often also from transcriptomes and low coverage genomic sequences.
+
+Since in the presence of conflicting sequences the assembly of mitochondrial genes often fails (e.g. if Numts are present), we recommend to mine mitochondrial genes from reads rather than assemblies. We have seen examples where the extraction from assemblies worked equally well as the extraction from unassembled reads and we have seen cases where the extraction from unassembled reads was successful, but failed for the assembly.
+
+List of use cases:
+- Mine mitochondrial or ... coding genes from sequencing libraries (Illumina and PacBio have been successfully tested).
+- Mint mitochondrial or ... coding genes from assemblies. (Works equally or less good as from sequencing libraries.)
+- Excise mitochondrial or ... coding genes from whole mitochondrial or ... genomes, which is is often simpler than referring to the genome annotation.
 
 ## Authors of the publication:
 - Marie Brasseur, ZFMK, Bonn, Germany
