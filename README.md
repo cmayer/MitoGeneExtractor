@@ -1,14 +1,16 @@
 # MitoGeneExtractor
 
-MitoGeneExtractor can be used to conveniently extract mitochondrial genes from sequencing libraries, as well as from genome and transcriptome assemblies.
-Mitochondrial reads are often found as byproduct in sequencing libraries or assemblies, in particular when originating from hybrid enrichment libraries, but often also from transcriptomes and low coverage genomic sequences.
+MitoGeneExtractor can be used to conveniently extract mitochondrial protein-coding genes from next-generation sequencing libraries.
+Mitochondrial reads are often found as byproduct in sequencing libraries obtained from whole-genome sequencing, RNA-sequencing or various kinds of reduced representation liibraries (e.g., hybrid enrichment libraries).
 
+or assemblies,
 Since in the presence of conflicting sequences the assembly of mitochondrial genes often fails (e.g. if Numts are present), we recommend to mine mitochondrial genes from reads rather than assemblies. We have seen examples where the extraction from assemblies worked equally well as the extraction from unassembled reads and we have seen cases where the extraction from unassembled reads was successful, but failed for the assembly.
 
 List of use cases:
-- Mine mitochondrial or ... coding genes from sequencing libraries (Illumina and PacBio have been successfully tested).
-- Mint mitochondrial or ... coding genes from assemblies. (Works equally or less good as from sequencing libraries.)
-- Excise mitochondrial or ... coding genes from whole mitochondrial or ... genomes, which is is often simpler than referring to the genome annotation.
+- Mine mitochondrial protein-coding genes across a broad taxonomic range from sequencing libraries (Genomic and transcriptomic Illumina and PacBio read data sets have been successfully tested).
+- Mine plastome protein-coding genes from sequencing libraries (matK or rbcL successfully tested).
+- Mine prokaryotic genes from assemblies. (Not tested, but in principle, all genes which can be directly translated into amino acid sequences can be reconstructed with MitoGeneExtractor)
+- Mine/excise protein-coding genes from whole assemblies (genomes, transcriptomes), which is is often simpler than referring to the annotation (if available). Note, that in this case the accuracy of the extracted sequence depends on the assembly.
 
 ## Authors of the publication:
 - Marie Brasseur, ZFMK, Bonn, Germany
@@ -37,7 +39,7 @@ the output. Exonerate should be able to align several 100k short reads in a few
 minutes using a single CPU core. Therefore, this approach can be used for projects of any size.
 Exonerate can align amino acid sequences to much longer nucleotide sequences. For this reason,
 MitoGeneExtractor can also mine sequences from assemblies or from long read libraries. It can even be used to
-extract genes of interest from whole mitochondrial or ... genomes. 
+extract genes of interest from whole mitochondrial or nuclear genome/transcriptome assemblies. 
 
 Input file formats:
 - The amino acid reference must be provided in a fasta file.
@@ -87,7 +89,7 @@ Path-to-MitoGeneExtractor/MitoGeneExtractor -h
 ```
 to display a full list of command line options of MitoGeneExtractor. 
 
-In order to run MitoGeneExtractor you need your input sequences in fasta format as well as an amino acid reference sequence of your mitochondrial gene of interest. Example references are included in the reference-sequence-examples folder of this project. For the COI gene, one can specify as a reference the amino acid sequence of the barcode region, or if intended, the full COI sequence. If the full COI sequence shall be extracted, we suggest to create a reference specific for your taxonomic group, since the COI gene can differ considerably in the first and last few amino acids for specific groups with respect to references designed for larger groups. For the barcode region of COI this is normally not a problem. In principle all mitochondrial genes can be extracted with this approach.
+In order to run MitoGeneExtractor you need your input sequences in fasta/fastq format as well as an amino acid reference sequence of your mitochondrial gene of interest. Example references are included in the reference-sequence-examples folder of this project. For the COI gene, one can specify as a reference the amino acid sequence of the barcode region, or if intended, the full COI sequence. If the full COI sequence shall be extracted, we suggest to create a reference specific for your taxonomic group, since the COI gene can differ considerably in the first and last few amino acids for specific groups with respect to references designed for larger groups. For the barcode region of COI this is normally not a problem. 
 
 ## Example analysis:
 An example analysis for the MitoGeneExtractor program can be found in the **example-analysis-for-MitoGeneExtractor** folder. The Readme.md file in this folder provided the necessary information to run the example analysis.
@@ -99,7 +101,7 @@ Then the following command could be used to attempt to reconstruct the COI seque
 ```{r, eval=TRUE}
 MitoGeneExtractor  -d query-input.fas -p COI-reference.fas -V vulgar.txt -o out-alignment.fas -n 0 -c out-consensus.fas -t 0.5 -r 1 -C 2
 ```
-Specifying the name of the vulgar file is optional, but recommended. If the file exists, it is used as input instead of calling exonerate to create it. If it does not exist, the name is used to story the vulgar file. The -C 2 option specifies the genetic code, the -t 0.5 option specifies the consensus threshold and the -r 1 and -n 0 options are used for a stricter alignment quality (see options for details).
+Specifying the name of the vulgar file is optional, but recommended. If the file exists, it is used as input instead of calling Exonerate to create it. If it does not exist, the name is used to story the vulgar file. The -C 2 option specifies the genetic code (here: vertebrate mitochondrial), the -t 0.5 option specifies the consensus threshold and the -r 1 and -n 0 options are used for a stricter alignment quality (see options for details). 
 
 ## Prepared Snakemake workflows
 An example analysis using a Snakemake workflow can be found in the **example-analysis-with-Snakemake-workflow** folder.
