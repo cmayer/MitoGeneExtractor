@@ -29,7 +29,7 @@ LHGCPPPYHTFEEP---------
 IHGCPPPFHTFEEPAFVQVQSQE
 ```
 
-The reference differ stlighly. In particular, the Passeriformes has one additional amino acid at the beginning and 9 additional amino acids at the end.
+The reference differ slightly. In particular, the Passeriformes has one additional amino acid at the beginning and 9 additional amino acids at the end.
 These would not be extracted with the general reference. In the example anaysis we show however that the barcode region extracted with both references
 are identical in the given example. The general vertebrate reference can be a good starting point in many cases. For many other vertebrate groups the differences
 are even smaller than for song birds.
