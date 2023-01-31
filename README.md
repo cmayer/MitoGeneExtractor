@@ -115,8 +115,11 @@ MitoGeneExtractor  -d PE_query-input_1.fq PE_query-input_2.fq SE_query-input.fq 
 Note, that the order of file names does not matter.
 
 ## Prepared Snakemake workflows
-An example analysis using a Snakemake workflow can be found in the **example-analysis-with-Snakemake-workflow** folder.
-[Manual for using existing Snakemake workflows to extract genes with MitoGeneExtractor.](Use-Snakemake-manual.md)
+You can find a description how data preprocessing and MitoGeneExtractor analyses can be implemented in Snakemake [here](https://github.com/cmayer/MitoGeneExtractor/blob/last-reviews-before-publication/Use-Snakemake-manual.md)
+
+A Snakemake workflow which starts with .sra files as input can be found [here](https://github.com/cmayer/MitoGeneExtractor/tree/last-reviews-before-publication/example-analysis-with-Snakemake-workflow-using-SRA-files-as-input)
+
+A Snakemake workflow which starts with .fastq data can be found [here](https://github.com/cmayer/MitoGeneExtractor/tree/last-reviews-before-publication/example-analysis-with-Snakemake-workflow-using-compressed-fastq-files-as-input)
 
 
 ## Command line options:
