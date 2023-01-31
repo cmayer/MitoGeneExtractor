@@ -1,6 +1,6 @@
 ## Use existing Snakemake workflows to easily extract genes from sequencing libraries
 
-MitoGeneExtractor does not require the usage or the installation of Snakemake, but Snakemake provides a convenient way to analyse a large number of data sets.
+MitoGeneExtractor does not require the usage or the installation of Snakemake, but Snakemake provides a convenient way to analyse a large number of data sets. Using Snakemake allows to scale all steps of the analysis, including extraction and quality control steps such as sequence trimming.
 
 Snakemake is a workflow management system which allows upscaling of data analyses in a reproducible way. In our example workflow, the wildcard {sample} is replaced with the individual sample names, followed by universal file extensions. Snakemake will determine dependencies between input and output file based on the user defined rules.
 
@@ -16,7 +16,7 @@ Before starting the analyses, the user needs to provide all necessary input data
 - A protein reference for MitoGeneExtractor in FASTA format.
 - optional (but needed for the example workflow): cutadapt.yaml file (Anaconda environment for cutadapt safed in .yaml file)  
 
-It is up to the user whether to incorporate analysis steps such as data trimming. Please also have in mind that you might want to adjust the example workflow according to your directory structure. <-- Further, if other versions of the used software are installed, some parameter names might have changed. -->
+It is up to the user whether to incorporate analysis steps such as data trimming. Please also have in mind that you might want to adjust the example workflow according to your directory structure. Further, if other versions of the used software are installed, some parameter names might have changed.
 
 ### Execution:
 There are different ways to execute Snakemake. In particular when computer that allow to use multiple CPU cores, Snakemake provides different ways to make use of these resources, e.g. on high performance clusters.
