@@ -117,9 +117,9 @@ Note, that the order of file names does not matter.
 ## Prepared Snakemake workflows
 You can find a description how data preprocessing and MitoGeneExtractor analyses can be implemented in Snakemake [here](https://github.com/cmayer/MitoGeneExtractor/blob/last-reviews-before-publication/Use-Snakemake-manual.md)
 
-A Snakemake workflow which starts with .sra files as input can be found [here](https://github.com/cmayer/MitoGeneExtractor/tree/last-reviews-before-publication/example-analysis-with-Snakemake-workflow-using-SRA-files-as-input)
+A Snakefile which starts with .sra files as input can be found [here](https://github.com/cmayer/MitoGeneExtractor/tree/last-reviews-before-publication/example-analysis-with-Snakemake-workflow-using-SRA-files-as-input)
 
-A Snakemake workflow which starts with .fastq data can be found [here](https://github.com/cmayer/MitoGeneExtractor/tree/last-reviews-before-publication/example-analysis-with-Snakemake-workflow-using-compressed-fastq-files-as-input)
+A Snakefile which starts with .fastq data can be found [here](https://github.com/cmayer/MitoGeneExtractor/tree/last-reviews-before-publication/example-analysis-with-Snakemake-workflow-using-compressed-fastq-files-as-input)
 
 
 ## Command line options:
