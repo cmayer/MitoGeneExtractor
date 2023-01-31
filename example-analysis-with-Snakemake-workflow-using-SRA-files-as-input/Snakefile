@@ -1,12 +1,11 @@
 #Snakefile
 configfile: "config.yaml"
 
-## Adapt this file for your own needs. /path/ needs to be changed according to your setup.
-
+## Adapt this file for your own needs. 
 rule all:
     input:
-        expand("/path/{sample}_out_alignment.fas", sample=config["samples"]),
-        expand("/path/{sample}_out_consensus.fas", sample=config["samples"])
+        expand("{sample}_out_alignment.fas", sample=config["samples"]),
+        expand("{sample}_out_consensus.fas", sample=config["samples"])
 
 # Decompress the sra file and split it in 1, 2, or 3 parts. Finally concatenate the parts.
 rule fastq_dump_concat:
@@ -17,8 +16,7 @@ rule fastq_dump_concat:
     shell:
         "fastq-dump --split-e --readids {input} \n cat {wildcards.sample}*.fastq > {output}"
 
-# (Optional but recommended) Trim adaptors and low quality regions from input.
-# Please comment out if not required.
+# Trim adaptors and low quality regions from input.
 
 rule TrimGalore:
     input:
