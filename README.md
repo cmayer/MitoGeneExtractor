@@ -1,16 +1,15 @@
 # MitoGeneExtractor
 
 MitoGeneExtractor can be used to conveniently extract mitochondrial protein-coding genes from next-generation sequencing libraries.
-Mitochondrial reads are often found as byproduct in sequencing libraries obtained from whole-genome sequencing, RNA-sequencing or various kinds of reduced representation liibraries (e.g., hybrid enrichment libraries).
+Mitochondrial reads are often found as byproduct in sequencing libraries obtained from whole-genome sequencing, RNA-sequencing or various kinds of reduced representation liibraries (e.g. hybrid enrichment libraries).
 
-or assemblies,
 Since in the presence of conflicting sequences the assembly of mitochondrial genes often fails (e.g. if Numts are present), we recommend to mine mitochondrial genes from reads rather than assemblies. We have seen examples where the extraction from assemblies worked equally well as the extraction from unassembled reads and we have seen cases where the extraction from unassembled reads was successful, but failed for the assembly.
 
 List of use cases:
-- Mine mitochondrial protein-coding genes across a broad taxonomic range from sequencing libraries (Genomic and transcriptomic Illumina and PacBio read data sets have been successfully tested).
+- Mine mitochondrial protein-coding genes across a broad taxonomic range from sequencing libraries (genomic and transcriptomic Illumina and PacBio read data sets have been successfully tested).
 - Mine plastome protein-coding genes from sequencing libraries (matK or rbcL successfully tested).
 - Mine prokaryotic genes from assemblies. (Not tested, but in principle, all genes which can be directly translated into amino acid sequences can be reconstructed with MitoGeneExtractor)
-- Mine/excise protein-coding genes from whole assemblies (genomes, transcriptomes), which is is often simpler than referring to the annotation (if available). Note, that in this case the accuracy of the extracted sequence depends on the assembly.
+- Mine/excise protein-coding genes from whole genome or transcriptpome assemblies (successfully tested), which is is often simpler than referring to the annotation (if one is available at all). Note, that in this case the accuracy of the extracted sequence depends on the assembly and that this is not the primariliy intended use case of MitoGeneExtractor.
 
 ## Authors of the publication:
 - Marie Brasseur, ZFMK, Bonn, Germany
@@ -23,12 +22,12 @@ List of use cases:
 - Marie Brasseur, ZFMK, Bonn, Germany: Snakemake pipeline and analyses for publication.
 
 ## Reference: Please cite when using MitoGeneExtractor
-Brasseur ... 2022 ...
+Brasseur ... 2023 ...
 
 ## How MitoGeneExtractor works:
 MitoGeneExtractor aligns all given nucleotide sequences against a
 protein reference sequence to obtain a multiple sequence alignment. The
-recommended use case is to extract mitochondrial genes from sequencing
+intended use case is to extract mitochondrial protein coding genes from sequencing
 libraries, e.g. from hybrid enrichment libraries sequenced on the
 Illumina platform. The individual alignments are computed by calling the
 Exonerate program. 
@@ -89,15 +88,15 @@ Path-to-MitoGeneExtractor/MitoGeneExtractor -h
 ```
 to display a full list of command line options of MitoGeneExtractor. 
 
-In order to run MitoGeneExtractor you need your input sequences in fasta/fastq format as well as an amino acid reference sequence of your mitochondrial gene of interest. Example references are included in the reference-sequence-examples folder of this project. For the COI gene, one can specify as a reference the amino acid sequence of the barcode region, or if intended, the full COI sequence. If the full COI sequence shall be extracted, we suggest to create a reference specific for your taxonomic group, since the COI gene can differ considerably in the first and last few amino acids for specific groups with respect to references designed for larger groups. For the barcode region of COI this is normally not a problem. 
+In order to run MitoGeneExtractor you need your input read data in fasta/fast format as well as reference fasta file with one or more amino acid reference sequence of your mitochondrial gene(s) of interest. Example references are included in the **Amino-Acid-references-for-taxonomic-groups** folder of this project [here](https://github.com/cmayer/MitoGeneExtractor/tree/last-reviews-before-publication/Amino-Acid-references-for-taxonomic-groups). For the COI gene, one can specify as a reference the amino acid sequence of the barcode region, or if intended, the full COI sequence. If the full COI sequence shall be extracted, we suggest to create a reference specific for your taxonomic group, since the COI gene can differ considerably in the first and last few amino acids for specific groups with respect to references designed for larger groups. For the barcode region of COI this is normally not a problem. 
 
 ## Example analysis:
-An example analysis for the MitoGeneExtractor program can be found in the **example-analysis-for-MitoGeneExtractor** folder. The Readme.md file in this folder provided the necessary information to run the example analysis.
+An example analysis for the MitoGeneExtractor program can be found in the **example-analysis-for-MitoGeneExtractor** folder [here](https://github.com/cmayer/MitoGeneExtractor/tree/last-reviews-before-publication/example-analysis-for-MitoGeneExtractor). The Readme.md file in this folder provided the necessary information to run the example analysis and provides further details.
 
 ***Quickstart:***
 Assume the input file (sequencing reads in fasta format, transcriptome assembly, genome assembly) are stored in the file: query-input.fas.
 Furthermore assume that the amino acid reference sequence is stored in the COI-reference.fas file.
-Then the following command could be used to attempt to reconstruct the COI sequence from the query-input.fas file sequences:
+Then the following command could be used to attempt to reconstruct the COI sequence from the read data in the query-input.fas file:
 ```{r, eval=TRUE}
 MitoGeneExtractor  -d query-input.fas -p COI-reference.fas -V vulgar.txt -o out-alignment.fas -n 0 -c out-consensus.fas -t 0.5 -r 1 -C 2
 ```
