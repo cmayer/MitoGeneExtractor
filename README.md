@@ -40,10 +40,11 @@ Exonerate can align amino acid sequences to much longer nucleotide sequences. Fo
 MitoGeneExtractor can also mine sequences from assemblies or from long read libraries. It can even be used to
 extract genes of interest from whole mitochondrial or nuclear genome/transcriptome assemblies. 
 
-Input file formats:
-- The amino acid reference must be provided in a fasta file.
-- The nucleotide reads/assemblies/genomes must be provided in the fasta or the fastq format.
-If the input is a sequencing library, we recommend to pass quality trimmed reads to MitoGeneExtractor.
+### MitoGeneExtractor requires two input files:
+- The amino acid reference in fasta file format. MitoGeneExtractor version > 1.9.3 can simultaneously analyse multiple references within one fasta file. 
+- The nucleotide reads/assemblies/genomes in the fasta or fastq format. If read data is provided in fastq format, MitoGeneExtractor  version > 1.9.3 will internally transform this to fasta format. If multiple input-files are specified (e.g. from paired-end sequencing), these files will be internally concatenated by MitoGeneExtractor version > 1.9.3. Since paired-end information cannot be exploited, paired-end libraries can be combined with single-end data.
+
+***Recommendation:*** Since quality scores are not included in the analysis, we recommend to pass quality trimmed reads to MitoGeneExtractor. If multiple input files exist (e.g. from paired-end sequencing), these files can be concatenated beforehand and subsequently trimmed in single-end mode. 
 
 
 ## Supported Platforms:
@@ -97,10 +98,21 @@ An example analysis for the MitoGeneExtractor program can be found in the **exam
 Assume the input file (sequencing reads in fasta format, transcriptome assembly, genome assembly) are stored in the file: query-input.fas.
 Furthermore assume that the amino acid reference sequence is stored in the COI-reference.fas file.
 Then the following command could be used to attempt to reconstruct the COI sequence from the read data in the query-input.fas file:
+
 ```{r, eval=TRUE}
 MitoGeneExtractor  -d query-input.fas -p COI-reference.fas -V vulgar.txt -o out-alignment.fas -n 0 -c out-consensus.fas -t 0.5 -r 1 -C 2
 ```
-Specifying the name of the vulgar file is optional, but recommended. If the file exists, it is used as input instead of calling Exonerate to create it. If it does not exist, the name is used to story the vulgar file. The -C 2 option specifies the genetic code (here: vertebrate mitochondrial), the -t 0.5 option specifies the consensus threshold and the -r 1 and -n 0 options are used for a stricter alignment quality (see options for details). 
+Specifying the name of the vulgar file is optional, but recommended as this is the most-time consuming step. If the file exists, it is used as input instead of calling Exonerate to create it. If it does not exist, the name is used to create the vulgar file. The -C 2 option specifies the genetic code (here: vertebrate mitochondrial), the -t 0.5 option specifies the consensus threshold and the -r 1 and -n 0 options are used for a stricter alignment quality (see options for details). 
+
+If your read data is in fastq format, you could run the same analysis via this command:
+```{r, eval=TRUE}
+MitoGeneExtractor  -d query-input.fq -p COI-reference.fas -V vulgar.txt -o out-alignment.fas -n 0 -c out-consensus.fas -t 0.5 -r 1 -C 2
+```
+If you have multiple input files (e.g. paired-end data (PE) and single-end (SE) data) you cand specify this as follows:
+```{r, eval=TRUE}
+MitoGeneExtractor  -d PE_query-input_1.fq PE_query-input_2.fq SE_query-input.fq -p COI-reference.fas -V vulgar.txt -o out-alignment.fas -n 0 -c out-consensus.fas -t 0.5 -r 1 -C 2
+```
+Note, that the order of file names does not matter.
 
 ## Prepared Snakemake workflows
 An example analysis using a Snakemake workflow can be found in the **example-analysis-with-Snakemake-workflow** folder.
