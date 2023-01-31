@@ -10,11 +10,11 @@ See https://snakemake.readthedocs.io/en/stable/getting_started/installation.html
 
 ### Prerequisites:
 Before starting the analyses, the user needs to provide all necessary input data. For the example workflow, you would need to provide the following files:
-- Snakefile. (See Snakefile in this folder as an example.)
-- The configuration file in .yaml format, in this example called config.yaml. (See config.yaml in this folder as an example.)
-- Input raw data, e.g. sequencing reads in FASTQ file format. In principle it is possible to include automatic download steps from NCBI into the workflow, e.g. to download SRA files from the NCBI SRA database.  
-- A protein reference for MitoGeneExtractor in FASTA format.
-- optional (but needed for the example workflow): cutadapt.yaml file (Anaconda environment for cutadapt safed in .yaml file)  
+- Snakefile
+- The configuration file in .yaml format, in this example called config.yaml.
+- Input raw data, e.g. sequencing reads in FASTQ file format. In principle it is possible to include automatic download steps from NCBI into the workflow, e.g. to download SRA files from the NCBI SRA database (see provided example Snakefiles)  
+- A protein reference file for MitoGeneExtractor in FASTA format
+- optional (but needed for the example workflow): cutadapt.yaml file (Anaconda environment for cutadapt saved in .yaml file format)  
 
 It is up to the user whether to incorporate analysis steps such as data trimming. Please also have in mind that you might want to adjust the example workflow according to your directory structure. Further, if other versions of the used software are installed, some parameter names might have changed.
 
