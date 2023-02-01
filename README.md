@@ -5,11 +5,23 @@ Mitochondrial reads are often found as byproduct in sequencing libraries obtaine
 
 Since in the presence of conflicting sequences the assembly of mitochondrial genes often fails (e.g. if Numts are present), we recommend to mine mitochondrial genes from reads rather than assemblies. We have seen examples where the extraction from assemblies worked equally well as the extraction from unassembled reads and we have seen cases where the extraction from unassembled reads was successful, but failed for the assembly.
 
-List of use cases:
+## List of use cases:
 - Mine mitochondrial protein-coding genes across a broad taxonomic range from sequencing libraries (genomic and transcriptomic Illumina and PacBio read data sets have been successfully tested).
 - Mine plastome protein-coding genes from sequencing libraries (matK or rbcL successfully tested).
 - Mine prokaryotic genes from assemblies. (Not tested, but in principle, all genes which can be directly translated into amino acid sequences can be reconstructed with MitoGeneExtractor)
-- Mine/excise protein-coding genes from whole genome or transcriptpome assemblies (successfully tested), which is is often simpler than referring to the annotation (if one is available at all). Note, that in this case the accuracy of the extracted sequence depends on the assembly and that this is not the primariliy intended use case of MitoGeneExtractor.
+- Mine/excise protein-coding genes from whole genome or transcriptome assemblies (successfully tested), which is often simpler than referring to the annotation (if one is available at all). If raw reads are available, it is recommended to use these as input rather than an assembly of the reads. We saw example for which a reconstruction from quality trimmd reads was successful while it failed completely when using the assembly. 
+
+## List of input sources that have been tested successfully:
+- Short reads such as reads from the Illumina platform.
+- Long reads from the PacBio platform. (Tested on a small number of libraries. See the supplementary materials of the publication for details.) 
+- Whole mitochondrial genomes
+- Assemblies of transcriptomes. (We recommend to use sequencing reads if available.)
+- Assemblies of genomes, if the contigs are not too long. Contigs with a length of the mitochondrial genome can easily be handled. (We recommend to use sequencing reads if available.)
+
+## List of input sources for which did not work:
+- Long reads from MinIon, Oxford Nanopore (Tested on a small number of libraries. See the supplementary materials of the publication for details.) 
+
+
 
 ## Authors of the publication:
 - Marie Brasseur, ZFMK, Bonn, Germany
@@ -24,27 +36,18 @@ List of use cases:
 ## Reference: Please cite when using MitoGeneExtractor
 Brasseur ... 2023 ...
 
-## How MitoGeneExtractor works:
-MitoGeneExtractor aligns all given nucleotide sequences against a
-protein reference sequence to obtain a multiple sequence alignment. The
-intended use case is to extract mitochondrial protein coding genes from sequencing
-libraries, e.g. from hybrid enrichment libraries sequenced on the
-Illumina platform. The individual alignments are computed by calling the
-Exonerate program. 
+## How MitoGeneExtractor works - the algorithm:
+MitoGeneExtractor aligns all given nucleotide sequences against a protein reference sequence to obtain a multiple sequence alignment. The intended use case is to extract mitochondrial protein coding genes from sequencing libraries, e.g. from hybrid enrichment libraries sequenced on the Illumina platform. The individual alignments are computed by calling the Exonerate program. 
 
 Exonerate is a very efficient alignment program which allows to align protein and nucleotide sequences.
-Nucleotide sequences which cannot be aligned to the protein reference will not be included in
-the output. Exonerate should be able to align several 100k short reads in a few
-minutes using a single CPU core. Therefore, this approach can be used for projects of any size.
-Exonerate can align amino acid sequences to much longer nucleotide sequences. For this reason,
-MitoGeneExtractor can also mine sequences from assemblies or from long read libraries. It can even be used to
-extract genes of interest from whole mitochondrial or nuclear genome/transcriptome assemblies. 
+Nucleotide sequences which cannot be aligned to the protein reference will not be included in the output. Exonerate should be able to align several 100k short reads in a few minutes using a single CPU core. Therefore, this approach can be used for projects of any size.
+Exonerate can align amino acid sequences to much longer nucleotide sequences. For this reason, MitoGeneExtractor can also mine sequences from assemblies or from long read libraries. It can even be used to extract genes of interest from whole mitochondrial or nuclear genome/transcriptome assemblies. 
 
 ### MitoGeneExtractor requires two input files:
 - The amino acid reference in fasta file format. MitoGeneExtractor version > 1.9.3 can simultaneously analyse multiple references within one fasta file. 
 - The nucleotide reads/assemblies/genomes in the fasta or fastq format. If read data is provided in fastq format, MitoGeneExtractor  version > 1.9.3 will internally transform this to fasta format. If multiple input-files are specified (e.g. from paired-end sequencing), these files will be internally concatenated by MitoGeneExtractor version > 1.9.3. Since paired-end information cannot be exploited, paired-end libraries can be combined with single-end data.
 
-***Recommendation:*** Since quality scores are not included in the analysis, we recommend to pass quality trimmed reads to MitoGeneExtractor. If multiple input files exist (e.g. from paired-end sequencing), these files can be concatenated beforehand and subsequently trimmed in single-end mode. 
+***Recommendation:*** Since quality scores are not used in the analysis, we recommend to pass quality trimmed reads to MitoGeneExtractor. If multiple input files exist (e.g. from paired-end sequencing), these files can be concatenated beforehand and subsequently trimmed in single-end mode. 
 
 
 ## Supported Platforms:
