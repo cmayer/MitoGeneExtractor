@@ -20,7 +20,7 @@ Since in the presence of conflicting sequences the assembly of mitochondrial gen
 - Assemblies of genomes, if the contigs are not too long. Contigs with a length of the mitochondrial genome can easily be handled. (We recommend to use sequencing reads if available.)
 
 ## List of input sources for which did not work:
-- Long reads from MinIon, Oxford Nanopore (Tested on a small number of libraries. See the supplementary materials of the publication for details.) 
+- Long reads from MinION, Oxford Nanopore (Tested on a small number of libraries. See the supplementary materials of the publication for details.) 
 
 
 
