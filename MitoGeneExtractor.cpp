@@ -13,12 +13,15 @@
 #include <iomanip>
 #include <cstdio>
 #include "statistic_functions.h"
+//#inlcude ""
+
 /// #include <utility>
 
 using namespace std;
 
 typedef pair<unsigned, unsigned> Key;
 typedef map< Key , unsigned> Mymap;
+
 
 // Verbosity rules:
 //      verbosity 0 -> only error messages that lead to exit() (goes to cerr). Welcome is printed to cout. Parameters are printed to cout.
@@ -28,7 +31,6 @@ typedef map< Key , unsigned> Mymap;
 //      verbosity 4 -> more progress (goes to cout)
 //      verbosity >=20: DEGUB
 // Default: 1
-
 
 // What the exonerate manual says about coordinates:
 // The coordinates are the coordinates in between the bases:
@@ -41,6 +43,78 @@ typedef map< Key , unsigned> Mymap;
 //unsigned  length_constaint                = 2000;
 
 unsigned num_WARNINGS = 0;
+
+
+struct stats_for_given_target
+{
+  // All numbers will be for this specific target
+  unsigned skipped_double_vulgar;
+  unsigned skipped_G;
+  unsigned skipped_F;
+  unsigned skipped_relative_score;
+  unsigned skipped_no_G;
+  unsigned not_considered;
+  unsigned not_best_score_for_query;
+  unsigned good_hits_added_to_alignment;
+  unsigned hits_in_vulgar_file;
+
+  stats_for_given_target():skipped_double_vulgar(0), skipped_G(0),
+			   skipped_F(0), skipped_relative_score(0),
+			   skipped_no_G(0), not_considered(0),
+			   not_best_score_for_query(0),
+			   good_hits_added_to_alignment(0),
+			   hits_in_vulgar_file(0)
+  {}
+
+  void increment_skipped_double_vulgar()
+  {
+    ++skipped_double_vulgar;
+  }
+
+  void increment_skipped_G()
+  {
+    ++skipped_G;
+  }
+
+  void increment_skipped_F()
+  {
+    ++skipped_F;
+  }
+
+  void increment_skipped_relative_score()
+  {
+    ++skipped_relative_score;
+  }
+
+  void increment_skipped_no_G()
+  {
+    ++skipped_no_G;
+  }
+
+  void increment_not_considered()
+  {
+    ++not_considered;
+  }
+
+  void increment_not_best_score()
+  {
+    ++not_best_score_for_query;
+  }
+
+  void increment_good_hits_added_to_alignment()
+  {
+    ++good_hits_added_to_alignment;
+  }
+
+  void increment_hits_in_vulgar_file()
+  {
+    ++hits_in_vulgar_file;
+  }
+};
+
+
+
+
 
 inline void add_or_count(Mymap &m, Key k)
 {
@@ -89,21 +163,27 @@ void print_DNA_profile(ostream &os, unsigned **profile, unsigned N_sites)
   }
 }
 
+// IMPORTANT: Reads/sequences are targets.
+//            Reference sequences are queries.
 
 class vulgar
 {
 public:
-  
-  faststring query;          // In this program, this is the AA-COI consensus seq. exonerate aligned against.
-  unsigned   query_start;    // 0 based numbers.
-  unsigned   query_end;      // The first position after the specified range.
+  static map<faststring, short>  queryID2Index;
+
+  faststring queryID;          // In this program, this is the AA-COI consensus seq. exonerate aligned against.
+  short      queryIndex;       // Every query sequence (reference sequence) has a query number.
+                               // This avoids many loopups for index.
+  unsigned   query_start;      // 0 based numbers.
+  unsigned   query_end;        // The first position after the specified range.
   char       query_strand;
-  faststring target;         // In this program, they are the reads.
-  unsigned   target_start;   // 0 based numbers.
-  unsigned   target_end;     // The first position after the specified range.
+  faststring targetID;         // In this program, they are the reads.
+  unsigned   target_start;     // 0 based numbers.
+  unsigned   target_end;       // The first position after the specified range.
   char       target_strand;
   unsigned   score;
   vector<Ctriple<char, unsigned, unsigned> > attributes;
+  
   
   // Frequent labels:
   bool       bool_has_M;
@@ -117,7 +197,33 @@ public:
   bool       bool_has_I;
   bool       bool_has_S;
   bool       bool_has_non_M;
-  
+
+  public:
+  static short add_query_to_query2short_map_or_get_index(faststring q)
+  {
+    map<faststring, short>::iterator find_it = queryID2Index.find(q);
+    if (find_it != queryID2Index.end())
+      return find_it->second;
+
+    unsigned s = queryID2Index.size();
+    queryID2Index[q] = s;
+    return s;
+  }
+
+  short get_index_in_query2short_map(faststring q)
+  {
+    map<faststring, short>::iterator find_it = queryID2Index.find(q);
+    if (find_it != queryID2Index.end())
+      return find_it->second;
+    else
+    {
+      cerr << "Reference sequence appears in Exonerate output, but not in "
+    	      "reference sequences. This should not be possible.\n";
+      exit(-127);
+    }
+  }
+
+  private:
   void parse(faststring &str)
   {
     bool_has_M = false;
@@ -150,22 +256,25 @@ public:
     }
 
     // It is a convention in exonerate that the protein sequence is the query and the DNA sequence the target:
-    query         = l[1];
+    queryID       = l[1];
     query_start   = l[2].ToUnsigned();
     query_end     = l[3].ToUnsigned();
     query_strand  = l[4][0];
 
-    target        = l[5];
+    targetID      = l[5];
     target_start  = l[6].ToUnsigned();
     target_end    = l[7].ToUnsigned();
     target_strand = l[8][0];
 
     score         = l[9].ToUnsigned();
 
+    queryIndex    = get_index_in_query2short_map(queryID);
+    
     int m = l.size()-10;
     if (m%3 != 0)
     {
-      cerr << "ERROR: Bad vulgar string encountered. The number of fields must by 10+3*n where n is an integer. But the number is "
+      cerr << "ERROR: Bad vulgar string encountered. The number of fields must "
+	      "by 10+3*n where n is an integer. But the number is "
            << m << "." << endl;
       cerr << "       Vulgar string: " << str << endl;
       exit(-5);
@@ -271,17 +380,18 @@ public:
    */
   
 public:
-  void print(ostream &os)
+  void print(ostream &os) const
   {
     os << "vulgar: "
-    << query << " "
+    << queryID       << " "
+      //    << queryIndex    << " "
     << query_start   << " "
     << query_end     << " "
     << query_strand  << " "
-    << target        << " "
-    << target_start   << " "
-    << target_end     << " "
-    << target_strand  << " "
+    << targetID      << " "
+    << target_start  << " "
+    << target_end    << " "
+    << target_strand << " "
     << score << " ";
     for (unsigned i=0; i<attributes.size(); ++i)
     {
@@ -291,63 +401,79 @@ public:
     }
   }
   
-  vulgar(faststring &str)
+  vulgar(faststring &str) 
   {
     parse(str);
     //    combine_FG_attributes();
   }
-  
-  const faststring & get_target()
+
+  const faststring & get_queryID() const
   {
-    return target;
+    return queryID;
+  }
+
+  short get_queryIndex() const
+  {
+    return queryIndex;
   }
   
-  bool has_F()
+  const faststring & get_targetID() const
+  {
+    return targetID;
+  }
+
+  faststring get_hitkey() const
+  {
+    return queryID + "##" + targetID;
+  }
+  
+  bool has_F() const
   {
     return bool_has_F;
   }
   
-  bool has_G()
+  bool has_G() const
   {
     return bool_has_G;
   }
   
-  bool has_M()
+  bool has_M() const
   {
     return bool_has_M;
   }
   
-  bool has_non_M()
+  bool has_non_M() const
   {
     return bool_has_non_M;
   }
   
-  unsigned num_attributes()
+  unsigned num_attributes() const
   {
     return attributes.size();
   }
   
-  unsigned get_query_start()
+  unsigned get_query_start() const
   {
     return query_start;
   }
 
-  unsigned get_target_start()
+  unsigned get_target_start() const
   {
     return target_start;
   }
   
-  unsigned get_target_end()
+  unsigned get_target_end() const
   {
     return target_end;
   }
   
-  bool is_revcomp()
+  bool is_revcomp() const
   {
     return (target_strand == '-');
   }
 
-  double relative_score()
+  // Divides the exonerate score by the length of the hit and returns the result.
+  double relative_score() const
   {
     double dist;
     if (target_end > target_start)
@@ -358,7 +484,17 @@ public:
       return 0;
     return score/dist;
   }
+
+  unsigned get_score()
+  {
+    return score;
+  }
 };
+
+
+// Global variable definition for static member variable of vulgar class:
+map<faststring, short>  vulgar::queryID2Index;
+
 
 bool fileExists(const char *filename)
 {
@@ -369,17 +505,67 @@ bool fileExists(const char *filename)
     return true;
 }
 
+inline unsigned size_keyset_multimap(multimap<faststring, vulgar *> &mm)
+{
+  set<pair<faststring, faststring> > s;
+  multimap<faststring, vulgar *>::iterator it = mm.begin();
+  while (it != mm.end())
+  {
+    vulgar &vul = *(it->second);
+    s.insert(make_pair(vul.queryID, vul.targetID));
+    ++it;
+  }
+  return s.size();
+}
 
+inline unsigned number_of_entries_targetID(multimap<faststring, vulgar *> &mm, faststring targetID)
+{
+  return mm.count(targetID);
+}
+
+inline unsigned number_of_entries_targetID_and_queryID(multimap<faststring, vulgar *> &mm,
+						       faststring targetID,
+						       faststring &quereyID)
+{
+  pair<multimap<faststring, vulgar *>::iterator, multimap<faststring, vulgar *>::iterator> it_bounds_pair;
+  multimap<faststring, vulgar *>::iterator it, it_end;
+
+  it_bounds_pair = mm.equal_range(targetID);
+  it     = it_bounds_pair.first;
+  it_end = it_bounds_pair.second;
+  unsigned count = 0;
+  
+  while (it != it_end)
+  {
+    if ( (*(it->second)).get_queryID() == quereyID )
+      ++count;
+    ++it;
+  }
+  return count;
+}
+
+
+  
 // Determines the aligned sequence newseqDNA
-void determine_alignment_string(CSequence_Mol* theSeq, vulgar vul, unsigned query_prot_length, CDnaString &newseqDNA, unsigned seq_count,
-                                map<pair<unsigned, unsigned>, unsigned> &map_of_gap_sites_in_queries, map<pair<unsigned, unsigned>, unsigned> &map_of_insertion_sites_suggested_in_reference)
+void determine_alignment_string(CSequence_Mol* theSeq, const vulgar &vul, unsigned query_prot_length,
+				CDnaString &newseqDNA, unsigned seq_count,
+                                map<pair<unsigned, unsigned>, unsigned> &map_of_gap_sites_in_queries,
+				map<pair<unsigned, unsigned>, unsigned> &map_of_insertion_sites_suggested_in_reference)
 {
   // The query prot sequence start coordinate sets the number of gaps before:
   unsigned    gaps_before = vul.query_start*3;
   unsigned    start_in_seqDNA, end_in_seqDNA;
   CDnaString  seqDNA;
-  
-  
+
+
+  if (global_verbosity >= 100)
+  {
+    cerr << "determine_alignment_string was called with the following parameters:\n"
+	 << "query_prot_length:  " << query_prot_length << endl;
+    cerr << "Reference (query):  " << vul.get_queryID() << endl;
+    cerr << "Reference (target): " << vul.get_targetID() << endl;
+  }
+    
   unsigned length_this_nuc_seq = theSeq->length();
   // Compute the rev comp once, so we do not have to handle so many different cases.
   if (vul.is_revcomp())
@@ -536,13 +722,16 @@ void determine_alignment_string(CSequence_Mol* theSeq, vulgar vul, unsigned quer
   // For all vulgar features: Usually only one: The M feature.
   for (unsigned i=0; i < vul.attributes.size(); ++i)
   {
+    /* These hits should never be handled here:
     if (global_relative_score_threshold && vul.relative_score() < global_relative_score_threshold)
     {
-      cerr << "NOTE: Exonerate hit skipped due to low relative alignment score: " << vul.relative_score()
-      << " " << vul.get_target() << endl;
+      cerr << "NOTE: Exonerate hit skipped due to low relative alignment score: "
+	   << vul.relative_score()
+	   << " " << vul.get_targetID() << endl;
     }
     //     cout << "Working on vulgar with target_strand: " << vul.target_strand << endl;
-    else if (vul.attributes[i].first() == 'M')
+    else */
+    if (vul.attributes[i].first() == 'M')
     {
       //       cout << "Working on attribute i: " << i << " with " << endl;
       if (!vul.is_revcomp())
@@ -658,7 +847,14 @@ void determine_alignment_string(CSequence_Mol* theSeq, vulgar vul, unsigned quer
   if (query_prot_length*3 < count)
   {
     cerr << "ERROR: count is larger than length of target in nucleotides. "
-    "This internal error should be reported.\n";
+            "This internal error should be reported.\n"
+            "Vulgar hit for this problematic sequence:\n";
+    vul.print(cerr);
+    cerr << endl;
+    cerr << "query_prot_length   " << query_prot_length   << endl;
+    cerr << "query_prot_length*3 " << query_prot_length*3 << endl;
+    cerr << "count (nuc-length)  " << count  << endl;
+    
     exit(-131);
   }
   
@@ -849,20 +1045,24 @@ int main(int argc, char **argv)
   
   CSequences2 seqs_DNA_reads_target(CSequence_Mol::dna);
   CSequences2 seqs_prot_query(CSequence_Mol::protein);
-  CSequences2 seqs_DNA_result(CSequence_Mol::dna);
+  //  CSequences2 seqs_DNA_result(CSequence_Mol::dna);
 
-  unsigned skipped_double_vulgar=0, skipped_G=0, skipped_F=0, skipped_relative_score=0, skipped_no_G=0;
+  // unsigned skipped_double_vulgar=0, skipped_G=0, skipped_F=0, skipped_relative_score=0, skipped_no_G=0;
+
+  vector<faststring>   seqnames_of_references;
+  vector<CSequences2*> result_alignments_for_references;
+
   
   //**************************
   // Read query sequences
   //**************************
   CFile query_file;
-  
+
   if (global_verbosity >= 3)
   {
     cout << "Reading query sequences from fasta file: " << global_input_dna_fasta_file << endl;
   }
-  
+
   query_file.ffopen(global_input_dna_fasta_file.c_str());
   if (query_file.fail())
   {
@@ -871,11 +1071,11 @@ int main(int argc, char **argv)
   }
   // cerr << "Line:   " <<  file.line() << endl;
   // cerr << "Status: " <<  (int)file.status() << endl;
-  
+
   CSequence_Mol::processing_flag pflag(CSequence_Mol::convert_toupper);
   int error = seqs_DNA_reads_target.read_from_Fasta_File(query_file, pflag, 0, -1, false);
   query_file.ffclose();
-  
+
   if (error < 0)
   {
     cerr << "ERROR: Exiting: An error occurred while reading the input file: " << global_input_dna_fasta_file
@@ -884,8 +1084,10 @@ int main(int argc, char **argv)
   }
 
   // TODO:
-  // Instead of printing this error message and exiting, we could fix this problem at this point, at least
-  // if we compute the vulgar file ourselves.
+  // Instead of printing this error message and exiting, we could fix this
+  // problem at this point, at least if we compute the vulgar file ourselves.
+  // But this should be an extremely  rare case. NGS reads should always be
+  // unique. I do not see the scenario in which this would occur.
 
   if (!seqs_DNA_reads_target.are_short_names_unique())
   {
@@ -899,7 +1101,9 @@ int main(int argc, char **argv)
   
   if (global_verbosity >= 3)
   {
-    cout << "Finished reading target read sequences. Found this number of target sequences: " << seqs_DNA_reads_target.GetTaxaNum()  << endl;
+    cout << "Finished reading target read sequences. Found this number of "
+            "target sequences: "
+	 << seqs_DNA_reads_target.GetTaxaNum()  << endl;
   }
   
   // Print memory usage details:
@@ -947,40 +1151,82 @@ int main(int argc, char **argv)
          << endl;
     exit(-3);
   }
+
+  if (!seqs_prot_query.are_short_names_unique())
+  {
+    cerr << "ERROR: The sequence in the reference file are not unique."
+            "Please rename the reference sequences to ensure they are unique.\n";
+    exit(-3);
+  }
+
+  seqs_prot_query.get_short_sequence_names(seqnames_of_references);
+
+  // Create vector of output objects:
+  for (std::vector<faststring>::size_type i=0; i < seqnames_of_references.size(); ++i)
+  {
+    result_alignments_for_references.push_back(new CSequences2(CSequence_Mol::dna) );
+    vulgar::add_query_to_query2short_map_or_get_index(seqnames_of_references[i]);
+  }
+    
+  if (global_verbosity >= 100)
+  {
+    cerr << "Sequence names found in reference file:\n";
+    for (std::vector<faststring>::size_type i=0; i<seqnames_of_references.size(); ++i)
+      cerr << seqnames_of_references[i] << endl;
+  }
   
+  // The program now accepts multiple reference sequences.
+  /*
   if (seqs_prot_query.GetTaxaNum() != 1)
   {
     cerr << "ERROR: Found multiple sequences in the query protein file. Only one sequence is allowed in this program." << endl;
     exit(-23);
   }
-  unsigned query_prot_length = seqs_prot_query.GetPosNum();
-  
+  */
+
+  //  unsigned query_prot_length = seqs_prot_query.GetPosNum();
+
+  map<faststring, unsigned> map_query_prot_lengths;
+  for (std::vector<faststring>::size_type i=0; i < seqnames_of_references.size(); ++i)
+    map_query_prot_lengths[seqnames_of_references[i]] = seqs_prot_query.get_seq(i)->length();
+
   if (global_verbosity >= 3)
   {
     cout << "Finished reading fasta file with protein reference sequence." << endl;
   }
-  
-  
+
   //**************************
   // Export query if sequence names had to be modified.
   //**************************
   
-  //**************************
-  // Run exonerate
-  //**************************
-  bool vulgar_file_read_successfully = false;
+  bool     vulgar_file_read_successfully = false;
   unsigned count_appempts_to_read_vulgar_file = 0;
 
-  list<pair<faststring, vulgar> > list_exonerate_results;
-  map<faststring, unsigned>       map_exonerate_count_results;
+  // OLD
+  //  vector<pair<faststring, vulgar *> > vec_exonerate_results;
+  //  map<faststring, unsigned>       map_exonerate_count_results;
+  // END OLD
+  
+  //*********
+  vector<vulgar *>                   vec_of_hits_as_in_file;
+  multimap<faststring, vulgar * >    map_of_vulgar_hits_targets_as_keys;
+
+  vector<stats_for_given_target> vector_of_hit_stats_for_targets(seqnames_of_references.size() );
+
+  //*********
 
   while (!vulgar_file_read_successfully)
   {
-    list_exonerate_results.clear();
-    map_exonerate_count_results.clear();
+    // Reset vec and map and counters. They might have data from an incomplete vulgar file that we tried to read before.
+    vec_of_hits_as_in_file.clear();
+    map_of_vulgar_hits_targets_as_keys.clear();
 
     ++count_appempts_to_read_vulgar_file;
     faststring exonerate_output_file_name = global_vulgar_file.c_str();
+
+    //*****************************
+    // Run exonerate if necessary:
+    //*****************************
 
     // Do we need to compute the vulgar file?
     if ( !fileExists(global_vulgar_file.c_str()))
@@ -989,15 +1235,17 @@ int main(int argc, char **argv)
         global_exonerate_binary = "exonerate";
  
       if (global_verbosity >= 1 && count_appempts_to_read_vulgar_file == 1)
-        cout << "No vulgar file with the specified name has been found. So the binary \"" << global_exonerate_binary << "\" will be used to create the vulgar file." << endl;
-      
+        cout << "No vulgar file with the specified name has been found. So the binary \""
+	     << global_exonerate_binary << "\" will be used to create the vulgar file." << endl;
+
       int num_trials = run_exonerate(global_exonerate_binary.c_str(), global_input_prot_reference_sequence.c_str(),
-                                     global_input_dna_fasta_file.c_str(), global_vulgar_file.c_str(), global_genetic_code_number,
-                                     global_frameshift_penalty, 10, global_run_mode);
-      
+                                     global_input_dna_fasta_file.c_str(), global_vulgar_file.c_str(),
+				     global_genetic_code_number, global_frameshift_penalty, 10, global_run_mode);
+
       if (num_trials == 10+1)
       {
-        cerr << "ERROR: Running exonerate failed. The generated vulgar file is incomplete and should be removed manually. Exiting.\n";
+        cerr << "ERROR: Running exonerate failed. "
+	        "The generated vulgar file is incomplete and should be removed manually. Exiting.\n";
         exit(-1);
       }
 
@@ -1010,9 +1258,9 @@ int main(int argc, char **argv)
         cout << "The specified vulgar file exists, so it does not have to be recomputed with exonerate." << endl;
     }
 
-    //**************************
+    //*****************************
     // Parse exonerate output:
-    //**************************
+    //*****************************
 
     CFile exonerate_output_file;
     //  map<faststring, vulgar>  m_exonerate_results;
@@ -1027,21 +1275,88 @@ int main(int argc, char **argv)
     }
 
     faststring line;
-    while(!exonerate_output_file.fail())
+    while(true) // Loop over all lines in file and create vulgar objects for all vulgar lines:
     {
       //    char c = exonerate_output_file.getchar();
       //    cout << "char: " << c << endl;
 
       exonerate_output_file.getline(line);
+
+      if (exonerate_output_file.fail())
+	break;
+
+      line.removeSpacesBack();
+
+      // These are valid hits:
       if (line.size() > 7 && line.substr(0,7) == "vulgar:")
       {
         //       cout << "Adding line: " << line << endl;
-        vulgar v(line);
-        //       m_exonerate_results.insert(make_pair(v.get_target(), v) );
-        list_exonerate_results.push_back(make_pair(v.get_target(),v));
-        add_or_count(map_exonerate_count_results, v.get_target());
-      }
-      else
+	// Create vulgar object:
+        vulgar *pv = new vulgar(line);
+
+	// Preselection of hits:
+	// Depeding on the program parameters, some hits will not be considered. This is a good
+	// point to remove them.
+	{
+	  vulgar &vul = *pv;
+	  short refnumber = pv->get_queryIndex();
+	  vector_of_hit_stats_for_targets[refnumber].increment_hits_in_vulgar_file();
+
+	  // Currently, considering frameshift hits is not supported. Anyway we filter them first.
+	  if (vul.has_F() && !global_include_frameshift_alignments)
+	  {
+	    vector_of_hit_stats_for_targets[refnumber].increment_skipped_F();
+	    vector_of_hit_stats_for_targets[refnumber].increment_not_considered();
+	    //	    ++skipped_F;
+	    //	    ++count_not_considered;
+	    if (!vul.has_G() )
+	      vector_of_hit_stats_for_targets[refnumber].increment_skipped_G();
+	      //	      ++skipped_G;
+	    delete pv;
+	    continue;
+	  }
+
+	  if ((!vul.has_G() && global_gap_frameshift_mode == 2) )
+	  {
+	    vector_of_hit_stats_for_targets[refnumber].increment_skipped_no_G();
+	    //	    ++skipped_no_G;
+	    vector_of_hit_stats_for_targets[refnumber].increment_not_considered();
+	    //	    ++count_not_considered;
+	    delete pv;
+	    continue;
+	  }
+
+	  if ((vul.has_G() && global_gap_frameshift_mode == 0) )
+	  {
+	    vector_of_hit_stats_for_targets[refnumber].increment_not_considered();
+	    //	    ++count_not_considered;
+	    vector_of_hit_stats_for_targets[refnumber].increment_skipped_G();
+	    //	    ++skipped_G;
+	    delete pv;
+	    continue;
+	  }
+
+	  if (global_relative_score_threshold && vul.relative_score() < global_relative_score_threshold)
+	  {
+	    cerr << "NOTE: Exonerate hit skipped due to low relative alignment score: " << vul.relative_score()
+		 << " " << vul.get_targetID() << endl;
+	    vector_of_hit_stats_for_targets[refnumber].increment_skipped_relative_score();
+	    vector_of_hit_stats_for_targets[refnumber].increment_not_considered();
+	    //	    ++skipped_relative_score;
+	    //	    ++count_not_considered;
+	    delete pv;
+	    continue;
+	  }
+	} // END Preselection of hits
+
+	vec_of_hits_as_in_file.push_back(pv);
+	map_of_vulgar_hits_targets_as_keys.emplace(pv->get_targetID(),pv);
+
+	////        vec_exonerate_results.push_back(make_pair(pv->get_targetID(),pv));
+	////        faststring hit_key = pv->get_hitkey();
+	////        add_or_count(map_exonerate_count_results, hit_key);
+      } // END if (line.size() > 7 && line.substr(0,7) == "vulgar:")
+      else  // These lines do not contain hits:
       {
         if (line.size() >= 13 && line.substr(0,13) == "Command line:")
           continue;
@@ -1052,12 +1367,12 @@ int main(int argc, char **argv)
           vulgar_file_read_successfully = true;
           break;
         }
-        line.removeSpacesBack();
         if (line.empty()) // Skip empty lines even though they normally do not occur in vulgar files.
           continue;
         cerr << "WARNING: Ignoring non standard line in vulgar file: \"" << line << "\""<< endl;
       }
-    } // END  while(!exonerate_output_file.fail())
+    } // END  while(true) // Reading all lines of the vulgar file.
+
     if (!vulgar_file_read_successfully)
     {
       cerr << "WARNING: Vulgar file is incomplete. It does not end with \"-- completed exonerate analysis\"\n";
@@ -1072,7 +1387,7 @@ int main(int argc, char **argv)
     }
   } // END  while (!vulgar_file_read_successfully)
 
-
+  // Remove the vulgar file, if the user has not specified a file name to save the file permanently.
   if (global_vulgar_file == "tmp-vulgar.txt")
     remove("tmp-vulgar.txt");
 
@@ -1085,29 +1400,34 @@ int main(int argc, char **argv)
   
   if (global_verbosity >= 3)
   {
-    unsigned s1 = list_exonerate_results.size();
-    cout << "Number of successful exonerate alignments (could include multiple hits) to the amino acid sequence found in input file: " << s1 << endl;
-    unsigned s2 = map_exonerate_count_results.size();
-    cout << "Number of successful exonerate alignments without multiple hits. Normally the number of aligned reads:                  " << s2 << endl;
+    unsigned s1 = vec_of_hits_as_in_file.size();
+    cout << "Number of exonerate hits (including multiple hits) to the amino "
+            "acid sequence\nfound in input file:, without skipped hits: " << s1 << endl;
+    //    cout << "Number of hits that have been filtered (gaps, frameshift, relative score): " << count_not_considered << endl;
+    unsigned s2 = map_of_vulgar_hits_targets_as_keys.size();
+    // TODO: Check what is the difference to s1. The text has been changed. I think s1 used to be without double hits?
+    //       If s1 == s2, we can remove one line or indicate.
+    cout << "Number of successful exonerate alignments with multiple hits: " << s2 << endl;
+    //    cout << "Number of queryID, targetID hit pairs: " << size_query_target_set(map_of_vulgar_hits_targets_as_keys);
   }
-  
+
   // Debug output:
   if (global_verbosity >= 100)
   {
     cout << "DEBUG OUTPUT: Exonerate results.\n";
-    
-    list<pair<faststring, vulgar> >::iterator it;
-    it = list_exonerate_results.begin();
-    while (it !=  list_exonerate_results.end())
+
+    vector<vulgar *>::iterator it;
+    it = vec_of_hits_as_in_file.begin();
+    while (it !=  vec_of_hits_as_in_file.end())
     {
-      faststring key = it->first;
-      cout << " => item " << key << " ";
-      it->second.print(cout);
+      faststring target_key = (**it).get_targetID();
+      cout << " => item " << target_key << " ";
+      (**it).print(cout);
       cout << endl;
       ++it;
     }
   }
-  
+
   // Debug output:
   if (global_verbosity >= 100)
   {
@@ -1119,13 +1439,19 @@ int main(int argc, char **argv)
       cout << "Name " << i << " " << names[i] << endl;
     }
   }
-  
+
+  /*
   ofstream os;
   os.open(global_alignment_output_file.c_str());
-  
+  */  
+
   // After reading the data, this is the main analysis and alignment block.
   {
-    list<pair<faststring, vulgar> >::iterator l_it;
+    multimap<faststring, vulgar *>::iterator seqs_it, equal_range_start, equal_range_end, tmp_it;
+    //    pair<multimap<faststring, vulgar *>::iterator,multimap<faststring, vulgar *>::iterator> equal_range_its;
+
+    
+    //    vector<vulgar*>::iterator vec_it;
     //    map<faststring, vulgar>::iterator m_it;
     
     unsigned seq_count = 0;
@@ -1134,32 +1460,202 @@ int main(int argc, char **argv)
     // For each sequence, use exonerate output to align the sequences:
     //**************************
     // Loop over all vulgar strings and align the corresponding read:
-    // Sequences without vulgar string are ignored. - Diagnostic output could be written for these sequences.
+    // Sequences without vulgar string are ignored. - Diagnostic output
+    // could be written for these sequences.
     
+    /*
     bool consider_this_read;
     unsigned count_not_considered = 0;
+    */
 
-    map<pair<unsigned, unsigned>, unsigned> map_of_insertion_sites_suggested_in_reference, map_of_gap_sites_in_queries;
-    
-    l_it = list_exonerate_results.begin();
-    while (l_it !=  list_exonerate_results.end()) // For all hits:
+    vector<map<pair<unsigned, unsigned>, unsigned> > all_maps_of_insertion_sites_suggested_in_reference(seqnames_of_references.size());
+    vector<map<pair<unsigned, unsigned>, unsigned> > all_maps_of_gap_sites_in_queries(seqnames_of_references.size());
+
+    //    map<pair<unsigned, unsigned>, unsigned> map_of_insertion_sites_suggested_in_reference, map_of_gap_sites_in_queries;
+
+    // The main analysis loop over all targets (reads or sequences).
+    // They are called targets since exonerate treats them as targets.
+
+    // For all target, i.e. read sequences do:
+    seqs_it = map_of_vulgar_hits_targets_as_keys.begin();
+    while (seqs_it !=  map_of_vulgar_hits_targets_as_keys.end())
     {
-      consider_this_read = true;
+      const faststring &target_key = seqs_it->first;
 
-      ++seq_count;
-      faststring &key = l_it->first;
-      vulgar     &vul = l_it->second;
-      
       if (global_verbosity >= 4)
       {
-        cout << "Working on key: " << key << endl;
+	cout << "Creating alignments for (read) sequence ID: " << target_key << endl;
       }
+
+      // Determine equal range. We could call equal range, but we already
+      // have the beginning, so it is more efficient to only look for the end.
+      tmp_it = equal_range_start = seqs_it;
+      unsigned count_hits_this_target_before_final_filtering = 0;
+
+      // A target sequence might have hits with multiple queries (references).
+      // Furthermore, the hits have to be added to the right alignment.
+      // This will be taken care of in the following:
+
+      map<faststring, unsigned> count_hits_for_different_queries_of_this_target;
+      vector<vulgar *>          vec_of_hits_for_this_target_key;
+      vector<vulgar *>          hits_to_use_for_target(seqnames_of_references.size(), 0);
+
+      // Loop over all hits for this target.
+      while (tmp_it != map_of_vulgar_hits_targets_as_keys.end() && tmp_it->first == target_key)
+      {
+	vec_of_hits_for_this_target_key.push_back(tmp_it->second);
+	++count_hits_this_target_before_final_filtering;
+	add_or_count(count_hits_for_different_queries_of_this_target, (*(tmp_it->second)).get_queryID() );
+	++tmp_it;
+      }
+      equal_range_end = tmp_it;
       
-      //      m_it = m_exonerate_results.find(key);
+      // This should be the case for maybe 99.x% of the target sequences.
+      if (count_hits_this_target_before_final_filtering == 1)
+      {
+	if (vec_of_hits_for_this_target_key.size() != 1)
+	{
+	  cerr << "vec_of_hits_for_this_target_key has unexpected size. "
+	          "Should be 1. Has : "
+	       << vec_of_hits_for_this_target_key.size() << endl;
+	}
+	vulgar *p = vec_of_hits_for_this_target_key[0];
+	hits_to_use_for_target[p->get_queryIndex()] = p;
+      }
+      else // We have multiple hits for target (read) sequences:
+      {
+	// We have more than one hit. This should be an exception if we
+	// look for different genes.
+	// This situation is expected if we have competing references for the same gene.
+
+	for (std::vector<vulgar*>::size_type i=0; i<vec_of_hits_for_this_target_key.size(); ++i)
+	{
+	  vulgar *p       = vec_of_hits_for_this_target_key[i];
+	  vulgar &vul     = *p;
+	  short ref_index = vul.get_queryIndex();
+
+	  // Address 0          indicates: No hit found so far.
+	  // Address (void *)-1 indicates: Double hit found for this reference already.  
+
+	  // Is this the first hit against this reference?
+	  if (hits_to_use_for_target[ref_index] == NULL )
+	  {
+	    hits_to_use_for_target[ref_index] = p;
+	  }
+	  else // Found more than one hit against this target. This is to be handled.
+	  {
+	    if (global_include_double_hits && hits_to_use_for_target[ref_index] !=  (void *)-1 )
+	    {
+	      // We include double hits, but only the best one of multile hits:
+	      // Is this score better than the one of the previous hit?
+	      if (vul.get_score() > hits_to_use_for_target[ref_index]->get_score() )
+		hits_to_use_for_target[ref_index] = p;
+	      else
+		vector_of_hit_stats_for_targets[ref_index].increment_skipped_double_vulgar();
+	    }
+	    else // We have a double hit, but do not want to include them.
+	         // So we block this reference for this target. 
+	    {
+	      hits_to_use_for_target[ref_index] = (vulgar *)-1; // We only add a hit if pointer is 0.
+	      //	      ++skipped_double_vulgar;                        // -> So we block this reference.
+	      // We skip two hits, one that has already been entered and the one we just tried to enter.
+	      vector_of_hit_stats_for_targets[i].increment_skipped_double_vulgar();
+	      vector_of_hit_stats_for_targets[i].increment_skipped_double_vulgar();
+	    }
+	  }
+	}
+
+	// Hits can be assinged to multiple sequences.
+	// Typically this is the case if we have multiple variants of the same reference gene.
+	// In this case we do the following:
+	// If one hit has a higher score than the hits to the other references, we only use this hit.
+	// If multiple hits have the same score we use all.
+	// This ensures that we cover all variants but prevent hits to be included in inferiour
+	// references 
+
+	// Targets with pointer (void *)-1)
+	for (std::vector<vulgar*>::size_type i=0; i<hits_to_use_for_target.size(); ++i)
+	{
+	  if (hits_to_use_for_target[i] == (vulgar *)-1 )
+	    hits_to_use_for_target[i] = NULL;
+	}
+	
+	unsigned best_score = 0;
+
+	// Find best score:
+	for (std::vector<vulgar*>::size_type i=0; i<hits_to_use_for_target.size(); ++i)
+	{
+	  if (hits_to_use_for_target[i] != NULL &&
+	      hits_to_use_for_target[i]->get_score() > best_score )
+	  {
+	    best_score = hits_to_use_for_target[i]->get_score();
+	  }
+	}
+
+	// Remove all hits that do not have the best score:
+	for (std::vector<vulgar*>::size_type i=0; i < hits_to_use_for_target.size(); ++i)
+	{
+	  if (hits_to_use_for_target[i] != NULL &&
+	      hits_to_use_for_target[i]->get_score() < best_score)
+	  {
+	    hits_to_use_for_target[i] = NULL;
+	    vector_of_hit_stats_for_targets[i].increment_not_best_score();
+	  }
+	}
+      }
+
+      // Hits have been assigned to references. Now they should be aligned and
+      // added to the alignment files.
+
+      // Hier weiter:
+      // Maybe determine if we have a hit at all??
+      ////// XXXXXXXXXXXXXXXXXXXXXX
+
+      CSequence_Mol* theSeq = seqs_DNA_reads_target.get_seq_by_name(target_key);
+      for (std::vector<vulgar*>::size_type i=0; i<hits_to_use_for_target.size(); ++i)
+      {
+	vulgar     *pv         = hits_to_use_for_target[i];
+	if (pv == NULL)
+	  continue;
+
+	// if pv != NULL:
+	++seq_count;
+	vulgar     &vul        = *pv;
+	const faststring &target_key = vul.get_targetID(); // These are the reads.
+
+	// Consider this hit:
+	///   Create function for following artificial block:
+        {
+          CDnaString     newseqDNA;
+
+          if (theSeq == NULL)
+          {
+            cerr << "ERROR: No sequence for sequence ID " << target_key
+		 << " found. This can only happen if the vulgar file does not "
+	            "correspond to the fasta file. Exiting.\n";
+            exit(-13);
+          }
+          determine_alignment_string(theSeq, vul, map_query_prot_lengths[vul.get_queryID()],
+				     newseqDNA, seq_count,
+				     all_maps_of_gap_sites_in_queries[i],
+				     all_maps_of_insertion_sites_suggested_in_reference[i]);
+
+	  if (global_verbosity >= 5)
+	    cerr << "Determining alignment for target key (read name) : " << target_key << endl;
+	  
+	  result_alignments_for_references[i]->add_seq_to_alignment(CSequence_Mol::dna, target_key, newseqDNA, 'N');
+	  vector_of_hit_stats_for_targets[i].increment_good_hits_added_to_alignment();
+
+	  //          seqs_DNA_result.add_seq_to_alignment(CSequence_Mol::dna, target_key, newseqDNA, 'N');
+	  //          os << ">" << target_key << "\n" << newseqDNA << "\n";  
+        }
+      }
+
+      //      m_it = m_exonerate_results.find(target_key);
       
       //       if (m_it == m_exonerate_results.end() )
       //       {
-      // 	cerr << "INTERNAL ERROR: No sequence name found for map key: " << key << endl;
+      // 	cerr << "INTERNAL ERROR: No sequence name found for map key (sequence ID): " << target_key << endl;
       // 	exit(-8);
       //       }
       
@@ -1168,190 +1664,168 @@ int main(int argc, char **argv)
       //       cout << "XX-Working on vulgar : ";
       //       vul.print(cout);
       //       cout << endl;
-      
-      map<faststring, unsigned>::iterator find_it = map_exonerate_count_results.find(key);
-      bool double_vulgar;
-      
-      if (find_it != map_exonerate_count_results.end() && find_it->second > 1)
-      {
-        double_vulgar = true;
-      }
-      else
-      {
-        double_vulgar = false;
-      }
-      
-      //      if ( vul.has_non_M() || double_vulgar )
-      if ( double_vulgar )
-      {
-        ++num_WARNINGS;
-        if (global_verbosity >= 1)
-          cerr << "WARNING: Found two or more exonerate hits for a single target read." << endl;
-        
-        if (!global_include_double_hits)
-        {
-          consider_this_read = false;
-          ++skipped_double_vulgar;
-        }
-      }
-      if (vul.has_F() && !global_include_frameshift_alignments)
-      {
-        consider_this_read = false;
-        ++skipped_F;
-      }
-      
-      if ((vul.has_G() && global_gap_frameshift_mode == 0) )
-      {
-        consider_this_read = false;
-        if (!vul.has_F() )
-          ++skipped_G;
-      }
+      ++seqs_it;
+    } // END  while (vec_it !=  l_keys.end())
+      // Loop over all "vulgar strings", i.e. "reads with hit" and align them.
 
-      if ((!vul.has_G() && global_gap_frameshift_mode == 2) )
-      {
-        consider_this_read = false;
-        if (!vul.has_F() )
-          ++skipped_no_G;
-      }
-      
-      if (global_relative_score_threshold && vul.relative_score() < global_relative_score_threshold)
-      {
-        cerr << "NOTE: Exonerate hit skipped due to low relative alignment score: " << vul.relative_score()
-        << " " << vul.get_target() << endl;
-        consider_this_read = false;
-        if (!vul.has_F() && !vul.has_G())
-          ++skipped_relative_score;
-      }
+    //os.close();
 
-      ///   Create function for following artificial block:
-      {
-        if (!consider_this_read)
-        {
-          ++count_not_considered;
-        }
-        else //      if (consider_this_read)
-        {
-          CDnaString     newseqDNA;
-          CSequence_Mol* theSeq = seqs_DNA_reads_target.get_seq_by_name(key);
-          
-          if (theSeq == NULL)
-          {
-            cerr << "ERROR: No sequence for key " << key << " found. This can only happen if the vulgar file does not correspond to the fasta file. Exiting.\n";
-            exit(-13);
-          }
-          determine_alignment_string(theSeq, vul, query_prot_length, newseqDNA, seq_count, map_of_gap_sites_in_queries, map_of_insertion_sites_suggested_in_reference);
-          
-          seqs_DNA_result.add_seq_to_alignment(CSequence_Mol::dna, key, newseqDNA, 'N');
-          os << ">" << key << "\n" << newseqDNA << "\n";
-          
-        } // else if (!consider_this_read), i.e. if (consider_this_read)
-      }
-      
-      ++l_it;
-    } // END  while (l_it !=  l_keys.end()) // Loop over all "vulgar strings", i.e. "reads with hit" and align them.
-    os.close();
-    
-    if (global_verbosity >= 1)
+    // Final output loop:
+    for (std::vector<faststring>::size_type i=0; i<seqnames_of_references.size(); ++i)
     {
-      cout << "\n\n";
-      cout << "Some stats for the exonerate results:\n";
-      cout.setf(ios::left);
-      unsigned s1 = list_exonerate_results.size();
-      cout << "Number of successful exonerate alignments (includes skipped hits/reads)\n"
-      << setw(50)  << "to the amino acid sequence found in input file: " << s1 << endl;
-      unsigned s2 = map_exonerate_count_results.size();
-      cout << "Number of successful exonerate alignments without skipped hits.\n"
-      << setw(50) << "Normally this is the number of aligned reads: " << s2-count_not_considered << endl;
-      cout << setw(50) << "Number of sequences in result file: " << seqs_DNA_result.GetTaxaNum() << endl;
-
-      cout << "-------------------------------------------\n";
-      if (global_gap_frameshift_mode == 0)
-        cout << setw(50) << "# skipped reads due to gappy alignment: " << skipped_G << endl;
-      if (global_gap_frameshift_mode == 2)
-        cout << setw(50) << "# skipped reads due to no gaps in aln.  : " << skipped_no_G << endl;
-      cout << setw(50) << "# skipped reads due to multiple hits:   " << skipped_double_vulgar  << endl;
-      cout << setw(50) << "# skipped reads due to low rel. score:  " << skipped_relative_score << endl;
-
-      cout << "Gap insertion sites and lengths suggested from reads for the reference:\n";
-      if (map_of_insertion_sites_suggested_in_reference.size() > 0)
-	print_Mymap(cout, map_of_insertion_sites_suggested_in_reference);
-      else
-	cout << "-\n";
-
-      cout << "Gap sites in query sequences:\n";
-      if (map_of_gap_sites_in_queries.size() > 0)
-	print_Mymap(cout, map_of_gap_sites_in_queries);
-      else
-	cout << "-\n";
-      cout << '\n';
-
-      unsigned **coverage_profile = seqs_DNA_result.get_DNA_site_profile();
-      print_DNA_profile(cout, coverage_profile, seqs_DNA_result.GetPosNum());
-    }
-
-    if (!global_consensus_sequence_output_filename.empty())
-    {
-      faststring consensus_seq;
-      unsigned   replaced_tilde_gaps = 0;
-      vector<unsigned> coverage_vec;
-
-      seqs_DNA_result.WeightedConsensusSequence_DNA(consensus_seq, global_consensus_threshold,
-                                                    global_minimum_seq_coverage_uppercase, global_minimum_seq_coverage_total,
-                                                    &coverage_vec, global_ends_width, global_weight_fraction_in_ends,
-                                                    'N');
-      // Default: Internal gaps are encoded as tilde.
-      if (global_report_gap_mode == 0)
-      {
-        replaced_tilde_gaps = consensus_seq.replace_char_count('~', '-');
-      }
-
-      if (global_report_gap_mode == 3)
-      {
-        consensus_seq.removeSpacesBack("-");
-        consensus_seq.removeSpaces("-~");
-      }
-
-      /*
-       if (global_verbosity >= 50)
-       {
-       cerr << "Coverage values obtained while determining the consensus sequence:\n";
-       for (unsigned i=0; i<coverage_vec.size(); ++i)
-       cerr << i << "\t" << coverage_vec[i] << endl;
-       cerr << "=====================\n";
-       }
-       */
-
-      ofstream os_con(global_consensus_sequence_output_filename.c_str());
-      if (os_con.fail() )
-      {
-        cerr << "ERROR when trying to write the consensus file. The output file could not be opened. "
-        "Please make sure the specified path exists!" << endl;
-        exit(-23);
-      }
-      os_con << ">Consensus" << global_input_dna_fasta_file << endl;
-      os_con << consensus_seq << endl;
-      os_con.close();
-
+      faststring &ref_name = seqnames_of_references[i];
+      unsigned query_prot_length = map_query_prot_lengths[ref_name];
+      
+      // Write some stats about the hits:
       if (global_verbosity >= 1)
       {
-        unsigned mi, ma;
-        double mean, sd, Q1, Q2, Q3;
-        vec_min_max(coverage_vec, mi, ma);
-        vec_mean_sd(coverage_vec, mean, sd);
-        // Be careful: coverage_vec will be sorted after calling this function:
-        vec_median_quartile_sort_method3(coverage_vec, Q1, Q2, Q3);
-        
-        cout.precision(2);
-        cout.setf(ios::fixed);
-        cout << "-------------------------------------------\n";
-        cout << setw(50) << "Length of alignment: " << query_prot_length*3 << '\n';
-        cout << setw(50) << "Coverage minimum:    " << mi   << '\n';
-        cout << setw(50) << "Coverage maximum:    " << ma   << '\n';
-        cout << setw(50) << "Coverage mean:       " << mean << '\n';
-        cout << setw(50) << "Coverage median:     " << Q2   << '\n';
-        cout << "-------------------------------------------\n";
+	cout << "\n\n";
+	cout << "Some stats for the exonerate results for reference: " << seqnames_of_references[i] << "\n";
+	cout.setf(ios::left);
+	//	unsigned s1 = vec_of_hits_as_in_file.size; // vec_exonerate_results.size();
+	cout << "Number of successful exonerate alignments (all)\n"
+	     << setw(50)  << "to the amino acid sequence found in vulgar file: "
+	     <<  vector_of_hit_stats_for_targets[i].hits_in_vulgar_file << endl;
+	//	unsigned s2 = map_exonerate_count_results.size();
+	cout << "Number of successful exonerate alignments without skipped hits.\n"
+	     << setw(50) << "This is the number of aligned reads: "
+	     << vector_of_hit_stats_for_targets[i].good_hits_added_to_alignment
+	     << endl;
+	//	cout << setw(50) << "Number of sequences in result file: " << seqs_DNA_result.GetTaxaNum() << endl;
+	
+	cout << "-------------------------------------------\n";
+	if (global_gap_frameshift_mode == 0)
+	  cout << setw(50) << "# skipped reads due to gappy alignment:            "
+	       << vector_of_hit_stats_for_targets[i].skipped_G << endl;
+	if (global_gap_frameshift_mode == 2)
+	  cout << setw(50) << "# skipped reads due to no gaps in alignment:       "
+	       << vector_of_hit_stats_for_targets[i].skipped_no_G << endl;
+	
+	cout << setw(50) << "# skipped reads due to frameshifts in alignment:     "
+	     << vector_of_hit_stats_for_targets[i].skipped_F << endl;
+
+	cout << setw(50) << "# skipped reads due to multiple hits:                "
+	     << vector_of_hit_stats_for_targets[i].skipped_double_vulgar  << endl;
+
+	cout << setw(50) << "# skipped reads due to low rel. score:               "
+	     << vector_of_hit_stats_for_targets[i].skipped_relative_score << endl;
+
+	cout << setw(50) << "# Added to different reference due to better score:  "
+	     << vector_of_hit_stats_for_targets[i].not_best_score_for_query << endl;
+	
+	cout << setw(50) << "# number of hits not considered:                     "
+	     << vector_of_hit_stats_for_targets[i].not_considered << endl;
+	
+	cout << "Gap insertion sites and lengths suggested from reads for the reference:\n";
+	if (all_maps_of_insertion_sites_suggested_in_reference[i].size() > 0)
+	  print_Mymap(cout, all_maps_of_insertion_sites_suggested_in_reference[i]);
+	else
+	  cout << "None\n";
+
+	cout << "Gap sites in query sequences:\n";
+	if ( all_maps_of_gap_sites_in_queries[i].size() > 0)
+	  print_Mymap(cout,  all_maps_of_gap_sites_in_queries[i]);
+	else
+	  cout << "None\n";
+	cout << '\n';
+
+	if (global_verbosity >= 2)
+	{
+	  unsigned **coverage_profile = result_alignments_for_references[i]->get_DNA_site_profile();
+	  cout << "Alignment coverage for this gene:\n";
+	  print_DNA_profile(cout, coverage_profile, result_alignments_for_references[i]->GetPosNum());
+	}
       }
-    }
+
+      // Export alignmentfile:
+      {
+	string this_output_filename = global_alignment_output_file + "__" + ref_name.c_str() + ".fas";
+	ofstream os;	
+	os.open(this_output_filename.c_str());
+	if (os.fail() )
+	{
+	  cerr << "ERROR when trying to write the alignment file. "
+	          "The output file could not be opened. "
+	          "Please make sure the specified path exists! Path: "
+	       << this_output_filename << endl;
+	  exit(-23);
+	}
+	result_alignments_for_references[i]->ExportSequences(os, 'f', UINT_MAX, faststring(), UINT_MAX, false);
+	os.close();
+      }
+      
+      if (!global_consensus_sequence_output_filename.empty())
+      {
+	faststring       consensus_seq;
+	unsigned         replaced_tilde_gaps;
+	vector<unsigned> coverage_vec;
+
+	result_alignments_for_references[i]->WeightedConsensusSequence_DNA(consensus_seq,
+									   global_consensus_threshold,
+									   global_minimum_seq_coverage_uppercase,
+									   global_minimum_seq_coverage_total,
+									   &coverage_vec, global_ends_width,
+									   global_weight_fraction_in_ends,
+									   'N');
+	// Default: Internal gaps are encoded as tilde.
+	if (global_report_gap_mode == 0)
+	{
+	  replaced_tilde_gaps = consensus_seq.replace_char_count('~', '-');
+	}
+
+	if (global_report_gap_mode == 3)
+	{
+	  consensus_seq.removeSpacesBack("-");
+	  consensus_seq.removeSpaces("-~");
+	}
+	/*
+	  if (global_verbosity >= 50)
+	  {
+	  cerr << "Coverage values obtained while determining the consensus sequence:\n";
+	  for (unsigned i=0; i<coverage_vec.size(); ++i)
+	  cerr << i << "\t" << coverage_vec[i] << endl;
+	  cerr << "=====================\n";
+	  }
+	*/
+
+	string outfilename = global_consensus_sequence_output_filename + "__" + ref_name.c_str() + ".fas";
+
+	ofstream os_con(outfilename.c_str());
+	if (os_con.fail() )
+	{
+	  cerr << "ERROR when trying to write the consensus file. The output file could not be opened. "
+	          "Please make sure the specified path exists! Path: "
+	       << outfilename << endl;
+	  exit(-23);
+	}
+	os_con << ">Consensus__" << ref_name << endl;
+	os_con << consensus_seq << endl;
+	os_con.close();
+
+	// Write some final coverage stats:
+	if (global_verbosity >= 1)
+	{
+	  unsigned mi, ma;
+	  double mean, sd, Q1, Q2, Q3;
+	  vec_min_max(coverage_vec, mi, ma);
+	  vec_mean_sd(coverage_vec, mean, sd);
+	  // Be careful: coverage_vec will be sorted after calling this function:
+	  vec_median_quartile_sort_method3(coverage_vec, Q1, Q2, Q3);
+
+	  cout << "-------------------------------------------\n";
+	  cout << "Alignment coverage stats:\n";
+	  cout.precision(2);
+	  cout.setf(ios::fixed);
+	  cout << "-------------------------------------------\n";
+	  cout << setw(50) << "Length of alignment: " << query_prot_length*3 << '\n';
+	  cout << setw(50) << "Coverage minimum:    " << mi   << '\n';
+	  cout << setw(50) << "Coverage maximum:    " << ma   << '\n';
+	  cout << setw(50) << "Coverage mean:       " << mean << '\n';
+	  cout << setw(50) << "Coverage median:     " << Q2   << '\n';
+	  cout << "-------------------------------------------\n";
+	} // END  if (global_verbosity >= 1) // Write some final coverage stats:
+      } // END if (!global_consensus_sequence_output_filename.empty())
+    } // for (int i=0; i<seqnames_of_references.size(); ++i) // Final output loop:
   } // END: After reading the data, this is the main analysis and alignment block.
   
   if (num_WARNINGS > 0)

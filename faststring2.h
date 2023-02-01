@@ -85,12 +85,12 @@ const char tolower_lookup[] = {
 
 inline char char_toupper(char c)
 {
-  return toupper_lookup[c];
+  return toupper_lookup[(unsigned char)c];
 }
 
 inline char char_lower(char c)
 {
-  return tolower_lookup[c];
+  return tolower_lookup[(unsigned char)c];
 }
 
 #define macromin(x,y) ((x)<(y) ? (x) : (y))
@@ -185,6 +185,7 @@ class faststring
 {
  public:
   // Shadow the "global" size_t typedef for this class.
+  typedef unsigned size_type;
   typedef unsigned size_t;
   static const size_t npos = UINT_MAX;
 
@@ -311,7 +312,7 @@ protected:
       std::cerr << "Critical error: malloc failed when requesting " << _capacity << " bytes in faststring constructor." << std::endl;
       exit(-1);
     }
-	snprintf(_buf, _capacity, "%d", i);
+	snprintf(_buf, _capacity, "%u", i);
     _len = strlen(_buf);
     //    std::cout << "Capacity: " << _capacity << std::endl;
   }
@@ -764,9 +765,9 @@ protected:
   // step imp-fin
   faststring& append(const faststring &s)
   {
-    int old_len = _len;
-    int s_len   = s._len;
-    int new_len = old_len + s_len;
+    size_t old_len = _len;
+    size_t s_len   = s._len;
+    size_t new_len = old_len + s_len;
 
     _len = new_len;
 
@@ -781,8 +782,8 @@ protected:
     if (n==npos || pos+n > s.length() )
       n = s.length()-pos;
 
-    int old_len = _len;
-    int new_len = old_len + n;
+    size_t old_len = _len;
+    size_t new_len = old_len + n;
 
     _len = new_len;
 
@@ -794,8 +795,8 @@ protected:
   // step imp-fin
   faststring& append(const char* s, size_t n)
   {
-    int old_len = _len;
-    int new_len = old_len + n;
+    size_t old_len = _len;
+    size_t new_len = old_len + n;
 
     _len = new_len;
 
@@ -1367,6 +1368,12 @@ protected:
     shorten(pos);
   }
 
+  void shorten_to_first_occurrence_of(faststring delim)
+  {
+    size_t pos = find(delim,0);
+    shorten(pos);
+  }
+    
   void shorten_to_first_occurrence_of(const char *symbollist)
   {
     const char *p = symbollist;
@@ -1416,7 +1423,7 @@ protected:
   // Has been corrected in 03.2011
   friend bool operator<(const faststring &a, const faststring &b)
   {
-    int l   =  macromin(a._len, b._len );
+    size_t l   =  macromin(a._len, b._len );
     //     int res =  (strncmp(a._buf, b._buf, l) < 0);
     short res =  strncmp(a._buf, b._buf, l);
 
@@ -1432,7 +1439,7 @@ protected:
   //          of the strings.
   friend int fstrcmp(const faststring &a, const faststring &b)
   {
-    int   l   =  macromin(a._len, b._len );
+    size_t   l   =  macromin(a._len, b._len );
     short res =  strncmp(a._buf, b._buf, l);
 
     if (res == 0)  // We only compared the first l chars.
@@ -1446,12 +1453,12 @@ protected:
     return res;
   }
 
-  friend int fstrncmp(const faststring &a, const faststring &b, int n)
+  friend int fstrncmp(const faststring &a, const faststring &b, size_t n)
   {
-    int   l   = macromin(a._len, b._len );
-    int   m   = macromin(l, n);
+    size_t   l   = macromin(a._len, b._len );
+    size_t   m   = macromin(l, n);
 
-    short res =  strncmp(a._buf, b._buf, m);
+    int res =  strncmp(a._buf, b._buf, m);
 
     // We do not have \0 terminated strings, so we have to restrict the initial
     // comparison to the length m.
@@ -1489,7 +1496,7 @@ protected:
   // Has been corrected in 03.2011
   friend bool operator>(const faststring &a, const faststring &b)
   {
-    int l   =  macromin(a._len, b._len );
+    size_t l   =  macromin(a._len, b._len );
     //    int res =  (strncmp(a._buf, b._buf, l) > 0);
     short res =  strncmp(a._buf, b._buf, l);
     
@@ -2060,7 +2067,7 @@ protected:
    int compare(const faststring &s)
    {
      size_t l = macromin(_len, s._len);
-     int    res = strncmp(_buf, s._buf, l);
+     int  res = strncmp(_buf, s._buf, l);
 
      if (res != 0)
        return res;
@@ -2722,7 +2729,7 @@ protected:
      if (pos > _len)
        return -2;
 
-     int l = n;
+     size_t l = n;
      if (n+pos > _len)
        l = _len-pos;
 

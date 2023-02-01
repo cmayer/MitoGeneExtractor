@@ -15,12 +15,12 @@ class Ctriple
   T3 t3;
 
  public:
- Ctriple(const T1 &pt1,const T2 &pt2,const T3 &pt3):t1(pt1),t2(pt2),t3(pt3)
+ Ctriple(const T1 &pt1, const T2 &pt2, const T3 &pt3):t1(pt1),t2(pt2),t3(pt3)
   {}
 
-  T1 first()  { return t1; }
-  T2 second() { return t2; }
-  T3 third()  { return t3; }
+  T1 first()  const { return t1; }
+  T2 second() const { return t2; }
+  T3 third()  const { return t3; }
 
   friend bool operator<(const Ctriple<T1, T2, T3> &a, const Ctriple<T1, T2, T3> &b)
   {
@@ -45,12 +45,6 @@ inline std::ostream &operator<<(std::ostream &os, const Ctriple<T1, T2, T3> &t)
   t.print(os);
   return os;
 }
-
-
-
-
-
-
 
 
 
