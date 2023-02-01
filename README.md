@@ -1,14 +1,15 @@
 # MitoGeneExtractor
 
-MitoGeneExtractor can be used to conveniently extract mitochondrial genes from sequencing libraries, as well as from genome and transcriptome assemblies.
-Mitochondrial reads are often found as byproduct in sequencing libraries or assemblies, in particular when originating from hybrid enrichment libraries, but often also from transcriptomes and low coverage genomic sequences.
+MitoGeneExtractor can be used to conveniently extract mitochondrial protein-coding genes from next-generation sequencing libraries.
+Mitochondrial reads are often found as byproduct in sequencing libraries obtained from whole-genome sequencing, RNA-sequencing or various kinds of reduced representation liibraries (e.g. hybrid enrichment libraries).
 
 Since in the presence of conflicting sequences the assembly of mitochondrial genes often fails (e.g. if Numts are present), we recommend to mine mitochondrial genes from reads rather than assemblies. We have seen examples where the extraction from assemblies worked equally well as the extraction from unassembled reads and we have seen cases where the extraction from unassembled reads was successful, but failed for the assembly.
 
 List of use cases:
-- Mine mitochondrial or ... coding genes from sequencing libraries (Illumina and PacBio have been successfully tested).
-- Mint mitochondrial or ... coding genes from assemblies. (Works equally or less good as from sequencing libraries.)
-- Excise mitochondrial or ... coding genes from whole mitochondrial or ... genomes, which is is often simpler than referring to the genome annotation.
+- Mine mitochondrial protein-coding genes across a broad taxonomic range from sequencing libraries (genomic and transcriptomic Illumina and PacBio read data sets have been successfully tested).
+- Mine plastome protein-coding genes from sequencing libraries (matK or rbcL successfully tested).
+- Mine prokaryotic genes from assemblies. (Not tested, but in principle, all genes which can be directly translated into amino acid sequences can be reconstructed with MitoGeneExtractor)
+- Mine/excise protein-coding genes from whole genome or transcriptpome assemblies (successfully tested), which is is often simpler than referring to the annotation (if one is available at all). Note, that in this case the accuracy of the extracted sequence depends on the assembly and that this is not the primariliy intended use case of MitoGeneExtractor.
 
 ## Authors of the publication:
 - Marie Brasseur, ZFMK, Bonn, Germany
@@ -21,12 +22,12 @@ List of use cases:
 - Marie Brasseur, ZFMK, Bonn, Germany: Snakemake pipeline and analyses for publication.
 
 ## Reference: Please cite when using MitoGeneExtractor
-Brasseur ... 2022 ...
+Brasseur ... 2023 ...
 
 ## How MitoGeneExtractor works:
 MitoGeneExtractor aligns all given nucleotide sequences against a
 protein reference sequence to obtain a multiple sequence alignment. The
-recommended use case is to extract mitochondrial genes from sequencing
+intended use case is to extract mitochondrial protein coding genes from sequencing
 libraries, e.g. from hybrid enrichment libraries sequenced on the
 Illumina platform. The individual alignments are computed by calling the
 Exonerate program. 
@@ -37,12 +38,13 @@ the output. Exonerate should be able to align several 100k short reads in a few
 minutes using a single CPU core. Therefore, this approach can be used for projects of any size.
 Exonerate can align amino acid sequences to much longer nucleotide sequences. For this reason,
 MitoGeneExtractor can also mine sequences from assemblies or from long read libraries. It can even be used to
-extract genes of interest from whole mitochondrial or ... genomes. 
+extract genes of interest from whole mitochondrial or nuclear genome/transcriptome assemblies. 
 
-Input file formats:
-- The amino acid reference must be provided in a fasta file.
-- The nucleotide reads/assemblies/genomes must be provided in the fasta or the fastq format.
-If the input is a sequencing library, we recommend to pass quality trimmed reads to MitoGeneExtractor.
+### MitoGeneExtractor requires two input files:
+- The amino acid reference in fasta file format. MitoGeneExtractor version > 1.9.3 can simultaneously analyse multiple references within one fasta file. 
+- The nucleotide reads/assemblies/genomes in the fasta or fastq format. If read data is provided in fastq format, MitoGeneExtractor  version > 1.9.3 will internally transform this to fasta format. If multiple input-files are specified (e.g. from paired-end sequencing), these files will be internally concatenated by MitoGeneExtractor version > 1.9.3. Since paired-end information cannot be exploited, paired-end libraries can be combined with single-end data.
+
+***Recommendation:*** Since quality scores are not included in the analysis, we recommend to pass quality trimmed reads to MitoGeneExtractor. If multiple input files exist (e.g. from paired-end sequencing), these files can be concatenated beforehand and subsequently trimmed in single-end mode. 
 
 
 ## Supported Platforms:
@@ -65,6 +67,12 @@ To install MitoGeneExtractor, do one of the following:
 - Download the zipped project folder and extract the folder. The link can be found by clicking on the "Code" pulldown menu at the top of this page.  
 
 Now enter the MitoGeneExractor-vx.x folder on the command line and run the make program by typing "make" and hitting return. The make program should be preinstalled on all Linux distributions. On MacOS it is included in the command line developer tools (see above). 
+
+```{r, eval=TRUE}
+cd/MitoGeneExractor-vx.x
+make
+```
+
 The make program will generate an executable called MitoGeneExtractor_. Either copy this to a directory in your path or reference it by its full path on the command line.
 
 <!---
@@ -75,29 +83,43 @@ Type
 ```{r, eval=TRUE}
 MitoGeneExtractor -h
 ```
-if MitoGeneExtractor is in your path and otherwise
+if MitoGeneExtractor is in your PATH and otherwise
 ```{r, eval=TRUE}
 Path-to-MitoGeneExtractor/MitoGeneExtractor -h 
 ```
 to display a full list of command line options of MitoGeneExtractor. 
 
-In order to run MitoGeneExtractor you need your input sequences in fasta format as well as an amino acid reference sequence of your mitochondrial gene of interest. Example references are included in the reference-sequence-examples folder of this project. For the COI gene, one can specify as a reference the amino acid sequence of the barcode region, or if intended, the full COI sequence. If the full COI sequence shall be extracted, we suggest to create a reference specific for your taxonomic group, since the COI gene can differ considerably in the first and last few amino acids for specific groups with respect to references designed for larger groups. For the barcode region of COI this is normally not a problem. In principle all mitochondrial genes can be extracted with this approach.
+In order to run MitoGeneExtractor you need your input read data in fasta/fast format as well as reference fasta file with one or more amino acid reference sequence of your mitochondrial gene(s) of interest. Example references are included in the **Amino-Acid-references-for-taxonomic-groups** folder of this project [here](https://github.com/cmayer/MitoGeneExtractor/tree/last-reviews-before-publication/Amino-Acid-references-for-taxonomic-groups). For the COI gene, one can specify as a reference the amino acid sequence of the barcode region, or if intended, the full COI sequence. If the full COI sequence shall be extracted, we suggest to create a reference specific for your taxonomic group, since the COI gene can differ considerably in the first and last few amino acids for specific groups with respect to references designed for larger groups. For the barcode region of COI this is normally not a problem. 
 
 ## Example analysis:
-An example analysis for the MitoGeneExtractor program can be found in the **example-analysis-for-MitoGeneExtractor** folder. The Readme.md file in this folder provided the necessary information to run the example analysis.
+An example analysis for the MitoGeneExtractor program can be found in the **example-analysis-for-MitoGeneExtractor** folder [here](https://github.com/cmayer/MitoGeneExtractor/tree/last-reviews-before-publication/example-analysis-for-MitoGeneExtractor). The Readme.md file in this folder provided the necessary information to run the example analysis and provides further details.
 
 ***Quickstart:***
 Assume the input file (sequencing reads in fasta format, transcriptome assembly, genome assembly) are stored in the file: query-input.fas.
 Furthermore assume that the amino acid reference sequence is stored in the COI-reference.fas file.
-Then the following command could be used to attempt to reconstruct the COI sequence from the query-input.fas file sequences:
+Then the following command could be used to attempt to reconstruct the COI sequence from the read data in the query-input.fas file:
+
 ```{r, eval=TRUE}
 MitoGeneExtractor  -d query-input.fas -p COI-reference.fas -V vulgar.txt -o out-alignment.fas -n 0 -c out-consensus.fas -t 0.5 -r 1 -C 2
 ```
-Specifying the name of the vulgar file is optional, but recommended. If the file exists, it is used as input instead of calling exonerate to create it. If it does not exist, the name is used to story the vulgar file. The -C 2 option specifies the genetic code, the -t 0.5 option specifies the consensus threshold and the -r 1 and -n 0 options are used for a stricter alignment quality (see options for details).
+Specifying the name of the vulgar file is optional, but recommended as this is the most-time consuming step. If the file exists, it is used as input instead of calling Exonerate to create it. If it does not exist, the name is used to create the vulgar file. The -C 2 option specifies the genetic code (here: vertebrate mitochondrial), the -t 0.5 option specifies the consensus threshold and the -r 1 and -n 0 options are used for a stricter alignment quality (see options for details). 
+
+If your read data is in fastq format, you could run the same analysis via this command:
+```{r, eval=TRUE}
+MitoGeneExtractor  -d query-input.fq -p COI-reference.fas -V vulgar.txt -o out-alignment.fas -n 0 -c out-consensus.fas -t 0.5 -r 1 -C 2
+```
+If you have multiple input files (e.g. paired-end data (PE) and single-end (SE) data) you cand specify this as follows:
+```{r, eval=TRUE}
+MitoGeneExtractor  -d PE_query-input_1.fq PE_query-input_2.fq SE_query-input.fq -p COI-reference.fas -V vulgar.txt -o out-alignment.fas -n 0 -c out-consensus.fas -t 0.5 -r 1 -C 2
+```
+Note, that the order of file names does not matter.
 
 ## Prepared Snakemake workflows
-An example analysis using a Snakemake workflow can be found in the **example-analysis-with-Snakemake-workflow** folder.
-[Manual for using existing Snakemake workflows to extract genes with MitoGeneExtractor.](Use-Snakemake-manual.md)
+You can find a description how data preprocessing and MitoGeneExtractor analyses can be implemented in Snakemake [here](https://github.com/cmayer/MitoGeneExtractor/blob/last-reviews-before-publication/Use-Snakemake-manual.md)
+
+A Snakefile which starts with .sra files as input can be found [here](https://github.com/cmayer/MitoGeneExtractor/tree/last-reviews-before-publication/example-analysis-with-Snakemake-workflow-using-SRA-files-as-input)
+
+A Snakefile which starts with .fastq data can be found [here](https://github.com/cmayer/MitoGeneExtractor/tree/last-reviews-before-publication/example-analysis-with-Snakemake-workflow-using-compressed-fastq-files-as-input)
 
 
 ## Command line options:
