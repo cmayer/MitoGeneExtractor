@@ -12,6 +12,16 @@ Since in the presence of conflicting sequences the assembly of mitochondrial gen
 - Mine/excise protein-coding genes from whole mitochondrial genomes (successfully tested), which is often simpler than referring to the annotation (if one is available at all).
 - Mine mitochondrial protein-coding genes from transcriptome assemblies. While this sometimes works, we recommended to mine these genes from quality trimmed sequencing reads rather than from the assembly of the reads. We saw example for which a reconstruction from quality trimmed reads was successful while it failed completely when using the assembly. Results might depend on parameters passed to the assembler.
 
+## Applications:
+- Extract COI and other protein coding mitochondrial genes in a sequencing library or transcriptome. 
+
+**Strategy:** Provide amino acid references for all genes of interest in the reference file and run MitoGeneExtractor.
+
+- Investigate the amount of contamination in a sequencing library.
+
+**Strategy:** Provide the amino acid references for COI of your target group and potentially distantly related contamination. 
+Contamination of closely related taxa will show up as multiple variants in the alignment file. Contamination of distantly related taxa can be found as hits to distantly related COI sequence.
+
 ## List of input sources that have been tested successfully:
 - Short reads such as reads from the Illumina platform.
 - Long reads from the PacBio platform. (Tested on a small number of libraries. See the supplementary materials of the publication for details.) 
@@ -45,8 +55,11 @@ Nucleotide sequences which cannot be aligned to the protein reference will not b
 Exonerate can align amino acid sequences to much longer nucleotide sequences. For this reason, MitoGeneExtractor can also mine sequences from assemblies or from long read libraries. It can even be used to extract genes of interest from whole mitochondrial or nuclear genome/transcriptome assemblies. 
 
 ### MitoGeneExtractor requires two input files:
-- The amino acid reference in fasta file format. MitoGeneExtractor version > 1.9.3 can simultaneously analyse multiple references within one fasta file. 
-- The nucleotide reads/assemblies/genomes in the fasta or fastq format. If read data is provided in fastq format, MitoGeneExtractor  version > 1.9.3 will internally transform this to fasta format. If multiple input-files are specified (e.g. from paired-end sequencing), these files will be internally concatenated by MitoGeneExtractor version > 1.9.3. Since paired-end information cannot be exploited, paired-end libraries can be combined with single-end data.
+- The amino acid reference in fasta file format. MitoGeneExtractor version >=1.9.5 can analyse multiple protein coding reference genes and their variants simultaneously in one program run. Simply combine all reference sequences in one fasta file. 
+- The nucleotide reads/assemblies/genomes in the fasta or fastq format. If read data is provided in fastq format, MitoGeneExtractor  version > 1.9.3 will internally transform this to the fasta format. If multiple input-files are specified (e.g. from paired-end sequencing), these files will be internally concatenated by MitoGeneExtractor version > 1.9.3. Since paired-end information cannot be exploited, paired-end libraries can be combined with single-end data.
+
+### 
+
 
 ***Recommendation:*** Since quality scores are not used in the analysis, we recommend to pass quality trimmed reads to MitoGeneExtractor. If multiple input files exist (e.g. from paired-end sequencing), these files can be concatenated beforehand and subsequently trimmed in single-end mode. 
 
