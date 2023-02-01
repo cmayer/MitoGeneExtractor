@@ -9,7 +9,8 @@ Since in the presence of conflicting sequences the assembly of mitochondrial gen
 - Mine mitochondrial protein-coding genes across a broad taxonomic range from sequencing libraries (genomic and transcriptomic Illumina and PacBio read data sets have been successfully tested).
 - Mine plastome protein-coding genes from sequencing libraries (matK or rbcL successfully tested).
 - Mine prokaryotic genes from assemblies. (Not tested, but in principle, all genes which can be directly translated into amino acid sequences can be reconstructed with MitoGeneExtractor)
-- Mine/excise protein-coding genes from whole genome or transcriptome assemblies (successfully tested), which is often simpler than referring to the annotation (if one is available at all). If raw reads are available, it is recommended to use these as input rather than an assembly of the reads. We saw example for which a reconstruction from quality trimmd reads was successful while it failed completely when using the assembly. 
+- Mine/excise protein-coding genes from whole mitochondrial genomes (successfully tested), which is often simpler than referring to the annotation (if one is available at all).
+- Mine mitochondrial protein-coding genes from transcriptome assemblies. While this sometimes works, we recommended to mine these genes from quality trimmed sequencing reads rather than from the assembly of the reads. We saw example for which a reconstruction from quality trimmed reads was successful while it failed completely when using the assembly. Results might depend on parameters passed to the assembler.
 
 ## List of input sources that have been tested successfully:
 - Short reads such as reads from the Illumina platform.
