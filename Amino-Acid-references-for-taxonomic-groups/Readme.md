@@ -47,11 +47,15 @@ In an MGE run, the input nucleotide sequences will be aligned (with Exonerate) a
 
 The sequence names of the reference sequences will be used as part of the output filenames. Therefore they should not contain symbols not allowed in filenames. MGE might change sequence names if they contain illegal characters.
 
-### Different genes
+### Using multiple and different reference genes
 
-The reference file can contain references for different genes. All genes will be reconstructed if possible.
+The reference file can contain references for different genes. All genes will be reconstructed if possible. This speeds up the analyses for multiple genes.
+
+Multiple reference genes and multiple variants of these can be combined in one reference file.
 
 ### Multiple variants of the same gene
 
-If multiple significantly different variants of the same gene are occur in a taxonomic group, all variants can be added to the reference file. Input sequences that align to multiple references will be assigned to the reference for which the alignment has the highest alignment score. If input sequences have the same alignment score to multiple reference sequences, they are assigned to all references.
+If multiple significantly different variants of the same gene can occur in the input sequences, all variants can be added to the reference file. Input sequences that align to multiple references will be assigned to the reference for which the alignment has the highest alignment score. If input sequences have the same alignment score to multiple reference sequences, they are assigned to all references.
+
+Multiple reference genes and multiple variants of these can be combined in one reference file.
 
