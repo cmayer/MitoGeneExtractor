@@ -1,67 +1,60 @@
 # MitoGeneExtractor
 
 MitoGeneExtractor can be used to conveniently extract mitochondrial protein-coding genes from next-generation sequencing libraries.
-Mitochondrial reads are often found as byproduct in sequencing libraries obtained from whole-genome sequencing, RNA-sequencing or various kinds of reduced representation liibraries (e.g. hybrid enrichment libraries).
+Mitochondrial reads are often found as byproduct in sequencing libraries obtained from whole-genome sequencing, RNA-sequencing or various kinds of reduced representation libraries (e.g. hybrid enrichment libraries).
 
-Since in the presence of conflicting sequences the assembly of mitochondrial genes often fails (e.g. if Numts are present), we recommend to mine mitochondrial genes from reads rather than assemblies. We have seen examples where the extraction from assemblies worked equally well as the extraction from unassembled reads and we have seen cases where the extraction from unassembled reads was successful, but failed for the assembly.
+## List of use recommended use cases:
+- Extract mitochondrial protein-coding genes across a broad taxonomic range from sequencing libraries.
+  Successfully tested for
+  * Illumina short read libraries, whole genomic, transcriptomic, reduced representation (hybrid enrichment libraries, RAD sequencing)
+  * PacBio long read libraries.
 
-## List of use cases:
-- Mine mitochondrial protein-coding genes across a broad taxonomic range from sequencing libraries (genomic and transcriptomic Illumina and PacBio read data sets have been successfully tested).
-- Mine plastome protein-coding genes from sequencing libraries (matK or rbcL successfully tested).
-- Mine prokaryotic genes from assemblies. (Not tested, but in principle, all genes which can be directly translated into amino acid sequences can be reconstructed with MitoGeneExtractor)
-- Mine/excise protein-coding genes from whole mitochondrial genomes (successfully tested), which is often simpler than referring to the annotation (if one is available at all).
+- Mine plastome protein-coding genes (matK or rbcL) from sequencing libraries
+  Successfully tested for 
+  * (??) Illumina short read libraries
+
 - Mine mitochondrial protein-coding genes from transcriptome assemblies. While this sometimes works, we recommended to mine these genes from quality trimmed sequencing reads rather than from the assembly of the reads. We saw example for which a reconstruction from quality trimmed reads was successful while it failed completely when using the assembly. Results might depend on parameters passed to the assembler.
 
-## Applications:
-- Extract COI and other protein coding mitochondrial genes in a sequencing library or transcriptome. 
+- Mine/excise protein-coding genes from whole mitochondrial genomes, which is often simpler than referring to the annotation (if one is available at all).
 
-**Strategy:** Provide amino acid references for all genes of interest in the reference file and run MitoGeneExtractor.
+- Check for **contamination*+ in sequencing libraries. Contamination is a common problem. By searching for COI sequences in taxonomic group, one should obtain COI sequencing reads from the target species as well as from the contaminating species. 
 
-- Investigate the amount of contamination in a sequencing library.
+- Off label usage: Mine prokaryotic genes from assemblies. (Not tested, but in principle, all genes which can be directly translated into amino acid sequences can be reconstructed with MitoGeneExtractor)
 
-**Strategy:** Provide the amino acid references for COI of your target group and potentially distantly related contamination. 
-Contamination of closely related taxa will show up as multiple variants in the alignment file. Contamination of distantly related taxa can be found as hits to distantly related COI sequence.
-
-## List of input sources that have been tested successfully:
-- Short reads such as reads from the Illumina platform.
-- Long reads from the PacBio platform. (Tested on a small number of libraries. See the supplementary materials of the publication for details.) 
-- Whole mitochondrial genomes
-- Assemblies of transcriptomes. (We recommend to use sequencing reads if available.)
-- Assemblies of genomes, if the contigs are not too long. Contigs with a length of the mitochondrial genome can easily be handled. (We recommend to use sequencing reads if available.)
-
-## List of input sources for which did not work:
+## List of input sources for which did not work in our tests:
 - Long reads from MinION, Oxford Nanopore (Tested on a small number of libraries. See the supplementary materials of the publication for details.) 
 
 
+## Arguments pro MitoGeneExtractor:
 
-## Authors of the publication:
-- Marie Brasseur, ZFMK, Bonn, Germany
-- Jonas Astrin, ZFMK, Bonn, Germany
-- Matthias Geiger, ZFMK, Bonn, Germany
-- Christoph Mayer, ZFMK, Bonn, Germany
+Several tools exist that are able to reconstruct whole or partial mitochondrial genomes from sequencing libraries. Most of them extract genes from assemblies. We found several examples in which assemblies contained strongly reduced amounts of mitochondrial sequences, in particular in the presence of conflicts sequences in the region of interest, e.g. if Numts are present or if the library contains DNA from different specimen.
+If mitochondrial genes cannot be assembled, assembly based tools cannot find these genes.
 
-## Authors of the software project:
-- Christoph Mayer, ZFMK, Bonn, Germany: MitoGeneExtractor program.
-- Marie Brasseur, ZFMK, Bonn, Germany: Snakemake pipeline and analyses for publication.
-
-## Reference: Please cite when using MitoGeneExtractor
-Brasseur ... 2023 ...
+For MGE this means that we recommend to extract protein coding mitochondrial genes from (quality trimmed) reads rather than assemblies if possible.
+We have seen examples where the extraction from assemblies worked equally well as the extraction from unassembled reads, but we have also seen cases where the extraction from unassembled reads was successful, but failed for the assembly.
 
 ## How MitoGeneExtractor works - the algorithm:
-MitoGeneExtractor aligns all given nucleotide sequences against a protein reference sequence to obtain a multiple sequence alignment. The intended use case is to extract mitochondrial protein coding genes from sequencing libraries, e.g. from hybrid enrichment libraries sequenced on the Illumina platform. The individual alignments are computed by calling the Exonerate program. 
+MitoGeneExtractor aligns all given input nucleotide sequences against a protein reference sequence to obtain a multiple sequence alignment. The intended use case is to extract mitochondrial protein coding genes from sequencing libraries. The individual alignments are computed by calling the Exonerate program. 
 
 Exonerate is a very efficient alignment program which allows to align protein and nucleotide sequences.
 Nucleotide sequences which cannot be aligned to the protein reference will not be included in the output. Exonerate should be able to align several 100k short reads in a few minutes using a single CPU core. Therefore, this approach can be used for projects of any size.
-Exonerate can align amino acid sequences to much longer nucleotide sequences. For this reason, MitoGeneExtractor can also mine sequences from assemblies or from long read libraries. It can even be used to extract genes of interest from whole mitochondrial or nuclear genome/transcriptome assemblies. 
+Exonerate can align amino acid sequences also to long nucleotide sequences. For this reason, MitoGeneExtractor can also mine sequences from assemblies or from long read libraries. It can even be used to extract genes of interest from whole mitochondrial or nuclear genome/transcriptome assemblies. 
 
-### MitoGeneExtractor requires two input files:
-- The amino acid reference in fasta file format. MitoGeneExtractor version >=1.9.5 can analyse multiple protein coding reference genes and their variants simultaneously in one program run. Simply combine all reference sequences in one fasta file. 
-- The nucleotide reads/assemblies/genomes in the fasta or fastq format. If read data is provided in fastq format, MitoGeneExtractor  version > 1.9.3 will internally transform this to the fasta format. If multiple input-files are specified (e.g. from paired-end sequencing), these files will be internally concatenated by MitoGeneExtractor version > 1.9.3. Since paired-end information cannot be exploited, paired-end libraries can be combined with single-end data.
+## Input
 
-### 
+### Required by MitoGeneExtractor
+MitoGeneExtractor requires two input files:
+- The amino acid reference in fasta file format. For MitoGeneExtractor version 1.9.5 or newer this file can contain multiple protein coding reference genes and/or their variants. This allows to extract all protein coding genes of interest in one program run. 
 
+- The nucleotide reads/assemblies/genomes in the fasta or fastq format. Since version 1.9.5 any number of fasta or fastq files (e.g. files from paired-end sequencing or multiple replicates) can be specified as program parameters. They will automatically be concatenated and analysed in a sigle run. Since the paired-end information is not exploited, paired-end libraries can be combined with single-end data.
 
-***Recommendation:*** Since quality scores are not used in the analysis, we recommend to pass quality trimmed reads to MitoGeneExtractor. If multiple input files exist (e.g. from paired-end sequencing), these files can be concatenated beforehand and subsequently trimmed in single-end mode. 
+***Recommendation:*** Since quality scores are not used in the analysis, we recommend to pass quality trimmed reads to MitoGeneExtractor.
+
+### Optional input
+The user can specify the vulgar file, i.e. the output file produced by Exonerate, that corresponds to the input sequences.
+This avoids aligning all reads against the reference(s) again, if only the MGE parameters are changed.
+
+** Caution: ** MGE can only find obvious inconsistencies between the sequence input files and the vulgar file. If the vulgar file contains only partial results, this will not be noticed and leads to incomplete results.
 
 
 ## Supported Platforms:
@@ -189,10 +182,32 @@ MitoGeneExtractor -h
 **--verbosity <int>:** Specifies how much run time information is printed to the console. Values: 0: minimal output, 1: important notices, 2: more notices, 3: basic progress, 4: detailed progress, 50-100: debug output, 1000: all output. Default: 1. (Optional parameter)
 
 
+## Applications:
+- Extract COI and other protein coding mitochondrial genes in a sequencing library or transcriptome. 
+
+**Strategy:** Provide amino acid references for all genes of interest in the reference file and run MitoGeneExtractor.
+
+- Investigate the amount of contamination in a sequencing library.
+
+**Strategy:** Provide the amino acid references for COI of your target group and potentially distantly related contamination. 
+Contamination of closely related taxa will show up as multiple variants in the alignment file. Contamination of distantly related taxa can be found as hits to distantly related COI sequence.
+
 ## Project outlook:
 
 Currently, we are exploring the utility of using HMMs, namely nhmmer as another option and alternative to exonerate.
 
+## Authors of the publication:
+- Marie Brasseur, ZFMK, Bonn, Germany
+- Jonas Astrin, ZFMK, Bonn, Germany
+- Matthias Geiger, ZFMK, Bonn, Germany
+- Christoph Mayer, ZFMK, Bonn, Germany
+
+## Authors of the software project:
+- Christoph Mayer, ZFMK, Bonn, Germany: MitoGeneExtractor program.
+- Marie Brasseur, ZFMK, Bonn, Germany: Snakemake pipeline and analyses for publication.
+
+## Reference: Please cite when using MitoGeneExtractor
+Brasseur ... 2023 ...
 
 
 
