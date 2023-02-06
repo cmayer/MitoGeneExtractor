@@ -1,10 +1,13 @@
+// -*- Mode: c++; c-basic-offset: 4; tab-width: 4; -*-
+
 
 /****************************************************************************** 
  * 
  *  file:  UnlabeledMultiArg.h
  * 
  *  Copyright (c) 2003, Michael E. Smoot.
- *  All rights reverved.
+ *  Copyright (c) 2017, Google LLC
+ *  All rights reserved.
  * 
  *  See the file COPYING in the top directory of this distribution for
  *  more information.
@@ -27,6 +30,7 @@
 #include <vector>
 
 #include <tclap/MultiArg.h>
+#include <tclap/OptionalUnlabeledTracker.h>
 
 namespace TCLAP {
 
@@ -40,13 +44,15 @@ class UnlabeledMultiArg : public MultiArg<T>
 {
 
 	// If compiler has two stage name lookup (as gcc >= 3.4 does)
-	// this is requried to prevent undef. symbols
+	// this is required to prevent undef. symbols
 	using MultiArg<T>::_ignoreable;
 	using MultiArg<T>::_hasBlanks;
 	using MultiArg<T>::_extractValue;
 	using MultiArg<T>::_typeDesc;
 	using MultiArg<T>::_name;
 	using MultiArg<T>::_description;
+	using MultiArg<T>::_alreadySet;
+	using MultiArg<T>::toString;
 
 	public:
 		
@@ -56,6 +62,8 @@ class UnlabeledMultiArg : public MultiArg<T>
 		 * identification, not as a long flag.
 		 * \param desc - A description of what the argument is for or
 		 * does.
+		 * \param req - Whether the argument is required on the command
+		 *  line.
 		 * \param typeDesc - A short, human readable description of the
 		 * type that this object expects.  This is used in the generation
 		 * of the USAGE statement.  The goal is to be helpful to the end user
@@ -67,6 +75,7 @@ class UnlabeledMultiArg : public MultiArg<T>
 		 */
 		UnlabeledMultiArg( const std::string& name,
 				           const std::string& desc,
+						   bool req,
 				           const std::string& typeDesc,
 						   bool ignoreable = false,
 				           Visitor* v = NULL );
@@ -76,6 +85,8 @@ class UnlabeledMultiArg : public MultiArg<T>
 		 * identification, not as a long flag.
 		 * \param desc - A description of what the argument is for or
 		 * does.
+		 * \param req - Whether the argument is required on the command
+		 *  line.
 		 * \param typeDesc - A short, human readable description of the
 		 * type that this object expects.  This is used in the generation
 		 * of the USAGE statement.  The goal is to be helpful to the end user
@@ -88,6 +99,7 @@ class UnlabeledMultiArg : public MultiArg<T>
 		 */
 		UnlabeledMultiArg( const std::string& name,
 				           const std::string& desc,
+						   bool req,
 				           const std::string& typeDesc,
 						   CmdLineInterface& parser,
 						   bool ignoreable = false,
@@ -99,8 +111,10 @@ class UnlabeledMultiArg : public MultiArg<T>
 		 * identification, not as a long flag.
 		 * \param desc - A description of what the argument is for or
 		 * does.
-		 * \param allowed - A vector of type T that where the values in the
-		 * vector are the only values allowed for the arg.
+		 * \param req - Whether the argument is required on the command
+		 *  line.
+		 * \param constraint - A pointer to a Constraint object used
+		 * to constrain this Arg.
 		 * \param ignoreable - Whether or not this argument can be ignored
 		 * using the "--" flag.
 		 * \param v - An optional visitor.  You probably should not
@@ -108,7 +122,8 @@ class UnlabeledMultiArg : public MultiArg<T>
 		 */
 		UnlabeledMultiArg( const std::string& name,
 						   const std::string& desc,
-						   const std::vector<T>& allowed,
+						   bool req,
+						   Constraint<T>* constraint,
 						   bool ignoreable = false,
 						   Visitor* v = NULL );
 
@@ -118,8 +133,10 @@ class UnlabeledMultiArg : public MultiArg<T>
 		 * identification, not as a long flag.
 		 * \param desc - A description of what the argument is for or
 		 * does.
-		 * \param allowed - A vector of type T that where the values in the
-		 * vector are the only values allowed for the arg.
+		 * \param req - Whether the argument is required on the command
+		 *  line.
+		 * \param constraint - A pointer to a Constraint object used
+		 * to constrain this Arg.
 		 * \param parser - A CmdLine parser object to add this Arg to
 		 * \param ignoreable - Whether or not this argument can be ignored
 		 * using the "--" flag.
@@ -128,7 +145,8 @@ class UnlabeledMultiArg : public MultiArg<T>
 		 */
 		UnlabeledMultiArg( const std::string& name, 
 						   const std::string& desc, 
-						   const std::vector<T>& allowed,
+						   bool req,
+						   Constraint<T>* constraint,
 						   CmdLineInterface& parser,
 						   bool ignoreable = false,
 						   Visitor* v = NULL );
@@ -156,7 +174,7 @@ class UnlabeledMultiArg : public MultiArg<T>
 		virtual std::string longID(const std::string& val="val") const;
 
 		/**
-		 * Opertor ==.
+		 * Operator ==.
 		 * \param a - The Arg to be compared to this.
 		 */
 		virtual bool operator==(const Arg& a) const;
@@ -171,24 +189,28 @@ class UnlabeledMultiArg : public MultiArg<T>
 template<class T>
 UnlabeledMultiArg<T>::UnlabeledMultiArg(const std::string& name, 
 				                        const std::string& desc, 
+										bool req,
 					                    const std::string& typeDesc,
 										bool ignoreable,
 					                    Visitor* v)
-: MultiArg<T>("", name, desc,  false, typeDesc, v)
+: MultiArg<T>("", name, desc,  req, typeDesc, v)
 { 
 	_ignoreable = ignoreable;
+	OptionalUnlabeledTracker::check(true, toString());
 }
 
 template<class T>
 UnlabeledMultiArg<T>::UnlabeledMultiArg(const std::string& name, 
 				                        const std::string& desc, 
+										bool req,
 					                    const std::string& typeDesc,
 										CmdLineInterface& parser,
 										bool ignoreable,
 					                    Visitor* v)
-: MultiArg<T>("", name, desc,  false, typeDesc, v)
+: MultiArg<T>("", name, desc,  req, typeDesc, v)
 { 
 	_ignoreable = ignoreable;
+	OptionalUnlabeledTracker::check(true, toString());
 	parser.add( this );
 }
 
@@ -196,24 +218,28 @@ UnlabeledMultiArg<T>::UnlabeledMultiArg(const std::string& name,
 template<class T>
 UnlabeledMultiArg<T>::UnlabeledMultiArg(const std::string& name, 
 				                        const std::string& desc, 
-					                    const std::vector<T>& allowed,
+										bool req,
+					                    Constraint<T>* constraint,
 										bool ignoreable,
 					                    Visitor* v)
-: MultiArg<T>("", name, desc,  false, allowed, v)
+: MultiArg<T>("", name, desc,  req, constraint, v)
 { 
 	_ignoreable = ignoreable;
+	OptionalUnlabeledTracker::check(true, toString());
 }
 
 template<class T>
 UnlabeledMultiArg<T>::UnlabeledMultiArg(const std::string& name, 
 				                        const std::string& desc, 
-					                    const std::vector<T>& allowed,
+										bool req,
+					                    Constraint<T>* constraint,
 										CmdLineInterface& parser,
 										bool ignoreable,
 					                    Visitor* v)
-: MultiArg<T>("", name, desc,  false, allowed, v)
+: MultiArg<T>("", name, desc,  req, constraint, v)
 { 
 	_ignoreable = ignoreable;
+	OptionalUnlabeledTracker::check(true, toString());
 	parser.add( this );
 }
 
@@ -227,26 +253,35 @@ bool UnlabeledMultiArg<T>::processArg(int *i, std::vector<std::string>& args)
 
 	// never ignore an unlabeled multi arg
 
-	_extractValue( args[*i] );
+
+	// always take the first value, regardless of the start string 
+	_extractValue( args[(*i)] );
+
+	/*
+	// continue taking args until we hit the end or a start string 
+	while ( (unsigned int)(*i)+1 < args.size() &&
+			args[(*i)+1].find_first_of( Arg::flagStartString() ) != 0 &&
+            args[(*i)+1].find_first_of( Arg::nameStartString() ) != 0 ) 
+		_extractValue( args[++(*i)] );
+	*/
+
+	_alreadySet = true;
+
 	return true;
 }
 
 template<class T>
 std::string UnlabeledMultiArg<T>::shortID(const std::string& val) const
 {
-  (void) val;
-	std::string id = "<" + _typeDesc + "> ...";
-
-	return id;
+	static_cast<void>(val); // Ignore input, don't warn
+	return std::string("<") + _typeDesc + "> ...";
 }
 
 template<class T>
 std::string UnlabeledMultiArg<T>::longID(const std::string& val) const
 {
-  (void) val;
-	std::string id = "<" + _typeDesc + ">  (accepted multiple times)";
-
-	return id;
+	static_cast<void>(val); // Ignore input, don't warn
+	return std::string("<") + _typeDesc + ">  (accepted multiple times)";
 }
 
 template<class T>
@@ -261,7 +296,7 @@ bool UnlabeledMultiArg<T>::operator==(const Arg& a) const
 template<class T>
 void UnlabeledMultiArg<T>::addToList( std::list<Arg*>& argList ) const
 {
-	argList.push_back( (Arg*)this );
+	argList.push_back( const_cast<Arg*>(static_cast<const Arg* const>(this)) );
 }
 
 }

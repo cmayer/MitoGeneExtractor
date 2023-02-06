@@ -1,10 +1,13 @@
+// -*- Mode: c++; c-basic-offset: 4; tab-width: 4; -*-
+
 
 /****************************************************************************** 
  * 
- *  file:  HelpVisitor.h
+ *  file:  Visitor.h
  * 
  *  Copyright (c) 2003, Michael E. Smoot .
- *  All rights reverved.
+ *  Copyright (c) 2017, Google LLC
+ *  All rights reserved.
  * 
  *  See the file COPYING in the top directory of this distribution for
  *  more information.
@@ -19,49 +22,34 @@
  *  
  *****************************************************************************/ 
 
-#ifndef TCLAP_HELP_VISITOR_H
-#define TCLAP_HELP_VISITOR_H
 
-#include <tclap/CmdLineInterface.h>
-#include <tclap/CmdLineOutput.h>
-#include <tclap/Visitor.h>
+#ifndef TCLAP_VISITOR_H
+#define TCLAP_VISITOR_H
 
 namespace TCLAP {
 
 /**
- * A Visitor object that calls the usage method of the given CmdLineOutput
- * object for the specified CmdLine object.
+ * A base class that defines the interface for visitors.
  */
-class HelpVisitor: public Visitor
+class Visitor
 {
-	protected:
-
-		/**
-		 * The CmdLine the output will be generated for. 
-		 */
-		CmdLineInterface* _cmd;
-
-		/**
-		 * The output object. 
-		 */
-		CmdLineOutput** _out;
-
 	public:
 
 		/**
-		 * Constructor.
-		 * \param cmd - The CmdLine the output will be generated for.
-		 * \param out - The type of output. 
+		 * Constructor. Does nothing.
 		 */
-		HelpVisitor(CmdLineInterface* cmd, CmdLineOutput** out) 
-				: Visitor(), _cmd( cmd ), _out( out ) { }
+		Visitor() { }
 
 		/**
-		 * Calls the usage method of the CmdLineOutput for the 
-		 * specified CmdLine.
+		 * Destructor. Does nothing.
 		 */
-		void visit() { (*_out)->usage(*_cmd); exit(0); }
-		
+		virtual ~Visitor() { }
+
+		/**
+		 * This method (to implemented by children) will be
+		 * called when the visitor is visited.
+		 */
+		virtual void visit() = 0;
 };
 
 }

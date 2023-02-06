@@ -1,7 +1,7 @@
 # CFLAGS  = -g3 -ggdb -Wall
 CFLAGS = -O2 # -Wall
 
-INCL =    -I . -I tclap
+INCL =    -I . -I tclap-1.2.5/include
 #LIBS    = -lc -Wall
 
 SRC    = MitoGeneExtractor.cpp \

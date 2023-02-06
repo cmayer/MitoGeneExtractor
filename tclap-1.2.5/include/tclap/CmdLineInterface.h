@@ -1,3 +1,5 @@
+// -*- Mode: c++; c-basic-offset: 4; tab-width: 4; -*-
+
 
 /****************************************************************************** 
  * 
@@ -5,7 +7,8 @@
  * 
  *  Copyright (c) 2003, Michael E. Smoot .
  *  Copyright (c) 2004, Michael E. Smoot, Daniel Aarno.
- *  All rights reverved.
+ *  Copyright (c) 2017, Google LLC
+ *  All rights reserved.
  *
  *  See the file COPYING in the top directory of this distribution for
  *  more information.
@@ -75,14 +78,21 @@ class CmdLineInterface
 		 * add does not need to be called.
 		 * \param xors - List of Args to be added and xor'd. 
 		 */
-		virtual void xorAdd( std::vector<Arg*>& xors )=0;
+		virtual void xorAdd( const std::vector<Arg*>& xors )=0;
 
 		/**
 		 * Parses the command line.
 		 * \param argc - Number of arguments.
 		 * \param argv - Array of arguments.
 		 */
-		virtual void parse(int argc, char** argv)=0;
+		virtual void parse(int argc, const char * const * argv)=0;
+
+        /**
+         * Parses the command line.
+         * \param args - A vector of strings representing the args. 
+         * args[0] is still the program name.
+         */
+        void parse(std::vector<std::string>& args);
 
 		/**
 		 * Returns the CmdLineOutput object.
@@ -123,6 +133,18 @@ class CmdLineInterface
 		 * Returns the message string.
 		 */
 		virtual std::string& getMessage()=0;
+
+		/**
+		 * Indicates whether or not the help and version switches were created
+		 * automatically.
+		 */
+		virtual bool hasHelpAndVersion()=0;
+
+		/** 
+		 * Resets the instance as if it had just been constructed so that the
+		 * instance can be reused. 
+		 */
+		virtual void reset()=0;
 };
 
 } //namespace

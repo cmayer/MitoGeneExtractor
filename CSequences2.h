@@ -334,12 +334,12 @@ private:
   // equal lengths.
   std::vector<unsigned>     originalPosNumbers;  // In case we excluded positions from the alignment, we want to remember the original positions.
   std::vector<CSequence_Mol*>   seqData;             // The vector of pointers to sequences
-  
+
   // Map of short names. Only makes sense if the short names are unique!
   std::map<faststring, CSequence_Mol*> sn_map;       // Obtain pointer to the sequence by sequence name. Is map of short names.
   // Short names are normal names
   bool                      short_names_unique;  // The short_name is the name before the first space or the full name if the name has no spaces.
-  
+
   void add_seq(CSequence_Mol* seq)
   {
     //    std::cerr << "Adding: " << seq->getName() << '\n';
@@ -348,6 +348,7 @@ private:
     
     seqData.push_back(seq);
     sn_map[seq->getName()] = seq;
+    ++taxaNum;
   }
   
   
@@ -382,14 +383,15 @@ public:
   
   // Constructor for a set of empty sequences with names and length.
   CSequences2(CSequence_Mol::DataTypesEnum Dt, std::vector<faststring> names, unsigned len):
-  datatype(Dt), taxaNum(names.size()), ambig_char('?'), originalPosNumbers_supplied(false),posNum(0), short_names_unique(true)
+  datatype(Dt), taxaNum(0), ambig_char('?'), originalPosNumbers_supplied(false),posNum(0), short_names_unique(true)
   
   {
-    seqData.reserve(taxaNum);
+    unsigned N = names.size(); 
+    seqData.reserve(N);
     unsigned        i;
     CSequence_Mol   *seq;
     
-    for (i=0; i<taxaNum; ++i)
+    for (i=0; i<N; ++i)
     {
       seq = new CSequence_Mol (CSequence_Mol::dna, names[i], len, ambig_char);
       add_seq(seq);
@@ -418,19 +420,19 @@ public:
   //    pos2-pos1 must be the number of bases that are copied to this sequence.
   
   CSequences2(const CSequences2 &s, faststring::size_t pos1 = 0, faststring::size_t pos2 = faststring::npos):
-  datatype(s.datatype), taxaNum(s.taxaNum), ambig_char(s.ambig_char),
+  datatype(s.datatype), taxaNum(0), ambig_char(s.ambig_char),
   originalPosNumbers_supplied(false), posNum(0), short_names_unique(true)
   {
-    unsigned        i, n=taxaNum;
+    unsigned        i, N=s.taxaNum;
     CSequence_Mol   *seq;
     
-    if (n>0)
+    if (N>0)
     {
       // This is taken out of the loop to silence the warning that seq is used uninitialised below.
       seq = new CSequence_Mol ( *(s.seqData[0]), pos1, pos2);
       add_seq(seq);
 
-      for (i=1; i<n; ++i)
+      for (i=1; i<N; ++i)
       {
         seq = new CSequence_Mol ( *(s.seqData[i]), pos1, pos2);
         add_seq(seq);
@@ -448,12 +450,11 @@ public:
   // Add more constructors: (a) from range, (b) from range_list
 
   
-  
   bool are_short_names_unique()
   {
     return short_names_unique;
   }
-  
+
   bool equal_length_of_all_sequences()
   {
     size_t len;
@@ -1650,8 +1651,10 @@ public:
         {
           PrintMessage_cerr("\n\n");
           faststring errormsg;
-          errormsg   =  "An error occurred while reading the input file. The data type of the sequence is DNA, but the sequence that is read contains non-DNA symbols.\n";
-          errormsg  +=  "File position: line ";
+          errormsg   =  "An error occurred while reading the input file. The "
+	                "data type of the sequence is DNA, but the sequence "
+	                "that is read contains non-DNA symbols.\n"
+                        "File position: line ";
           errormsg  +=  faststring(infile.line());
           ErrorMessage(errormsg.c_str());
           PrintMessage_cerr("\n");
@@ -1712,15 +1715,16 @@ public:
       ++count_seqs_stored;
     } // End while
     
-    // Check equal data type and ambig character:
-    taxaNum = count_seqs_stored;
-    
     // Check that all sequences have the same length. We require that
     // they have the same length for what remains to be done in this function.
     // posNum == 0 if we return now.0
     if (!equal_length_of_all_sequences() )
+    {
+      posNum = 0;
       return 1;
-    
+    }
+      
+    // If we get here, sequences have equal lengths:
     if (taxaNum > 0)
     {
       posNum  = seqData[0]->length();
@@ -1750,7 +1754,8 @@ public:
     //     bool            global_gaps_to_Ns=false;
     unsigned        all_lines_N;
     unsigned        curr_taxon;
-    
+    unsigned        expected_taxaNum, expected_posNum;
+
     char read_mode;
     
     // The allowed symbols from the phylip manual:
@@ -1775,11 +1780,11 @@ public:
       
       if (fsvec.size()==2 && fsvec[0].isAnUnsigned() && fsvec[1].isAnUnsigned() )
       {
-        taxaNum = fsvec[0].ToUnsigned();
-        posNum  = fsvec[1].ToUnsigned();
+        expected_taxaNum = fsvec[0].ToUnsigned();
+        expected_posNum  = fsvec[1].ToUnsigned();
         
-        /* 	 std::cout << "Number of taxa     " << taxaNum << '\n'; */
-        /* 	 std::cout << "Number of residues " << posNum  << '\n'; */
+        /* 	 std::cout << "Number of taxa     " << expected_taxaNum << '\n'; */
+        /* 	 std::cout << "Number of residues " << expected_posNum << '\n'; */
       }
     }
     
@@ -1836,7 +1841,8 @@ public:
     all_lines_N = all_lines.size();
     
     //     std::cerr << all_lines[all_lines_N-1]->length() << '\n';
-    
+
+    // Remove trailling blank lines:
     while (all_lines[all_lines_N-1]->length() == 0)
     {
       --all_lines_N;
@@ -1845,7 +1851,8 @@ public:
       --it;
       all_lines.erase(it);
     }
-    
+
+    // Count non trailling blank lines:
     unsigned number_blank_lines=0;
     
     for (i=0; i<all_lines_N; ++i)
@@ -1883,7 +1890,7 @@ public:
       faststring  *currLine;
       
       
-      if (taxaNum == 0 || posNum == 0)
+      if (expected_taxaNum == 0 || expected_posNum == 0)
       {
         // delete all faststrings in all_lines
         for (unsigned ind=0; ind < all_lines.size(); ++ind)
@@ -1894,12 +1901,12 @@ public:
       
       // For all taxa
       //
-      for (curr_taxon = 0; curr_taxon < taxaNum; ++curr_taxon)
+      for (curr_taxon = 0; curr_taxon < expected_taxaNum; ++curr_taxon)
       {
         if (curr_line_num >= all_lines_N)
         {
           std::cerr << "Parse error while reading the input file:\nUnexpected end of file in line: " << curr_line_num <<  '\n';
-          std::cerr << "Trying to read " << taxaNum << " taxa but found only " << curr_taxon << "!\n";
+          std::cerr << "Trying to read " << expected_taxaNum << " taxa but found only " << curr_taxon << "!\n";
           
           exit(-45);
         }
@@ -1964,7 +1971,7 @@ public:
         // TODO: More error checking could be done here:
         // We could check that only allowed symbols are added.
         // By this we also might be able to detect an error earlier
-        while (seq_in_one_line.length() < posNum)
+        while (seq_in_one_line.length() < expected_posNum)
         {
           ++curr_line_num;
           if (curr_line_num >= all_lines_N)
@@ -2018,7 +2025,8 @@ public:
         "(i) The number of taxa found in the first block does not match the number specified in the file header.\n"
         "(ii) Since only one data block was found, this file is interpreted as sequential format. If this should be a file\n"
         "in interleaved format, blank line must be added between blocks of data.\n"
-        "(iii) It could also be that the number of residues in the sequences is larger than specified in the header, so that additional\n"
+        "(iii) It could also be that the number of residues in the sequences is "
+	"larger than specified in the header, so that additional\n"
         "lines of data are interpreted as additional taxa in the sequential format.\n";
         exit(-67);
       }
@@ -2127,16 +2135,21 @@ public:
       } // End while loop over all non blank lines in first block (interleaved)
       
       // All remaining blocks still need to be read.
-      
-      if (taxaNum == 0 && posNum == 0)
-        taxaNum = curr_taxon;
+
+      // TODO: Test this function and final taxaNum!!
+      //      if (taxaNum == 0 && posNum == 0)
+      //        taxaNum = curr_taxon;
       
       // Check that the number of taxa that might had been specified agrees with the
       // number of taxa we found now.
-      if (taxaNum != 0 && taxaNum != curr_taxon) // do we have a problem?
+      if (expected_taxaNum != 0 && expected_taxaNum != curr_taxon) // do we have a problem?
       {
-        std::cerr << "Parse error while reading the input file:\nThe number of taxa in the first block of the input file ("
-        << curr_taxon  << ") does not match the number of taxa specified in the header of the phylip file (" << taxaNum << ")\n";
+        std::cerr << "Parse error while reading the input file:\nThe number "
+	             "of taxa in the first block of the input file ("
+		  << curr_taxon
+		  << ") does not match the number of taxa specified in the "
+	             "header of the phylip file ("
+		  << expected_taxaNum  << ")\n";
         exit(-55);
       }
       
@@ -2150,7 +2163,7 @@ public:
       while (true)  // (curr_line_num < all_lines_N)
       {
         // Read the next block:
-        for (curr_taxon=0; curr_taxon < taxaNum; ++curr_taxon)
+        for (curr_taxon=0; curr_taxon < expected_taxaNum; ++curr_taxon)
         {
           // The current line should be the first line of this block
           if (curr_line_num >= all_lines_N)
@@ -2205,12 +2218,12 @@ public:
         // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
       } // End while loop read all blocks
       
-      if (taxaNum > 0 && posNum == 0)
-        posNum = sequences[0]->length();
+      //      if (taxaNum > 0 && posNum == 0)
+      //        posNum = sequences[0]->length();
       
       // Now we should have read the sequences
       // and we can delete the data we reserved.
-      for (curr_taxon=0; curr_taxon < taxaNum; ++curr_taxon)
+      for (curr_taxon=0; curr_taxon < expected_taxaNum; ++curr_taxon)
       {
         seq = new CSequence_Mol (datatype);
         seq->set_taxon_and_sequence(*taxonnames[curr_taxon], *sequences[curr_taxon], datatype);
@@ -2223,46 +2236,32 @@ public:
     
     // Do some final error checking
     
-    if (taxaNum == 0)
+    if (expected_taxaNum == 0)
     {
       // delete all faststrings in all_lines
       for (unsigned ind=0; ind < all_lines.size(); ++ind)
         delete all_lines[ind];
       return 0;
     }
-    
-    unsigned len1 = seqData[0]->length();
-    
-    if (len1 != posNum)
+
+    if (equal_length_of_all_sequences())
+      posNum = seqData[0]->length();
+    else
+      posNum = 0;
+
+    if (expected_posNum != posNum)
     {
       std::cerr << "Parse error while reading the input file:\n"
       << "The file was interpreted in the " << (read_mode == 's'? "sequential":"interleaved") << " format.\n"
       "The number of positions specified in the file header is not identical to the number of positons\n"
-      "in the first sequence.\n"
+      "of the sequences or the sequences have different lengths.\n"
       "This can have multiple reasons:\n"
       "In the interleaved format, make sure, taxon names only occur in the first block of sequences.\n"
       "In the interleaved format a blank line must be found between all blocks of data.\n";
-      std::cerr << "The number of positions in the first sequence is: " << len1
-      << ", while the number specified in the header is " << posNum << ".\n";
       
       //       std::cerr << seqData[0]->getSeqStr() << '\n';
       
       exit(-66);
-    }
-    
-    unsigned len2;
-    // Check that the number of positions is correct and equal for all sequences:
-    for (curr_taxon=1; curr_taxon < taxaNum; ++curr_taxon)
-    {
-      seq = seqData[curr_taxon];
-      len2 = seq->length();
-      
-      if (len1 != len2)
-      {
-        std::cerr << "Parse error while reading the input file:\nThe number of residues in sequence " << curr_taxon+1 << " differs from the number of residues in sequence 1. The sequence lengths for sequence 1 and sequence " << curr_taxon+1
-        <<  " are respectively " << len1 << " and " << len2 << ".\n";
-        exit(-67);
-      }
     }
     
     // Check that the data type is equal for all sequences and that
@@ -2340,6 +2339,27 @@ public:
     
     return 0;
   }  // End read_from_Phylip_File
+
+
+  // This function does not fill in gaps and starts that might have been removed before.
+  void ExportSequences(FILE *ofp, char format, unsigned interleaved_len)
+  {
+    if (taxaNum == 0)
+      return;
+
+    if (format=='f')
+    {
+      for (unsigned i=0; i<taxaNum; ++i)
+      {
+	seqData[i]->writeSequence_fasta(ofp, interleaved_len);
+      }
+    }
+    else
+    {
+      std::cerr << "INTERNAL ERROR: This is a specialized export function and only the fasta format is currently supported.\n";
+      exit(-111);
+    }
+  }
   
   // Backwards compatible and convenience function ExportSequences with fewer parameters.
   void ExportSequences(std::ostream &os, char format, unsigned interleaved_len)
@@ -2352,6 +2372,7 @@ public:
   //  void ExportSequences(std::ostream &os, char format, unsigned interleaved_len,
   //       faststring &replace_symbols_in_sequence_names, unsigned trim_seq_names_length, const char *trim_at_symobls, bool unique_names)
 
+  
   void ExportSequences(std::ostream &os, char format, unsigned interleaved_len,
 		       faststring replace_symbols_in_sequence_names,
 		       unsigned trim_seq_names_length, bool unique_names)
@@ -2381,7 +2402,7 @@ public:
       trim_seq_names_length = 10;
     }
     
-    if (format == 'r')
+    if (format == 'r') // relaxed phylip
     {
       bool space_in_query = false;;
       faststring::size_t j;
@@ -3353,7 +3374,7 @@ public:
       sn_map.erase(find_it);
     return p;
   }
-  
+
   void add_seq_to_alignment(CSequence_Mol::DataTypesEnum     datatype_param,
                             const faststring                  &fullname_param,
                             const faststring                  &seq_data_param,
@@ -3376,24 +3397,63 @@ public:
     //     std::cout << "Datatype after constructor: " << seq->get_datatype() << '\n';
     seq->set_taxon_and_sequence(fullname_param, seq_data_param, datatype_param);
     //     std::cout << "Datatype after constructor+set_taxon_and_sequence: " << seq->get_datatype() << '\n';
-    
-    
-    
-    
-    ++taxaNum;
-    if (posNum == 0)
-      posNum = seq->length();
-    else if (posNum != seq->length())
+
+    if (taxaNum == 0)
     {
-      std::cerr << "Error: Sequence added has different length than existing sequences in void add_seq_to_alignmen(...).\n";
-      delete seq;
-      return;
+      posNum = seq->length();
     }
-    
+    else
+    {
+      if (posNum != seq->length())
+      {
+	std::cerr << "Error: Sequence added to alignment has different length than existing "
+	             "sequences in void add_seq_to_alignment(...).\n";
+	delete seq;
+	return;
+      }
+    }
+
     add_seq(seq);
     
     // Further auto detect stuff???????
   }
+
+  // Does not check for equal lengths of sequences.
+  // Also consider to use add_seq_to_alignment. 
+  void add_seq_to_dataset(CSequence_Mol::DataTypesEnum     datatype_param,
+			  const faststring                  &fullname_param,
+			  const faststring                  &seq_data_param,
+			  char                              ambig_param='\0' // default auto
+  )
+  {
+    if (datatype != datatype_param)
+    {
+      std::cerr << "Warning: Not all sequences seem to have the same data type.\n";
+      datatype = CSequence_Mol::mixed;
+    }
+    
+    //     std::cout << "datatype_param: " << datatype_param  << '\n';
+    
+    // Handle general ambig TODO XXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    //     if (general_ambig == CSequence_Mol::unknown)
+    
+    CSequence_Mol   *seq;
+    seq = new CSequence_Mol (datatype_param, ambig_param);
+    //     std::cout << "Datatype after constructor: " << seq->get_datatype() << '\n';
+    seq->set_taxon_and_sequence(fullname_param, seq_data_param, datatype_param);
+    //     std::cout << "Datatype after constructor+set_taxon_and_sequence: " << seq->get_datatype() << '\n';
+
+    if (taxaNum == 0)
+      posNum = seq->length();
+    else if (posNum != seq->length())
+    {
+      posNum = 0;
+    }
+    add_seq(seq);
+    
+    // Further auto detect stuff???????
+  }
+  
   
   void get_vectors_of_site_coverages_and_site_entropies_DNA(std::vector<float> &coverage, std::vector<float> &entropies)
   {
@@ -3456,7 +3516,7 @@ public:
     delete [] seq_strs;
   }
   
-  
+
   void get_vectors_of_site_coverages_values_DNA(std::vector<unsigned> &coverage, bool count_ambig, unsigned start=0, unsigned end=faststring::npos)
   {
     unsigned symbols[256];
@@ -3986,8 +4046,11 @@ public:
       }
       find_it->second->append_sequence(*(s.seqData[i]));
     }
-    if (seqData.size() > 0)
+
+    if (equal_length_of_all_sequences())
       posNum = seqData[0]->length();
+    else
+      posNum = 0;
   }
   
   // Append a column to an alignment.

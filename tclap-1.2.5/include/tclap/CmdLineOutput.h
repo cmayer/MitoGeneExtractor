@@ -1,3 +1,5 @@
+// -*- Mode: c++; c-basic-offset: 4; tab-width: 4; -*-
+
 
 
 /****************************************************************************** 
@@ -5,7 +7,8 @@
  *  file:  CmdLineOutput.h
  * 
  *  Copyright (c) 2004, Michael E. Smoot
- *  All rights reverved.
+ *  Copyright (c) 2017, Google LLC
+ *  All rights reserved.
  * 
  *  See the file COPYING in the top directory of this distribution for
  *  more information.
@@ -42,6 +45,12 @@ class CmdLineOutput
 {
 
 	public:
+
+		/**
+		 * Virtual destructor.
+		 */
+		virtual ~CmdLineOutput() {}
+
 		/**
 		 * Generates some sort of output for the USAGE. 
 		 * \param c - The CmdLine object the output is generated for. 
@@ -61,8 +70,6 @@ class CmdLineOutput
 		 */
 		virtual void failure( CmdLineInterface& c, 
 						      ArgException& e )=0;
-
-		virtual ~CmdLineOutput() { };
 
 };
 

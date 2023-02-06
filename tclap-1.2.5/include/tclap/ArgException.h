@@ -1,10 +1,12 @@
+// -*- Mode: c++; c-basic-offset: 4; tab-width: 4; -*-
 
 /****************************************************************************** 
  * 
  *  file:  ArgException.h
  * 
  *  Copyright (c) 2003, Michael E. Smoot .
- *  All rights reverved.
+ *  Copyright (c) 2017 Google LLC
+ *  All rights reserved.
  * 
  *  See the file COPYING in the top directory of this distribution for
  *  more information.
@@ -78,7 +80,8 @@ class ArgException : public std::exception
 		 */
 		const char* what() const throw() 
 		{
-			std::string ex = _argId + " -- " + _errorText;
+			static std::string ex; 
+			ex = _argId + " -- " + _errorText;
 			return ex.c_str();
 		}
 
@@ -180,6 +183,28 @@ class SpecificationException : public ArgException
 							std::string("developer." )) 
 		{ }
 
+};
+
+/**
+ * Thrown when TCLAP thinks the program should exit.
+ * 
+ * For example after parse error this exception will be thrown (and
+ * normally caught). This allows any resource to be clened properly
+ * before exit.
+ * 
+ * If exception handling is disabled (CmdLine::setExceptionHandling),
+ * this exception will propagate to the call site, allowing the
+ * program to catch it and avoid program termination, or do it's own
+ * cleanup. See for example, https://sourceforge.net/p/tclap/bugs/29.
+ */
+class ExitException {
+public:
+	ExitException(int estat) : _estat(estat) {}
+
+	int getExitStatus() const { return _estat; }
+
+private:
+	int _estat;
 };
 
 } // namespace TCLAP

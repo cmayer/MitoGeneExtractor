@@ -13,7 +13,10 @@
 #include <iomanip>
 #include <cstdio>
 #include "statistic_functions.h"
-//#inlcude ""
+#include <ctime>
+#include "fastq.h"
+#include "Cfastq-sequences.h"
+
 
 /// #include <utility>
 
@@ -24,7 +27,8 @@ typedef map< Key , unsigned> Mymap;
 
 
 // Verbosity rules:
-//      verbosity 0 -> only error messages that lead to exit() (goes to cerr). Welcome is printed to cout. Parameters are printed to cout.
+//      verbosity 0 -> only error messages that lead to exit() (goes to cerr).
+//                     Welcome is printed to cout. Parameters are printed to cout.
 //      verbosity 1 -> warnings, ALERT (goes to cerr)
 //      verbosity 2 -> more warnings, e.g. skipping features
 //      verbosity 3 -> Basic progress (goes to cout)
@@ -40,9 +44,72 @@ typedef map< Key , unsigned> Mymap;
 // next index after the range.
 
 //bool 	  add_partial_codons_at_ends      = true;
-//unsigned  length_constaint                = 2000;
+//unsigned  length_constaint              = 2000;
 
 unsigned num_WARNINGS = 0;
+
+void append_fasta_files_to_exonerate_input_file(FILE *ofp, vector<string> global_input_dna_fasta_filenames)
+{
+  for (vector<string>::size_type i=0; i < global_input_dna_fasta_filenames.size(); ++i)
+  {
+    FILE* ifp; // input file pointer
+    unsigned nread;
+
+    ifp = fopen(global_input_dna_fasta_filenames[i].c_str(), "r");
+
+    if (!ifp)
+    {
+      cerr << "The fasta input file " << global_input_dna_fasta_filenames[i] << "\ncould not be opened. "
+	      "Maybe it does not exist. Exiting.\n";
+      good_bye_and_exit(-27);
+    }
+    
+    char const_buf [1000000];
+    while ((nread = fread(const_buf, sizeof(char), sizeof(const_buf), ifp)) > 0)
+    {
+      fwrite(const_buf, sizeof(char), nread, ofp);
+    }
+    fclose(ifp);
+  }
+}
+
+void append_fastq_files_to_exonerate_input_file(FILE *ofp, vector<string> global_input_dna_fastq_filenames)
+{
+  for (vector<string>::size_type i=0; i < global_input_dna_fastq_filenames.size(); ++i)
+  {
+    CFile      infile;
+    infile.ffopen(global_input_dna_fastq_filenames[i]);
+
+    if (infile.fail())
+    {
+      cerr << "The fastq input file " << global_input_dna_fastq_filenames[i] << "\ncould not be opened. "
+	      "Maybe it does not exist. Exiting.\n";
+	good_bye_and_exit(-27);
+    }
+
+    fastq_sequences fq_in_collection;
+    fq_in_collection.read_fastq(infile, global_input_dna_fastq_filenames[i].c_str(), 1);
+    infile.close();
+
+    /*
+      unsigned N_seq_in_fq_file = fq_in_collection.size();
+
+      if (global_verbosity >= 1)
+      {
+         cout << "Found " << N_seq_in_fq_file << " sequences in input file " << global_input_dna_fastq_filenames[i]
+              << endl;
+      }
+    */
+
+    //    fq_in.print(cout);
+
+    CSequences2 *pseqs = new CSequences2(CSequence_Mol::dna);
+    fq_in_collection.add_sequences_to_CSequences_object(pseqs);
+    cout << "Fasta sequences:\n";
+    pseqs->ExportSequences(ofp, 'f', UINT_MAX);
+    delete pseqs;
+  }
+}
 
 
 struct stats_for_given_target
@@ -112,8 +179,26 @@ struct stats_for_given_target
   }
 };
 
+/*
+void copy_file(const char * sourcename, const char * destname, const char * out_mode)
+{
+  FILE* ifp; // input file pointer                                                                                   
+  FILE* ofp; // output file pointer                                                                                  
 
+  unsigned nread;
+  ifp = fopen(sourcename, "r");
+  ofp = fopen(destname, out_mode);
 
+  char const_buf [100000];
+  while ((nread = fread(const_buf, sizeof(char), sizeof(const_buf), ifp)) > 0)
+  {
+    fwrite(const_buf, sizeof(char), nread, ofp);
+  }
+
+  fclose(ifp);
+  fclose(ofp);
+}
+*/
 
 
 inline void add_or_count(Mymap &m, Key k)
@@ -173,7 +258,7 @@ public:
 
   faststring queryID;          // In this program, this is the AA-COI consensus seq. exonerate aligned against.
   short      queryIndex;       // Every query sequence (reference sequence) has a query number.
-                               // This avoids many loopups for index.
+                               // This avoids many lookups for index.
   unsigned   query_start;      // 0 based numbers.
   unsigned   query_end;        // The first position after the specified range.
   char       query_strand;
@@ -219,7 +304,8 @@ public:
     {
       cerr << "Reference sequence appears in Exonerate output, but not in "
     	      "reference sequences. This should not be possible.\n";
-      exit(-127);
+      good_bye_and_exit(-127);
+      return 0; // Only introduced to silence warnings about no return for non-void function.
     }
   }
 
@@ -246,13 +332,13 @@ public:
     {
       
       cerr << "ERROR: Bad vulgar string encountered with a wrong number of elements: " << str << endl;
-      exit(-4);
+      good_bye_and_exit(-4);
     }
 
     if (l[0] != "vulgar:")
     {
       cerr << "ERROR: Bad vulgar string: The vulgar string is expected to start with \"vulgar:\" but found: " << str << endl;
-      exit(-4);
+      good_bye_and_exit(-4);
     }
 
     // It is a convention in exonerate that the protein sequence is the query and the DNA sequence the target:
@@ -277,7 +363,7 @@ public:
 	      "by 10+3*n where n is an integer. But the number is "
            << m << "." << endl;
       cerr << "       Vulgar string: " << str << endl;
-      exit(-5);
+      good_bye_and_exit(-5);
     }
 
     unsigned k = 10;
@@ -597,7 +683,7 @@ void determine_alignment_string(CSequence_Mol* theSeq, const vulgar &vul, unsign
    cerr << "ERROR: Unexpected number of attributes for exonerate output: ";
    vul.print(cerr);
    cerr << "\n";
-   exit(-19);
+   good_bye_and_exit(-19);
    }
    */
   
@@ -610,7 +696,7 @@ void determine_alignment_string(CSequence_Mol* theSeq, const vulgar &vul, unsign
   //
   
   // We might want to add unmatched bp before and after, e.g. for partial codons or in order to see how much they differ from other sequences.
-  // In order not to intervene with with multiple attributes, we treat that case
+  // In order not to intervene with multiple attributes, we treat that case
   // that we add unmatched residues before and after as special cases.
   // If would only expect to find a single M attribute, the logic would be much simpler.
   
@@ -641,7 +727,7 @@ void determine_alignment_string(CSequence_Mol* theSeq, const vulgar &vul, unsign
         if (global_verbosity >= 1000)
           cout << "Number add_length_beginning: " << add_length_beginning << endl;
         
-        if (start_in_seqDNA > 0) // // Could be 0, and nothing should be done
+        if (start_in_seqDNA > 0) // Could be 0, and nothing should be done
         {
           add_length_beginning = start_in_seqDNA;
           if (global_num_bp_beyond_exonerate_alignment_if_at_start_or_end < add_length_beginning)
@@ -810,7 +896,7 @@ void determine_alignment_string(CSequence_Mol* theSeq, const vulgar &vul, unsign
     }
     else if (vul.attributes[i].first() == 'G')
     {
-      // Hits with gaps and without global_include_gap_alignments are not conidered at all, so we do not need this check here.
+      // Hits with gaps and without global_include_gap_alignments are not considered at all, so we do not need this check here.
       //            if (global_include_gap_alignments)
       {
         // Gap in nucleotide sequence:
@@ -840,7 +926,7 @@ void determine_alignment_string(CSequence_Mol* theSeq, const vulgar &vul, unsign
       cerr << "ERROR: Unexpected attribute in vulgar string: " << vul.attributes[i].first() << endl;
       cerr << "Normally, a \'grep \" " << vul.attributes[i].first()
       << " \" vulgar-file-name \' should find the offending attribute in the vulgar file. " << endl;
-      exit(-21);
+      good_bye_and_exit(-21);
     }
   } // END for (unsigned i=0; i < vul.attributes.size(); ++i)
   
@@ -854,8 +940,7 @@ void determine_alignment_string(CSequence_Mol* theSeq, const vulgar &vul, unsign
     cerr << "query_prot_length   " << query_prot_length   << endl;
     cerr << "query_prot_length*3 " << query_prot_length*3 << endl;
     cerr << "count (nuc-length)  " << count  << endl;
-    
-    exit(-131);
+    good_bye_and_exit(-131);
   }
   
   // Now work on gaps after and add - after:
@@ -918,7 +1003,7 @@ void determine_alignment_string(CSequence_Mol* theSeq, const vulgar &vul, unsign
         if (global_verbosity >= 1000)
           cout << "Number add_length_end: " << add_length_end << endl;
         
-        if (add_length_end > 0) // // Could be 0, and nothing should be done
+        if (add_length_end > 0) // Could be 0, and nothing should be done
         {
           if (add_length_end > gaps_after)
           {
@@ -990,8 +1075,8 @@ int run_exonerate(const faststring &exonerate_binary, const faststring &protein_
     code_string = "FFLLSSSSYY*LCC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG";
   else
   {
-    cerr << "ERROR: Unknown genetic code number passed to function run_exonerate. Code nuber: " << genetic_code_number << endl;
-    exit(-20);
+    cerr << "ERROR: Unknown genetic code number passed to function run_exonerate. Code number: " << genetic_code_number << endl;
+    good_bye_and_exit(-20);
   }
   
   //  system "exonerate --geneticcode FFLLSSSSYY**CCWWLLLLPPPPHHQQRRRRIIMMTTTTNNKKSS**VVVVAAAADDEEGGGG --frameshift -9 --query ${dir2}/${gene}.fasta
@@ -1036,13 +1121,14 @@ int run_exonerate(const faststring &exonerate_binary, const faststring &protein_
 int main(int argc, char **argv)
 {
   cout << "Welcome to the " PROGNAME " program, version " VERSION << endl;
-  
+
   // In exonerate the protein sequence is by convention the query sequence.
   // This makes things a bit confusing here:
   
   read_and_init_parameters(argc, argv);
   print_parameters(cout, "");
-  
+
+  bool combined_input_sequence_file_created = false;
   CSequences2 seqs_DNA_reads_target(CSequence_Mol::dna);
   CSequences2 seqs_prot_query(CSequence_Mol::protein);
   //  CSequences2 seqs_DNA_result(CSequence_Mol::dna);
@@ -1052,6 +1138,42 @@ int main(int argc, char **argv)
   vector<faststring>   seqnames_of_references;
   vector<CSequences2*> result_alignments_for_references;
 
+  string global_input_dna_fasta_file;
+
+  // Single fasta input file:
+  if (global_input_dna_fasta_filenames.size() == 1 && global_input_dna_fastq_filenames.size() == 0)
+  {
+    global_input_dna_fasta_file = global_input_dna_fasta_filenames[0];
+  }
+  else
+  {
+    char  tmpstr[] = "Concatenated_exonerate_input_XXXXXX";
+    int   fd = mkstemp(tmpstr);
+    FILE  *ofp = fdopen(fd, "w");
+
+    combined_input_sequence_file_created = true;
+    if (fd == -1 || ofp == 0)
+    {
+      cerr << "ERROR: Could not open the temporary file for the fasta file passed to the Exonerate program." << endl;
+      good_bye_and_exit(-13);
+    }
+
+    global_input_dna_fasta_file = string(tmpstr);
+
+    if (global_input_dna_fasta_filenames.size() > 0)
+    {
+      append_fasta_files_to_exonerate_input_file(ofp, global_input_dna_fasta_filenames);
+    }
+    
+    if (global_input_dna_fastq_filenames.size() > 0)
+    {
+      append_fastq_files_to_exonerate_input_file(ofp, global_input_dna_fastq_filenames);
+    }
+
+    //    global_input_dna_fasta_filenames = faststring(tmpstr);
+    //    cout << "Temporary name: " << global_input_dna_fasta_file << endl;
+    fclose(ofp);
+  }
   
   //**************************
   // Read query sequences
@@ -1067,7 +1189,7 @@ int main(int argc, char **argv)
   if (query_file.fail())
   {
     cerr << "ERROR: Could not open specified file: " << global_input_dna_fasta_file << endl;
-    exit(-1);
+    good_bye_and_exit(-1);
   }
   // cerr << "Line:   " <<  file.line() << endl;
   // cerr << "Status: " <<  (int)file.status() << endl;
@@ -1080,7 +1202,7 @@ int main(int argc, char **argv)
   {
     cerr << "ERROR: Exiting: An error occurred while reading the input file: " << global_input_dna_fasta_file
     << " Double check the input type or the file you specified."    << endl;
-    exit(-3);
+    good_bye_and_exit(-3);
   }
 
   // TODO:
@@ -1096,7 +1218,7 @@ int main(int argc, char **argv)
             "which is done by many programs, including exonerate. Please verify your "
             "input data. Often it "
             "helps to rename sequences by replacing spaces with e.g. underscores.\n";
-    exit(-3);
+    good_bye_and_exit(-3);
   }
   
   if (global_verbosity >= 3)
@@ -1136,7 +1258,7 @@ int main(int argc, char **argv)
   if (query_prot_file.fail())
   {
     cerr << "ERROR: Could not open specified file: " << global_input_prot_reference_sequence << endl;
-    exit(-1);
+    good_bye_and_exit(-1);
   }
   // cerr << "Line:   " <<  file.line() << endl;
   // cerr << "Status: " <<  (int)file.status() << endl;
@@ -1149,14 +1271,14 @@ int main(int argc, char **argv)
     cerr << "ERROR: Exiting: An error occurred while reading the input file. "
             "Double check the input type or the file you specified."
          << endl;
-    exit(-3);
+    good_bye_and_exit(-3);
   }
 
   if (!seqs_prot_query.are_short_names_unique())
   {
     cerr << "ERROR: The sequence in the reference file are not unique."
             "Please rename the reference sequences to ensure they are unique.\n";
-    exit(-3);
+    good_bye_and_exit(-3);
   }
 
   seqs_prot_query.get_short_sequence_names(seqnames_of_references);
@@ -1180,7 +1302,7 @@ int main(int argc, char **argv)
   if (seqs_prot_query.GetTaxaNum() != 1)
   {
     cerr << "ERROR: Found multiple sequences in the query protein file. Only one sequence is allowed in this program." << endl;
-    exit(-23);
+    good_bye_and_exit(-23);
   }
   */
 
@@ -1246,7 +1368,7 @@ int main(int argc, char **argv)
       {
         cerr << "ERROR: Running exonerate failed. "
 	        "The generated vulgar file is incomplete and should be removed manually. Exiting.\n";
-        exit(-1);
+	good_bye_and_exit(-1);
       }
 
       if (global_verbosity >= 1)
@@ -1271,7 +1393,7 @@ int main(int argc, char **argv)
     {
       cerr << "ERROR: Could not open file " << exonerate_output_file_name << endl;
       cerr << "Exiting.\n\n";
-      exit(-6);
+      good_bye_and_exit(-6);
     }
 
     faststring line;
@@ -1386,6 +1508,21 @@ int main(int argc, char **argv)
       exonerate_output_file.ffclose();
     }
   } // END  while (!vulgar_file_read_successfully)
+
+
+  // Remove exonerate input file if this was created in this program
+  if (combined_input_sequence_file_created)
+  {
+    if (!global_keep_concatenated_input_file)
+    {
+      remove(global_input_dna_fasta_file.c_str());
+    }
+    else
+    {
+      string final_concat_name = global_input_dna_fasta_file + ".fas";
+      rename(global_input_dna_fasta_file.c_str(), final_concat_name.c_str());
+    }
+  }
 
   // Remove the vulgar file, if the user has not specified a file name to save the file permanently.
   if (global_vulgar_file == "tmp-vulgar.txt")
@@ -1546,7 +1683,7 @@ int main(int argc, char **argv)
 	  {
 	    if (global_include_double_hits && hits_to_use_for_target[ref_index] !=  (void *)-1 )
 	    {
-	      // We include double hits, but only the best one of multile hits:
+	      // We include double hits, but only the best one of multiple hits:
 	      // Is this score better than the one of the previous hit?
 	      if (vul.get_score() > hits_to_use_for_target[ref_index]->get_score() )
 		hits_to_use_for_target[ref_index] = p;
@@ -1565,12 +1702,12 @@ int main(int argc, char **argv)
 	  }
 	}
 
-	// Hits can be assinged to multiple sequences.
+	// Hits can be assigned to multiple sequences.
 	// Typically this is the case if we have multiple variants of the same reference gene.
 	// In this case we do the following:
 	// If one hit has a higher score than the hits to the other references, we only use this hit.
 	// If multiple hits have the same score we use all.
-	// This ensures that we cover all variants but prevent hits to be included in inferiour
+	// This ensures that we cover all variants but prevent hits to be included in inferior
 	// references 
 
 	// Targets with pointer (void *)-1)
@@ -1633,7 +1770,7 @@ int main(int argc, char **argv)
             cerr << "ERROR: No sequence for sequence ID " << target_key
 		 << " found. This can only happen if the vulgar file does not "
 	            "correspond to the fasta file. Exiting.\n";
-            exit(-13);
+	    good_bye_and_exit(-13);
           }
           determine_alignment_string(theSeq, vul, map_query_prot_lengths[vul.get_queryID()],
 				     newseqDNA, seq_count,
@@ -1656,7 +1793,7 @@ int main(int argc, char **argv)
       //       if (m_it == m_exonerate_results.end() )
       //       {
       // 	cerr << "INTERNAL ERROR: No sequence name found for map key (sequence ID): " << target_key << endl;
-      // 	exit(-8);
+      //        good_bye_and_exit(-8);
       //       }
       
       //      vulgar vul = m_it->second;
@@ -1679,12 +1816,14 @@ int main(int argc, char **argv)
       // Write some stats about the hits:
       if (global_verbosity >= 1)
       {
-	cout << "\n\n";
-	cout << "Some stats for the exonerate results for reference: " << seqnames_of_references[i] << "\n";
+	cout << "\n\n---------------------------------\n";
+	cout << "Some stats for the exonerate results for reference: " << seqnames_of_references[i] << '\n';
+	cout << "---------------------------------\n";
 	cout.setf(ios::left);
 	//	unsigned s1 = vec_of_hits_as_in_file.size; // vec_exonerate_results.size();
-	cout << "Number of successful exonerate alignments (all)\n"
-	     << setw(50)  << "to the amino acid sequence found in vulgar file: "
+	cout << setw(50) << "Number of input sequences considered:" << seqs_DNA_reads_target.GetTaxaNum() << '\n';
+	cout << "Number of input sequences successful aligned with exonerate (all)\n"
+	     << setw(50) << "to the amino acid sequence found in vulgar file: "
 	     <<  vector_of_hit_stats_for_targets[i].hits_in_vulgar_file << endl;
 	//	unsigned s2 = map_exonerate_count_results.size();
 	cout << "Number of successful exonerate alignments without skipped hits.\n"

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <vector>
 //#include "faststring2.h"
 
 #define DEBUG
@@ -28,8 +29,10 @@ void init_param();
 void read_and_init_parameters(int argc, char** argv);
 void print_parameters(std::ostream &os, const char *s);
 
-extern std::string                 global_input_dna_fasta_file;
+extern std::vector<std::string>    global_input_dna_fasta_filenames;
+extern std::vector<std::string>    global_input_dna_fastq_filenames;
 extern std::string                 global_input_prot_reference_sequence;
+extern std::string                 global_tmp_directory;
 extern unsigned                    global_verbosity;
 extern unsigned                    global_num_bp_beyond_exonerate_alignment_if_at_start_or_end;
 extern std::string                 global_exonerate_binary;
@@ -50,6 +53,7 @@ extern unsigned                    global_minimum_seq_coverage_total;
 extern unsigned                    global_exonerate_score_threshold;
 extern int                         global_gap_frameshift_mode;
 extern int                         global_report_gap_mode;
+extern bool                        global_keep_concatenated_input_file;
 
 extern unsigned                    global_ends_width;
 extern unsigned                    global_weight_fraction_in_ends;

@@ -1,3 +1,5 @@
+// -*- Mode: c++; c-basic-offset: 4; tab-width: 4; -*-
+
 
 /****************************************************************************** 
  * 
@@ -5,7 +7,7 @@
  * 
  *  Copyright (c) 2003, Michael E. Smoot .
  *  Copyright (c) 2004, Michael E. Smoot, Daniel Aarno.
- *  All rights reverved.
+ *  All rights reserved.
  * 
  *  See the file COPYING in the top directory of this distribution for
  *  more information.
@@ -49,14 +51,14 @@ class XorHandler
 		/**
 		 * Constructor.  Does nothing.
 		 */
-		XorHandler( ) {}
+		XorHandler( ) : _orList(std::vector< std::vector<Arg*> >()) {}
 
 		/**
-		 * Add a list of Arg*'s that will be orred together.
+		 * Add a list of Arg*'s that will be xor'd together.
 		 * \param ors - list of Arg* that will be xor'd.
 		 */
-		void add( std::vector<Arg*>& ors );
-			
+		void add( const std::vector<Arg*>& ors );
+
 		/**
 		 * Checks whether the specified Arg is in one of the xor lists and
 		 * if it does match one, returns the size of the xor list that the
@@ -84,7 +86,7 @@ class XorHandler
 		 */
 		bool contains( const Arg* a );
 
-		std::vector< std::vector<Arg*> >& getXorList(); 
+		const std::vector< std::vector<Arg*> >& getXorList() const;
 
 };
 
@@ -92,64 +94,43 @@ class XorHandler
 //////////////////////////////////////////////////////////////////////
 //BEGIN XOR.cpp
 //////////////////////////////////////////////////////////////////////
-inline void XorHandler::add( std::vector<Arg*>& ors )
-{ 
+inline void XorHandler::add( const std::vector<Arg*>& ors )
+{
 	_orList.push_back( ors );
 }
 
-/*
-inline std::string XorHandler::shortUsage()
-{
-        std::string out = "";
-	for ( int i = 0; (unsigned int)i < _orList.size(); i++ )
-	{
-		out += " {";
-		for ( ArgVectorIterator it = _orList[i].begin(); 
-						it != _orList[i].end(); it++ )
-			out += (*it)->shortID() + "|";
-
-		out[out.length()-1] = '}';
-	}
-
-	return out;
-}
-
-inline void XorHandler::printLongUsage( std::ostream& os )
-{
-	for ( int i = 0; (unsigned int)i < _orList.size(); i++ )
-	{
-		for ( ArgVectorIterator it = _orList[i].begin(); 
-			  it != _orList[i].end(); 
-			  it++ )
-		{
-			spacePrint( os, (*it)->longID(), 75, 3, 3 );
-			spacePrint( os, (*it)->getDescription(), 75, 5, 0 );
-
-			if ( it+1 != _orList[i].end() )
-				spacePrint(os, "-- OR --", 75, 9);
-		}
-		os << std::endl << std::endl;
-	}
-}
-*/
 inline int XorHandler::check( const Arg* a ) 
 {
 	// iterate over each XOR list
-	for ( int i = 0; (unsigned int)i < _orList.size(); i++ )
+	for ( int i = 0; static_cast<unsigned int>(i) < _orList.size(); i++ )
 	{
 		// if the XOR list contains the arg..
-	  if ( std::find( _orList[i].begin(), _orList[i].end(), a ) != 
-				   _orList[i].end() )
+		ArgVectorIterator ait = std::find( _orList[i].begin(), 
+		                                   _orList[i].end(), a );
+		if ( ait != _orList[i].end() )
 		{
+			// first check to see if a mutually exclusive switch
+			// has not already been set
+			for ( ArgVectorIterator it = _orList[i].begin(); 
+				  it != _orList[i].end(); 
+				  it++ )
+				if ( a != (*it) && (*it)->isSet() )
+					throw(CmdLineParseException(
+					      "Mutually exclusive argument already set!",
+					      (*it)->toString()));
+
 			// go through and set each arg that is not a
 			for ( ArgVectorIterator it = _orList[i].begin(); 
 				  it != _orList[i].end(); 
-				  it++ )	
+				  it++ )
 				if ( a != (*it) )
 					(*it)->xorSet();
 
 			// return the number of required args that have now been set
-			return (int)_orList[i].size();
+			if ( (*ait)->allowMore() )
+				return 0;
+			else
+				return static_cast<int>(_orList[i].size());
 		}
 	}
 
@@ -161,7 +142,7 @@ inline int XorHandler::check( const Arg* a )
 
 inline bool XorHandler::contains( const Arg* a )
 {
-	for ( int i = 0; (unsigned int)i < _orList.size(); i++ )
+	for ( int i = 0; static_cast<unsigned int>(i) < _orList.size(); i++ )
 		for ( ArgVectorIterator it = _orList[i].begin(); 
 			  it != _orList[i].end(); 
 			  it++ )	
@@ -171,7 +152,7 @@ inline bool XorHandler::contains( const Arg* a )
 	return false;
 }
 
-inline std::vector< std::vector<Arg*> >& XorHandler::getXorList() 
+inline const std::vector< std::vector<Arg*> >& XorHandler::getXorList() const
 {
 	return _orList;
 }
