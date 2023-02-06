@@ -6,7 +6,7 @@ Mitochondrial reads are often found as byproduct in sequencing libraries obtaine
 ## List of use recommended use cases:
 - Extract mitochondrial protein-coding genes across a broad taxonomic range from sequencing libraries.
   Successfully tested for
-  * Illumina short read libraries, whole genomic, transcriptomic, reduced representation (hybrid enrichment libraries, RAD sequencing)
+  * Illumina short read libraries, namely whole genomic, transcriptomic, reduced representation (hybrid enrichment libraries, RAD sequencing) libraries.
   * PacBio long read libraries.
 
 - Mine plastome protein-coding genes (matK or rbcL) from sequencing libraries
