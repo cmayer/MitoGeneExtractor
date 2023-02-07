@@ -260,8 +260,13 @@ Currently, we are exploring the utility of using HMMs, namely nhmmer as another 
 - Christoph Mayer, ZFMK/LIB, Bonn, Germany: MitoGeneExtractor program.
 - Marie Brasseur, ZFMK/LIB, Bonn, Germany: Snakemake pipeline and analyses for publication.
 
-## Reference: Please cite when using MitoGeneExtractor
+## Reference: When using MitoGeneExtractor please cite:
 Brasseur ... 2023 ...
+
+Since MitoGeneExtractor uses the Exonerate program, please also cite:
+
+Slater, G.S.C., Birney, E., 2005. Automated generation of heuristics for biological sequence comparison. BMC Bioinformatics 6, 31. https://doi.org/10.1186/1471-2105-6-31
+
 
 
 
