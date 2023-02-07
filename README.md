@@ -114,12 +114,6 @@ In order to run MitoGeneExtractor you need your input read data in fasta/fast fo
 --->
 
 
-## Example analysis:
-An example analysis for the MitoGeneExtractor program can be found in the **example-analysis-for-MitoGeneExtractor** folder [here](https://github.com/cmayer/MitoGeneExtractor/tree/last-reviews-before-publication/example-analysis-for-MitoGeneExtractor). The Readme.md file in this folder provided the necessary information to run the example analysis and provides further details.
-
-
-
-
 ## Quickstart:
 Assume the input file (sequencing reads in fasta format, transcriptome assembly, genome assembly) are stored in the file: query-input.fas.
 Furthermore assume that the amino acid reference sequence is stored in the COI-reference.fas file.
@@ -139,6 +133,11 @@ If you have multiple input files (e.g. paired-end data (PE) and single-end (SE) 
 MitoGeneExtractor  -d PE_query-input_1.fq PE_query-input_2.fq SE_query-input.fq -p COI-reference.fas -V vulgar.txt -o out-alignment.fas -n 0 -c out-consensus.fas -t 0.5 -r 1 -C 2
 ```
 Note, that the order of file names does not matter. It is also possible to simultaneously specify input data in fastq and fasta format.
+
+
+## Example analysis:
+An example analysis for the MitoGeneExtractor program can be found in the **example-analysis-for-MitoGeneExtractor** folder [here](https://github.com/cmayer/MitoGeneExtractor/tree/last-reviews-before-publication/example-analysis-for-MitoGeneExtractor). The Readme.md file in this folder provided the necessary information to run the example analysis and provides further details.
+
 
 ## Prepared Snakemake workflows
 You can find a description how data preprocessing and MitoGeneExtractor analyses can be implemented in Snakemake [here](https://github.com/cmayer/MitoGeneExtractor/blob/last-reviews-before-publication/Use-Snakemake-manual.md)
@@ -252,14 +251,14 @@ Contamination of closely related taxa will show up as multiple variants in the a
 Currently, we are exploring the utility of using HMMs, namely nhmmer as another option and alternative to exonerate.
 
 ## Authors of the publication:
-- Marie Brasseur, ZFMK, Bonn, Germany
-- Jonas Astrin, ZFMK, Bonn, Germany
-- Matthias Geiger, ZFMK, Bonn, Germany
-- Christoph Mayer, ZFMK, Bonn, Germany
+- Marie Brasseur, ZFMK/LIB, Bonn, Germany
+- Jonas Astrin, ZFMK/LIB, Bonn, Germany
+- Matthias Geiger, ZFMK/LIB, Bonn, Germany
+- Christoph Mayer, ZFMK/LIB, Bonn, Germany
 
 ## Authors of the software project:
-- Christoph Mayer, ZFMK, Bonn, Germany: MitoGeneExtractor program.
-- Marie Brasseur, ZFMK, Bonn, Germany: Snakemake pipeline and analyses for publication.
+- Christoph Mayer, ZFMK/LIB, Bonn, Germany: MitoGeneExtractor program.
+- Marie Brasseur, ZFMK/LIB, Bonn, Germany: Snakemake pipeline and analyses for publication.
 
 ## Reference: Please cite when using MitoGeneExtractor
 Brasseur ... 2023 ...
