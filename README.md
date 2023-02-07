@@ -6,7 +6,7 @@ Mitochondrial reads are often found as byproduct in sequencing libraries obtaine
 ## List of use recommended use cases:
 - Extract mitochondrial protein-coding genes across a broad taxonomic range from sequencing libraries.
   Successfully tested for
-  * Illumina short read libraries, namely whole genomic, transcriptomic, reduced representation (hybrid enrichment libraries, RAD sequencing) libraries.
+  * Illumina short read libraries, namely whole genomic, transcriptomic, reduced representation (e.g. hybrid enrichment libraries, RAD sequencing) libraries.
   * PacBio long read libraries.
 
 - Mine plastome protein-coding genes (matK or rbcL) from sequencing libraries
@@ -27,11 +27,11 @@ Mitochondrial reads are often found as byproduct in sequencing libraries obtaine
 
 ## Arguments pro MitoGeneExtractor:
 
-Several tools exist that are able to reconstruct whole or partial mitochondrial genomes from sequencing libraries. Most of them extract genes from assemblies. We found several examples in which assemblies contained strongly reduced amounts of mitochondrial sequences, in particular in the presence of conflicts sequences in the region of interest, e.g. if Numts are present or if the library contains DNA from different specimen.
-If mitochondrial genes cannot be assembled, assembly based tools cannot find these genes.
+Several tools exist that are able to reconstruct whole or partial mitochondrial genomes from sequencing libraries. Most of them extract sequences from assemblies. We found several examples in which assemblies contained strongly reduced amounts of mitochondrial sequence data compared to the raw reads, in particular in the presence of conflicts sequences, e.g. if Numts are present or if the library contains DNA from different specimen.
+If mitochondrial sequences cannot be assembled, assembly based tools cannot find the genes.
 
 For MGE this means that we recommend to extract protein coding mitochondrial genes from (quality trimmed) reads rather than assemblies if possible.
-We have seen examples where the extraction from assemblies worked equally well as the extraction from unassembled reads, but we have also seen cases where the extraction from unassembled reads was successful, but failed for the assembly.
+We have seen examples where the extraction from assemblies worked equally well as the extraction from unassembled reads, but we have also seen cases where the extraction from unassembled reads was successful, but failed when using the assembly.
 
 ## How MitoGeneExtractor works - the algorithm:
 MitoGeneExtractor aligns all given input nucleotide sequences against a protein reference sequence to obtain a multiple sequence alignment. The intended use case is to extract mitochondrial protein coding genes from sequencing libraries. The individual alignments are computed by calling the Exonerate program. 
@@ -40,19 +40,29 @@ Exonerate is a very efficient alignment program which allows to align protein an
 Nucleotide sequences which cannot be aligned to the protein reference will not be included in the output. Exonerate should be able to align several 100k short reads in a few minutes using a single CPU core. Therefore, this approach can be used for projects of any size.
 Exonerate can align amino acid sequences also to long nucleotide sequences. For this reason, MitoGeneExtractor can also mine sequences from assemblies or from long read libraries. It can even be used to extract genes of interest from whole mitochondrial or nuclear genome/transcriptome assemblies. 
 
-## Input
+## Input to MitoGeneExtractor
 
 ### Required by MitoGeneExtractor
 MitoGeneExtractor requires two input files:
 - The amino acid reference in fasta file format. For MitoGeneExtractor version 1.9.5 or newer this file can contain multiple protein coding reference genes and/or their variants. This allows to extract all protein coding genes of interest in one program run. 
+
+Many example references are included in the **Amino-Acid-references-for-taxonomic-groups** folder of this project [here](https://github.com/cmayer/MitoGeneExtractor/tree/last-reviews-before-publication/Amino-Acid-references-for-taxonomic-groups). For the COI gene, one can specify as a reference the amino acid sequence of the barcode region, or if intended, the full COI sequence. If the full COI sequence shall be extracted, we suggest to create a reference specific for your taxonomic group, since the COI gene can differ considerably in the first and last few amino acids for specific groups with respect to references designed for larger groups. For the barcode region of COI this is normally not a problem.
 
 - The nucleotide reads/assemblies/genomes in the fasta or fastq format. Since version 1.9.5 any number of fasta or fastq files (e.g. files from paired-end sequencing or multiple replicates) can be specified as program parameters. They will automatically be concatenated and analysed in a sigle run. Since the paired-end information is not exploited, paired-end libraries can be combined with single-end data.
 
 ***Recommendation:*** Since quality scores are not used in the analysis, we recommend to pass quality trimmed reads to MitoGeneExtractor.
 
 ### Optional input
-The user can specify the vulgar file, i.e. the output file produced by Exonerate, that corresponds to the input sequences.
-This avoids aligning all reads against the reference(s) again, if only the MGE parameters are changed.
+The user can specify a previously computed vulgar file, i.e. the output file produced by Exonerate.
+The vulgar file has to correspond to the input sequences!
+Specifying an existing file avoids aligning all reads against the reference(s) again, if only the MGE parameters are changed.
+
+** If you specify a vulgar file name: **
+- If the file exists, it will be used.
+- If the file does not exist, MGE will run Exonerate to create a new vulgar file and save it using the specified filename.
+
+** If you do not specify a vulgar file name: **
+- MGE will run Exonerate to create a new vulgar file and remove it after it has been used.
 
 ** Caution: ** MGE can only find obvious inconsistencies between the sequence input files and the vulgar file. If the vulgar file contains only partial results, this will not be noticed and leads to incomplete results.
 
@@ -99,12 +109,18 @@ Path-to-MitoGeneExtractor/MitoGeneExtractor -h
 ```
 to display a full list of command line options of MitoGeneExtractor. 
 
-In order to run MitoGeneExtractor you need your input read data in fasta/fast format as well as reference fasta file with one or more amino acid reference sequence of your mitochondrial gene(s) of interest. Example references are included in the **Amino-Acid-references-for-taxonomic-groups** folder of this project [here](https://github.com/cmayer/MitoGeneExtractor/tree/last-reviews-before-publication/Amino-Acid-references-for-taxonomic-groups). For the COI gene, one can specify as a reference the amino acid sequence of the barcode region, or if intended, the full COI sequence. If the full COI sequence shall be extracted, we suggest to create a reference specific for your taxonomic group, since the COI gene can differ considerably in the first and last few amino acids for specific groups with respect to references designed for larger groups. For the barcode region of COI this is normally not a problem. 
+<!---
+In order to run MitoGeneExtractor you need your input read data in fasta/fast format as well as reference fasta file with one or more amino acid reference sequence of your mitochondrial gene(s) of interest. 
+--->
+
 
 ## Example analysis:
 An example analysis for the MitoGeneExtractor program can be found in the **example-analysis-for-MitoGeneExtractor** folder [here](https://github.com/cmayer/MitoGeneExtractor/tree/last-reviews-before-publication/example-analysis-for-MitoGeneExtractor). The Readme.md file in this folder provided the necessary information to run the example analysis and provides further details.
 
-***Quickstart:***
+
+
+
+## Quickstart:
 Assume the input file (sequencing reads in fasta format, transcriptome assembly, genome assembly) are stored in the file: query-input.fas.
 Furthermore assume that the amino acid reference sequence is stored in the COI-reference.fas file.
 Then the following command could be used to attempt to reconstruct the COI sequence from the read data in the query-input.fas file:
@@ -136,52 +152,87 @@ A Snakefile which starts with .fastq data can be found [here](https://github.com
 A full list of the command line options is available when typing
 MitoGeneExtractor -h
 
-**-d <string>, --dna_sequences_file <string>:** Name (potentially including the path) of the nucleotide sequence file in the fasta format. Sequences are expected to be unaligned without gaps. Typically, these are short or long reads but could also be assembled fragments of any length. (Required parameter) 
+**-d <string>,  --dna_fasta_file <string>  (accepted multiple times)** 
+Specifies the input query nucleotide sequence files in the fasta format. Sequences are expected not to include gap characters. This option can be specified multiple times if multiple input files shall be analysed in one run. If sequence files contain reads, they should have been quality filtered before being used as input for this program. This option can be combined with multiple input files in the fastq format (see -q option).
 
-**-p <string>, --prot_reference_file <string>:** Protein sequence file in the fasta format. This is the sequence used to align the reads against. File is expected to have exactly one reference sequence. (Required parameter) 
+**-q <string>,  --dna_fastq_file <string>  (accepted multiple times)**
+Specifies the input query nucleotide sequence files in the fastq format. This option can be specified multiple times if multiple input files shall be analysed in one run. All input files will be converted to a fasta file without taking into account the quality scores. Sequence files should be quality filtered before being used as input for this program. This option can be combined with multiple input files in the fasta format (see -d option).
 
-**-o  <string>** Name of alignment output file. (Required parameter) 
+**-p <string>,  --prot_reference_file <string>**
+Specifies the fasta file containing the amino acid reference sequences. This file can contain one or multiple reference sequences. All input nucleotide sequences are aligned against all references. Hits with a score higher than the minimum are considered. If a sequence matches multiple reference genes/variants, the sequence will be assigned to the reference for which the alignment score is higher or to both if the scores are equal. 
+
+**-o <string>,  -- <string> (required)**
+Base name of alignment output file(s). The final output file name will be: BaseName + sequenceNameOfRefernce + .fas
+
+**-V <string>,  --vulgar_file <string>**
+Specifies the name of Exonerate vulgar file. If the specified file exists, it will be used for the analysis. If it does not exist MitoGeneExtractor will run Exonerate in order to create the file with this name. The created file will then be used to proceed. If no file is specified with this option, a temporary file called tmp-vulgar.txt will be created and removed after the program run. In this case a warning will be printed to the console.
+
+**-e <string>,  --exonerate_program <string>**
+Specifies the name of the Exonerate program in system path OR the path to the Exonerate program including the program name. Default: Exonerate
 
 **-V <string>, --vulgar_file <string>:** Name of Exonerate vulgar file. If the specified file exists, it will be used for this analysis. If it does not exist, MitoGeneExtractor will run Exonerate in order to create the file. The created file will then be used to proceed. If no file is specified with this option, a temporary file called tmp-vulgar.txt will be created and removed after the program run. In this case a warning will be printed to the console, since the vulgar file cannot be used again. (Optional, but recommended parameter) 
 
-**-e <string>, --exonerate_program <string>:** Name of the exonerate program in the system path OR the path to the exonerate program including the program name. Default: exonerate. (Optional parameter)
+**-e <string>, --exonerate_program <string>:** Name of the Exonerate program in the system path OR the path to the exonerate program including the program name. Default: exonerate. (Optional parameter)
 
-**-n <int>, --numberOfBpBeyond <int>:** Specifies the number of base pairs that are shown beyond the Exonerate alignment. A value of 0 means that the sequence is clipped at the point the Exonerate alignment ends. Values of 1 and 2 make sense, since exonerate does not consider partial matches of the DNA to the amino acid sequence, so that partial codons would always be clipped, even if the additional base pairs would match with the expected amino acid. Values >0 lead to the inclusion of sequence segments that do not align well with the amino acid sequence and have to be treated with caution. They might belong to chimera, NUMTs, or other problematic sequences. Larger values might be included e.g. if problematic sequences with a well matching seed alignment are of interest. CAUTION: Bases included with this option might not be aligned well or could even belong to stop codons! They should be considered as of lower quality compared to other bases. Bases that are added with this option are added as lower case characters to the output alignment file. A sequence coverage of bases not belonging to these extra bases can be requested with the --minSeqCoverageInAlignment_uppercase option. Default: 0. Type: integer. (Optional parameter)
+**-n <int>,  --numberOfBpBeyond <int>**
+Specifies the number of base pairs that are shown beyond the Exonerate alignment. A value of 0 means that the sequence is clipped at the point the Exonerate alignment ends. Values >0 can lead to the inclusion of sequence segments that do not align well with the amino acid sequence and have to be treated with caution. They might belong to chimera, Numts, or other problematic sequences. Larger values might be included e.g. if problematic sequences with a well matching seed alignment are of interest. CAUTION: Bases included with this option might not be aligned well or could even belong to stop codons! They should be considered as of lower quality compared to other bases. Bases that are added with this option are added as lower case characters to the output alignment file. A sequence coverage of bases not belonging to these extra bases can be requested with the --minSeqCoverageInAlignment_uppercase option. Default: 0.
 
-**-c <string>, --consensus_file <string>:** If this option is specified, a consensus sequence of all aligned reads is written to the file with the specified name. Normally, this is the intended output. Default: No consensus is written, since no good default output file is known. (Optional parameter)
+**-c <string>,  --consensus_file <string>**
+If this option is specified, a consensus sequence of all aligned reads is written to the file with the specified name. Normally, this is the intended output. Default: No consensus is written, since no good default output file is known.
 
-**-t <float>, --consensus_threshold <float>:** This option modifies the consensus threshold. Default: 0.5 which corresponds to 50%. Type: Decimal number. (Not required)
+**-t <float>,  --consensus_threshold <float>**
+This option modifies the consensus threshold. Default: 0.5 which corresponds to 50%.
 
-**-D, --includeDoubleHits:** Include reads with two alignment results found by exonerate. Default: No. (Optional parameter)
+**-D,  --includeDoubleHits**
+Include input sequences with two alignment results against the same reference.
 
-**-g, --onlyGap:** Include only reads which aligned with a gap. Useful for finding problems in the set of reads or the correspondence between the reference and the reads.
+**--noGaps**
+Do not include reads for which the alignment with the reference contains gaps.
 
-**--noGaps:** Do not include reads which aligned with a gap. Default: No. (Optional parameter)
+**-g,  --onlyGap**
+Include only reads which aligned with a gap.
 
-**--report_gaps_mode <int>:** Gaps can be reported in different ways. With this
-     option the reporting mode can be specified: 1: report leading and
-     trailing gaps with '-' character. Report internal gaps (introduced
-     with options -G or -g) with '~' character. 2: report leading and
-     trainling gaps with '-' character. Report internal gaps (introduced
-     with options -G or -g) with '-' characters. 3: Remove all gap
-     characters in output. In this case sequences are extracted but are
-     reported with respect to the reference. Default: 1. (Optional parameter)
+**--report_gaps_mode <int>**
+Gaps can be reported in different ways. With this option the reporting mode can be specified: 1: report leading and trailing gaps with '-' character. Report internal gaps (introduced with options -G or -g) with '~' character. 2: report leading and trailing gaps with '-' character. Report internal gaps (introduced with options -G or -g) with '-' characters. 3: Remove all gap characters in output. In this case sequences are extracted but are reported with respect to the reference. Default: 1.
 
-**-f <int>, --frameshift_penalty <int>** The frameshift penalty passed to exonerate. The option value has to be a negative integer. Default: -9. More negative values lead to lower scores and by this can have the following effects: (i) hit regions are trimmed since trimming can lead to a better final alignment score, (ii) they can also lead to excluding a read as a whole if the final score is too low and trimming does lead to a higher score. The default of the exonerate program is -28. A value of -9 (or other values less negative than -28) lead to more reads in which the best alignment has a frameshift. In order to remove reads that do not align well, one can use a less negative value for the frameshift penalty and then exclude hits with a frameshift, see -F option). (Optional parameter)
+**-f <int>,  --frameshift_penalty <int>**
+The frameshift penalty passed to Exonerate. Default: -9. Higher values lead to lower scores and by this can have the following effects: (i) hit regions are trimmed since trimming can lead to a better final alignment score, (ii) they can also lead to excluding a read as a whole if the final score is too low and trimming does lead to a higher score. The default of the Exonerate program is -28. A value of -9 (or other values lower than -28) lead to more reads in which the best alignment has a frameshift. In order to remove reads that do not align well, one can use a smaller frameshift penalty and then exclude hits with a frameshift, see -F option).
 
-**-C <int>, --genetic_code <int>:** The number of the genetic code to use in Exonerate, if this step is required. Default: 2, i.e. vertebrate mitochondrial code. (Type: integer). [See genetic code list at NCBI.](https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi). (Not required but recommended). ** A misspecification of the genetic code leads to unusable results. Make sure the default is correct, or specify the genetic code.** (Optional parameter)
+**-C <int>,  --genetic_code <int>**
+The number of the genetic code to use in Exonerate, if this step is required. See https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi for details. Default: 2, i.e. vertebrate mitochondrial code.
 
-**-r <float>, --relative_score_threshold <float>:** Specified the relative alignment score threshold for Exonerate hits to be considered. The relative score is the score reported by Exonerate divided by the alignment length. Default 1. Reasonable thresholds are between 0.7 and 2.0.  (Optional parameter)
+**-s <int>,  --minExonerateScoreThreshold <int>**
+The score threshold passed to Exonerate to decide whether to include or not include the hit in the output.
 
-**--minSeqCoverageInAlignment_total <int>:** Specifies the absolute value of the minimum alignment coverage for computing the consensus sequence. For the coverage, all nucleotides count, also those lower case nucleotides that have been added beyond the exonerate alignment region. Default: 1. Increasing this value increases the number of unknown nucleotides in the consensus sequence.  (Optional parameter)
+**-r <float>,  --relative_score_threshold <float>**
+Specified the relative alignment score threshold for Exonerate hits to be considered. The relative score is the score reported by Exonerate divided by the alignment length. Default 1. Reasonable thresholds are between 0.7 and 2.0.
 
-**--minSeqCoverageInAlignment_uppercase <int>:** Specifies the absolute value of the minimum alignment coverage for computing the consensus sequence. As coverage, only upper case nucleotides are taken into account, i.e. no nucleotides are counted that have been added beyond the Exonerate alignment region. Bases beyond the Exonerate alignment are added with the -n or --numberOfBpBeyond option. If no bases are added beyond the Exonerate alignment (default), the effect of this option is identical to the minSeqCoverageInAlignment_total option. Default: 1. Increasing this value increases the number of unknown nucleotides in the consensus sequence.  (Optional parameter)
+**--minSeqCoverageInAlignment_total <int>**
+Specifies the absolute value of the minimum alignment coverage for computing the consensus sequence. For the coverage, all nucleotides count, also lower case nucleotides that have been added beyond the Exonerate alignment region. Default: 1. Increasing this value increases the number of unknown nucleotides in the consensus sequence.
 
-**-s <int>, --minExonerateScoreThreshold <int>:** The score threshold passed to exonerate to decide whether to include or not include the hit in the output. Typ: integer, optional parameter.  (Optional parameter)
+**--minSeqCoverageInAlignment_uppercase <int>**
+Specifies the absolute value of the minimum alignment coverage for computing the consensus sequence. As coverage, only upper case nucleotides are taken into account, i.e. no nucleotides are counted that have been added beyond the Exonerate alignment region. Bases beyond the Exonerate alignment are added with the -n or --numberOfBpBeyond option. If no bases are added beyond the Exonerate alignment (default), the effect of this option is identical to the minSeqCoverageInAlignment_total option. Default: 1. Increasing this value increases the number of unknown nucleotides in the consensus sequence.
 
-**--verbosity <int>:** Specifies how much run time information is printed to the console. Values: 0: minimal output, 1: important notices, 2: more notices, 3: basic progress, 4: detailed progress, 50-100: debug output, 1000: all output. Default: 1. (Optional parameter)
+**--temporaryDirectory <string>**
+MGE has to create potentially large temporary files, e.g. if multiple input files are specified, or if fastq file are specified. With this option these files will not be created in the directory the program was launched, but in the specified tmp directory. 
+
+**--keep-concat-input-file**
+If multiple input files are specified MGE first creates a concatenated file. By default this file is removed. Use this option if you want to keep this file.
+
+**--verbosity <int>**
+Specifies how much run time information is printed to the console. Values: 0: minimal output, 1: important notices, 2: more notices, 3: basic progress, 4: detailed progress, 50-100: debug output, 1000: all output.
+
+**--,  --ignore_rest**
+Ignores the rest of the labeled arguments following this flag.
+
+**--version**
+Displays version information and exits.
+
+**-h,  --help**
+Displays usage information and exits.
 
 
+<!---
 ## Applications:
 - Extract COI and other protein coding mitochondrial genes in a sequencing library or transcriptome. 
 
@@ -191,6 +242,8 @@ MitoGeneExtractor -h
 
 **Strategy:** Provide the amino acid references for COI of your target group and potentially distantly related contamination. 
 Contamination of closely related taxa will show up as multiple variants in the alignment file. Contamination of distantly related taxa can be found as hits to distantly related COI sequence.
+
+--->
 
 ## Project outlook:
 
