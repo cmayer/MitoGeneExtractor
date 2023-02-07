@@ -50,21 +50,21 @@ Many example references are included in the **Amino-Acid-references-for-taxonomi
 
 - The nucleotide reads/assemblies/genomes in the fasta or fastq format. Since version 1.9.5 any number of fasta or fastq files (e.g. files from paired-end sequencing or multiple replicates) can be specified as program parameters. They will automatically be concatenated and analysed in a single run. Since the paired-end information is not exploited, paired-end libraries can be combined with single-end data.
 
-***Recommendation:*** Since quality scores are not used in the analysis, we recommend to pass quality trimmed reads to MitoGeneExtractor.
+**Recommendation:** Since quality scores are not used in the analysis, we recommend to pass quality trimmed reads to MitoGeneExtractor.
 
 ### Optional input
 The user can specify a previously computed vulgar file, i.e. the output file produced by Exonerate.
 The vulgar file has to correspond to the input sequences!
 Specifying an existing file avoids aligning all reads against the reference(s) again, if only the MGE parameters are changed.
 
-** If you specify a vulgar file name: **
+**If you specify a vulgar file name:**
 - If the file exists, it will be used.
 - If the file does not exist, MGE will run Exonerate to create a new vulgar file and save it using the specified filename.
 
-** If you do not specify a vulgar file name: **
+**If you do not specify a vulgar file name:**
 - MGE will run Exonerate to create a new vulgar file and remove it after it has been used.
 
-** Caution: ** MGE can only find obvious inconsistencies between the sequence input files and the vulgar file. If the vulgar file contains only partial results (e.g. from a previous run with less data), this will not be noticed and leads to incomplete results.
+**Caution:** MGE can only find obvious inconsistencies between the sequence input files and the vulgar file. If the vulgar file contains only partial results (e.g. from a previous run with less data), this will not be noticed and leads to incomplete results.
 
 
 ## Supported Platforms:
