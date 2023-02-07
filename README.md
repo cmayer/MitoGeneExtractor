@@ -21,7 +21,7 @@ Mitochondrial reads are often found as byproduct in sequencing libraries obtaine
 
 - Off label usage: Mine prokaryotic genes from assemblies. (Not tested, but in principle, all genes which can be directly translated into amino acid sequences can be reconstructed with MitoGeneExtractor)
 
-## ## List of input sources for which MitoGeneExtractor did not work in our tests:
+## List of input sources for which MitoGeneExtractor did not work in our tests:
 - Long reads from MinION, Oxford Nanopore (Tested on a small number of libraries. See the supplementary materials of the publication for details.) 
 
 
@@ -175,7 +175,7 @@ Specifies the name of the Exonerate program in system path OR the path to the Ex
 **-e <string>, --exonerate_program <string>:** Name of the Exonerate program in the system path OR the path to the exonerate program including the program name. Default: exonerate. (Optional parameter)
 
 **-n <int>,  --numberOfBpBeyond <int>**
-Specifies the number of base pairs that are shown beyond the Exonerate alignment. A value of 0 means that the sequence is clipped at the point the Exonerate alignment ends. Values >0 can lead to the inclusion of sequence segments that do not align well with the amino acid sequence and have to be treated with caution. They might belong to chimera, Numts, or other problematic sequences. Larger values might be included e.g. if problematic sequences with a well matching seed alignment are of interest. CAUTION: Bases included with this option might not be aligned well or could even belong to stop codons! They should be considered as of lower quality compared to other bases. Bases that are added with this option are added as lower case characters to the output alignment file. A sequence coverage of bases not belonging to these extra bases can be requested with the --minSeqCoverageInAlignment_uppercase option. Default: 0.
+Specifies the number of base pairs that are shown beyond the Exonerate alignment. A value of 0 means that the sequence is clipped at the point the Exonerate alignment ends. Values >0 can lead to the inclusion of sequence segments that do not align well with the amino acid sequence and have to be treated with caution. They might belong to chimera, NUMTs, or other problematic sequences. Larger values might be included e.g. if problematic sequences with a well matching seed alignment are of interest. CAUTION: Bases included with this option might not be aligned well or could even belong to stop codons! They should be considered as of lower quality compared to other bases. Bases that are added with this option are added as lower case characters to the output alignment file. A sequence coverage of bases not belonging to these extra bases can be requested with the --minSeqCoverageInAlignment_uppercase option. Default: 0.
 
 **-c <string>,  --consensus_file <string>**
 If this option is specified, a consensus sequence of all aligned reads is written to the file with the specified name. Normally, this is the intended output. Default: No consensus is written, since no good default output file is known.
