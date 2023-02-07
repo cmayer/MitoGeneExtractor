@@ -11,23 +11,23 @@ Mitochondrial reads are often found as byproduct in sequencing libraries obtaine
 
 - Mine plastome protein-coding genes (matK or rbcL) from sequencing libraries
   Successfully tested for 
-  * (??) Illumina short read libraries
+  * Illumina short read libraries (genomic and transcriptomic)
 
 - Mine mitochondrial protein-coding genes from transcriptome assemblies. While this sometimes works, we recommended to mine these genes from quality trimmed sequencing reads rather than from the assembly of the reads. We saw example for which a reconstruction from quality trimmed reads was successful while it failed completely when using the assembly. Results might depend on parameters passed to the assembler.
 
 - Mine/excise protein-coding genes from whole mitochondrial genomes, which is often simpler than referring to the annotation (if one is available at all).
 
-- Check for **contamination*+ in sequencing libraries. Contamination is a common problem. By searching for COI sequences in taxonomic group, one should obtain COI sequencing reads from the target species as well as from the contaminating species. 
+- Check for **contamination** in sequencing libraries. Contamination is a common problem. By mining COI sequences from as NGS library, one should obtain COI sequencing reads from the target species as well as from the contaminating species.
 
 - Off label usage: Mine prokaryotic genes from assemblies. (Not tested, but in principle, all genes which can be directly translated into amino acid sequences can be reconstructed with MitoGeneExtractor)
 
-## List of input sources for which did not work in our tests:
+## ## List of input sources for which MitoGeneExtractor did not work in our tests:
 - Long reads from MinION, Oxford Nanopore (Tested on a small number of libraries. See the supplementary materials of the publication for details.) 
 
 
 ## Arguments pro MitoGeneExtractor:
 
-Several tools exist that are able to reconstruct whole or partial mitochondrial genomes from sequencing libraries. Most of them extract sequences from assemblies. We found several examples in which assemblies contained strongly reduced amounts of mitochondrial sequence data compared to the raw reads, in particular in the presence of conflicts sequences, e.g. if Numts are present or if the library contains DNA from different specimen.
+Several tools exist that are able to reconstruct whole or partial mitochondrial genomes from sequencing libraries. All of them extract sequences from assemblies. We found several examples in which assemblies contained strongly reduced amounts of mitochondrial sequence data compared to the raw reads, in particular in the presence of conflicting sequences, e.g. if NUMTs are present or if the library contains DNA from different specimen.
 If mitochondrial sequences cannot be assembled, assembly based tools cannot find the genes.
 
 For MGE this means that we recommend to extract protein coding mitochondrial genes from (quality trimmed) reads rather than assemblies if possible.
@@ -48,7 +48,7 @@ MitoGeneExtractor requires two input files:
 
 Many example references are included in the **Amino-Acid-references-for-taxonomic-groups** folder of this project [here](https://github.com/cmayer/MitoGeneExtractor/tree/last-reviews-before-publication/Amino-Acid-references-for-taxonomic-groups). For the COI gene, one can specify as a reference the amino acid sequence of the barcode region, or if intended, the full COI sequence. If the full COI sequence shall be extracted, we suggest to create a reference specific for your taxonomic group, since the COI gene can differ considerably in the first and last few amino acids for specific groups with respect to references designed for larger groups. For the barcode region of COI this is normally not a problem.
 
-- The nucleotide reads/assemblies/genomes in the fasta or fastq format. Since version 1.9.5 any number of fasta or fastq files (e.g. files from paired-end sequencing or multiple replicates) can be specified as program parameters. They will automatically be concatenated and analysed in a sigle run. Since the paired-end information is not exploited, paired-end libraries can be combined with single-end data.
+- The nucleotide reads/assemblies/genomes in the fasta or fastq format. Since version 1.9.5 any number of fasta or fastq files (e.g. files from paired-end sequencing or multiple replicates) can be specified as program parameters. They will automatically be concatenated and analysed in a single run. Since the paired-end information is not exploited, paired-end libraries can be combined with single-end data.
 
 ***Recommendation:*** Since quality scores are not used in the analysis, we recommend to pass quality trimmed reads to MitoGeneExtractor.
 
@@ -64,7 +64,7 @@ Specifying an existing file avoids aligning all reads against the reference(s) a
 ** If you do not specify a vulgar file name: **
 - MGE will run Exonerate to create a new vulgar file and remove it after it has been used.
 
-** Caution: ** MGE can only find obvious inconsistencies between the sequence input files and the vulgar file. If the vulgar file contains only partial results, this will not be noticed and leads to incomplete results.
+** Caution: ** MGE can only find obvious inconsistencies between the sequence input files and the vulgar file. If the vulgar file contains only partial results (e.g. from a previous run with less data), this will not be noticed and leads to incomplete results.
 
 
 ## Supported Platforms:
@@ -138,7 +138,7 @@ If you have multiple input files (e.g. paired-end data (PE) and single-end (SE) 
 ```{r, eval=TRUE}
 MitoGeneExtractor  -d PE_query-input_1.fq PE_query-input_2.fq SE_query-input.fq -p COI-reference.fas -V vulgar.txt -o out-alignment.fas -n 0 -c out-consensus.fas -t 0.5 -r 1 -C 2
 ```
-Note, that the order of file names does not matter.
+Note, that the order of file names does not matter. It is also possible to simultaneously specify input data in fastq and fasta format.
 
 ## Prepared Snakemake workflows
 You can find a description how data preprocessing and MitoGeneExtractor analyses can be implemented in Snakemake [here](https://github.com/cmayer/MitoGeneExtractor/blob/last-reviews-before-publication/Use-Snakemake-manual.md)
