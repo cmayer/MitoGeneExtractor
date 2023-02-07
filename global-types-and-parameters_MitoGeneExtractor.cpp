@@ -126,22 +126,16 @@ void read_and_init_parameters(int argc, char** argv)
 
     SwitchArg keep_concat_input_files_Arg("", "keep-concat-input-file",
 					  "If multiple input files are "
-					  "specified MGE first creates a "
+					  "specified, MGE first creates a "
 					  "concatenated file. By default this "
 					  "file is removed. Use this option if "
 					  "you want to keep this file.", global_keep_concatenated_input_file);
     cmd.add(keep_concat_input_files_Arg);
     
-    ValueArg<unsigned> min_exonerate_score_threshold_Arg("s", "minExonerateScoreThreshold",
-							 "The score threshold passed to Exonerate to decide whether to include "
-							 "or not include the hit in the output.",
-						       false, UINT_MAX, "int");
-    cmd.add(min_exonerate_score_threshold_Arg);
-
     ValueArg<string>   tmp_directory_Arg("", "temporaryDirectory",
 					 "MGE has to create potentially large "
 					 "temporary files, e.g. if multiple "
-					 "input files are specified, if fastq file "
+					 "input files are specified, or if fastq file "
 					 "are specified. With this option these files "
 					 "will not be created in the directory the program "
 					 "was launched, but in the specified tmp directory. ",
@@ -154,7 +148,7 @@ void read_and_init_parameters(int argc, char** argv)
     cmd.add(min_seq_coverage_upper_case_Arg);
 
     ValueArg<unsigned> min_seq_coverage_total_Arg("", "minSeqCoverageInAlignment_total",
-						       "Specifies the absolute value of the minimum alignment coverage for computing the consensus sequence. For the coverage, all nucleotides count, also those lower case nucleotides that have been added beyond the Exonerate alignment region. Default: 1. Increasing this value increases the number of unknown nucleotides in the consensus sequence.",
+						       "Specifies the absolute value of the minimum alignment coverage for computing the consensus sequence. For the coverage, all nucleotides count, including lower case nucleotides that have been added beyond the Exonerate alignment region. Default: 1. Increasing this value increases the number of unknown nucleotides in the consensus sequence.",
 						       false, global_minimum_seq_coverage_total, "int");
     cmd.add(min_seq_coverage_total_Arg);
     
@@ -166,6 +160,12 @@ void read_and_init_parameters(int argc, char** argv)
 	false, global_relative_score_threshold, "float");
     cmd.add(relative_score_threshold_Arg);
 
+    ValueArg<unsigned> min_exonerate_score_threshold_Arg("s", "minExonerateScoreThreshold",
+							 "The score threshold passed to Exonerate to decide whether to include "
+							 "or not include the hit in the output.",
+						       false, UINT_MAX, "int");
+    cmd.add(min_exonerate_score_threshold_Arg);
+    
     ValueArg<int> genetic_code_number_Arg("C", "genetic_code",
 	 "The number of the genetic code to use in Exonerate, if this step is required. See https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi for details. Default: 2, i.e. "
 	"vertebrate mitochondrial code.",
@@ -178,7 +178,7 @@ void read_and_init_parameters(int argc, char** argv)
     cmd.add(frameshift_penalty_Arg);
 
     ValueArg<int> report_gaps_mode_Arg("", "report_gaps_mode",
-				       "Gaps can be reported in different ways. With this option the reporting mode can be specified: 1: report leading and trailing gaps with \'-\' character. Report internal gaps (introduced with options -G or -g) with \'~\' character. 2: report leading and trailing gaps with \'-\' character. Report internal gaps (introduced with options -G or -g) with \'-\' characters. 3: Remove all gap characters in output. In this case sequences are extracted but are reported with respect to the reference. Default: 1.",
+				       "Gaps can be reported in different ways. With this option the reporting mode can be specified. 1: report leading and trailing gaps with \'-\' character. Report internal gaps (introduced with options -G or -g) with \'~\' character. 2: report leading and trailing gaps with \'-\' character. Report internal gaps (introduced with options -G or -g) with \'-\' characters. 3: Remove all gap characters in output. In this case sequences are extracted but are reported with respect to the reference. Default: 1.",
 	false, global_report_gap_mode, "int");
     cmd.add(report_gaps_mode_Arg);
 
@@ -197,6 +197,11 @@ void read_and_init_parameters(int argc, char** argv)
     cmd.add(include_F_Arg);
     */
 
+    SwitchArg include_g_only_Arg("g", "onlyGap",
+			 "Include only reads which aligned with a gap.",
+			 false);
+    cmd.add(include_g_only_Arg);
+    
     SwitchArg notinclude_Gaps_Arg("", "noGaps",
 				  "Do not include reads for which the alignment with the reference contains gaps.",
 				  false);
@@ -208,14 +213,9 @@ void read_and_init_parameters(int argc, char** argv)
     //    cmd.add(include_G_Arg);
 
 
-    SwitchArg include_g_only_Arg("g", "onlyGap",
-			 "Include only reads which aligned with a gap.",
-			 false);
-    cmd.add(include_g_only_Arg);
     
     SwitchArg include_D_Arg("D", "includeDoubleHits",
-			 "Include reads with two alignment results found by Exonerate.",
-			 false);
+			    "Include input sequences with two alignment results against the same reference.", false);
     cmd.add(include_D_Arg);
 
     ValueArg<float> consensus_threshold_Arg("t", "consensus_threshold",
@@ -230,20 +230,20 @@ void read_and_init_parameters(int argc, char** argv)
     cmd.add(consensus_output_file_Arg);
 
     ValueArg<unsigned> bp_beyond_Arg("n", "numberOfBpBeyond",
-	"Specifies the number of base pairs that are shown beyond the Exonerate alignment. A value of 0 means that the sequence is clipped at the point the Exonerate alignment ends. Values of 1 and 2 make sense, since Exonerate does not consider partial matches of the DNA to the amino acid sequence, so that partial codons would always be clipped, even if the additional base pairs would match with the expected amino acid. Values >0 lead to the inclusion of sequence segments that do not align well with the amino acid sequence and have to be treated with caution. They might belong to chimera, Numts, or other problematic sequences. Larger values might be included e.g. if problematic sequences with a well matching seed alignment are of interest. CAUTION: Bases included with this option might not be aligned well or could even belong to stop codons! They should be considered as of lower quality compared to other bases. Bases that are added with this option are added as lower case characters to the output alignment file. A sequence coverage of bases not belonging to these extra bases can be requested with the --minSeqCoverageInAlignment_uppercase option. Default: 0.",
+	"Specifies the number of base pairs that are shown beyond the Exonerate alignment. A value of 0 means that the sequence is clipped at the point the Exonerate alignment ends. Values >0 can lead to the inclusion of sequence segments that do not align well with the amino acid sequence and have to be treated with caution. They might belong to chimera, Numts, or other problematic sequences. Larger values might be included e.g. if problematic sequences with a well matching seed alignment are of interest. CAUTION: Bases included with this option might not be aligned well or could even belong to stop codons! They should be considered as of lower quality compared to other bases. Bases that are added with this option are added as lower case characters to the output alignment file. A sequence coverage of bases not belonging to these extra bases can be requested with the --minSeqCoverageInAlignment_uppercase option. Default: 0.",
 	false, global_num_bp_beyond_exonerate_alignment_if_at_start_or_end, "int");
     cmd.add(bp_beyond_Arg);
 
     ValueArg<string> exonerate_path_Arg("e", "exonerate_program",
-     				        "Name of the Exonerate program in system path OR the path "
+     				        "Specifies the name of the Exonerate program in system path OR the path "
 					"to the Exonerate program including the program name. Default: Exonerate",
 				        false, global_exonerate_binary, "string");
     cmd.add(exonerate_path_Arg);
 
     ValueArg<string> vulgar_file_Arg("V", "vulgar_file",
-				     "Name of Exonerate vulgar file. If the specified file exists, it will be used "
+				     "Specifies the name of Exonerate vulgar file. If the specified file exists, it will be used "
 				     "for the analysis. If it does not exist " PROGNAME " will run Exonerate in "
-				     "order to create the file. The created file will then be used to proceed. "
+				     "order to create the file with this name. The created file will then be used to proceed. "
 				     "If no file is specified with this option, a temporary file called tmp-vulgar.txt "
 				     "will be created and removed after the program run. In this case a warning "
 				     "will be printed to the console.",
@@ -251,33 +251,34 @@ void read_and_init_parameters(int argc, char** argv)
     cmd.add(vulgar_file_Arg);
 
     ValueArg<string> alignment_output_file_name_Arg("o", "",
-						    "Base name of alignment output file(s). The reference "
-						    "sequence name will be appended to create the final output file name.",
+						    "Base name of alignment output file(s). The final output file name will be: "
+						    "BaseName + sequenceNameOfRefernce + .fas",
 						    true, global_alignment_output_file, "string");
     cmd.add(alignment_output_file_name_Arg);
 
     ValueArg<string> prot_fasta_input_file_name_Arg("p", "prot_reference_file",
-						    "Protein sequence file in the fasta format. This is the "
-						    "sequence used to align the reads against. "
-						    "File is expected to have exactly one reference sequence. ",
-						    false, global_input_prot_reference_sequence, "string");
+       "Specifies the fasta file containing the amino acid reference sequences. This file can contain one "
+       "or multiple reference sequences. All input nucleotide sequences are aligned against all references. "
+       "Hits with a score higher than the minimum are considered. If a sequence matches multiple reference genes/variants, "
+       "the sequence will be assigned to the reference for which the alignment score is higher or to both if the scores are equal. ",
+       false, global_input_prot_reference_sequence, "string");
     cmd.add(prot_fasta_input_file_name_Arg);
 
     MultiArg<string> dna_fastq_input_file_names_Arg("q", "dna_fastq_file",
-       "Nucleotide sequence files in the fastq format. This option can be "
+       "Specifies the input query nucleotide sequence files in the fastq format. This option can be "
        "specified multiple times if multiple input files shall be analysed "
        "in one run. All input files will be converted to a fasta file without "
-       "taking into account the quality scores. Sequence files should be "
-       "quality filtered before being used as input for this program. This "
-       "option can be combined with multiple input files in the fasta format. See -d option.",
+       "taking into account the quality scores. "
+       "Sequence files should be quality filtered before being used as input for this program. This "
+       "option can be combined with multiple input files in the fasta format (see -d option).",
 	false, "string");
     cmd.add(dna_fastq_input_file_names_Arg);
 
     MultiArg<string> dna_fasta_input_file_names_Arg("d", "dna_fasta_file",
-	"Nucleotide sequence files in the fasta format. Sequences are expected to be unaligned, "
-	"not including gap characters. "
+	"Specifies the input query nucleotide sequence files in the fasta format. Sequences are expected not to include gap characters. "
 	"This option can be specified multiple times if multiple input files shall be analysed in one run. "
-        "This option can be combined with multiple input files in the fastq format. See -q option.",
+        "If sequence files contain reads, they should have been quality filtered before being used as input for this program. "
+	"This option can be combined with multiple input files in the fastq format (see -q option).",
 	false, "string");
     cmd.add(dna_fasta_input_file_names_Arg);
 
