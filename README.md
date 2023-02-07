@@ -21,7 +21,7 @@ Mitochondrial reads are often found as byproduct in sequencing libraries obtaine
 
 - Off label usage: Mine prokaryotic genes from assemblies. (Not tested, but in principle, all genes which can be directly translated into amino acid sequences can be reconstructed with MitoGeneExtractor)
 
-## ## List of input sources for which MitoGeneExtractor did not work in our tests:
+## List of input sources for which MitoGeneExtractor did not work in our tests:
 - Long reads from MinION, Oxford Nanopore (Tested on a small number of libraries. See the supplementary materials of the publication for details.) 
 
 
