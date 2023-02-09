@@ -1,5 +1,5 @@
-# CFLAGS  = -g3 -ggdb -Wall
-CFLAGS = -O2 # -Wall
+# CFLAGS  = -g3 -ggdb -Wall -std=c++11
+CFLAGS = -O2 -std=c++11 # -Wall
 
 INCL =    -I . -I tclap-1.2.5/include
 #LIBS    = -lc -Wall
