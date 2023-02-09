@@ -57,5 +57,5 @@ extern bool                        global_keep_concatenated_input_file;
 
 extern unsigned                    global_ends_width;
 extern unsigned                    global_weight_fraction_in_ends;
-extern bool                        global_treat_references_as_individual;
+extern bool                        global_treat_references_as_individual
 //extern bool                        global_report_internal_gaps_as_tilde;

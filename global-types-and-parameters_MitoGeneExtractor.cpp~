@@ -46,7 +46,7 @@ unsigned                    global_weight_fraction_in_ends;
 void good_bye_and_exit(int error)
 {
   if (error == 0)
-    cerr << "## Finished successfully. ##" << endl;
+    cout << "## Finished successfully. ##" << endl;
   cerr << endl << PROGNAME << " says goodbye." << endl << endl;
   exit(error);
 }
@@ -134,7 +134,7 @@ void read_and_init_parameters(int argc, char** argv)
 					  "Input sequences which can be aligned with "
 					  "different reference sequences are by default assigned "
 					  "only to the references for which the alignment score is "
-					  "equal to the best score achieved by this input sequence. "
+					  "equal to the best score achived by this input sequence. "
 					  "This score competition is switched off if this option "
 					  "is specified. This treats multiple references as if they "
 					  "are specified in independent program runs. ",
@@ -233,11 +233,9 @@ void read_and_init_parameters(int argc, char** argv)
     cmd.add(consensus_threshold_Arg);
 
     ValueArg<string> consensus_output_file_Arg("c", "consensus_file",
-	"Specifies the base name of the consensus sequence output file(s). A "
-	"consensus sequence with the name "
-	"baseName + reference-sequence-name + .fas is written for each "
-	"reference sequence.",
-	true, global_consensus_sequence_output_filename, "string");
+	"If this option is specified, a consensus sequence of all aligned reads is written to the file with the specified name. Normally, this is the intended output. "
+	"Default: No consensus is written, since no good default output file is known.",
+	false, global_consensus_sequence_output_filename, "string");
     cmd.add(consensus_output_file_Arg);
 
     ValueArg<unsigned> bp_beyond_Arg("n", "numberOfBpBeyond",
@@ -262,10 +260,9 @@ void read_and_init_parameters(int argc, char** argv)
     cmd.add(vulgar_file_Arg);
 
     ValueArg<string> alignment_output_file_name_Arg("o", "",
-       "Specifies the base name of alignment output file(s). Aligned input sequences "
-       "are written to a file with the name: BaseName + sequenceNameOfRefernce + .fas "
-       "for each reference sequence.",
-       true, global_alignment_output_file, "string");
+						    "Base name of alignment output file(s). The final output file name will be: "
+						    "BaseName + sequenceNameOfRefernce + .fas",
+						    true, global_alignment_output_file, "string");
     cmd.add(alignment_output_file_name_Arg);
 
     ValueArg<string> prot_fasta_input_file_name_Arg("p", "prot_reference_file",
@@ -346,14 +343,7 @@ void read_and_init_parameters(int argc, char** argv)
             "-d and/or -q option.\nExiting\n";
     good_bye_and_exit(-2);
   }
-
-  if (global_tmp_directory.find('~') != string::npos)
-  {
-    cerr << "The character \'~\' (tilde) is not allowed in the string "
-      "specifying the path to a temporary directory.\nExiting.\n" << endl;
-    exit(-13);
-  }
-
+  
   if (global_include_only_gap_alignments && global_notinclude_gap_alignments)
   {
     cerr << "Error: Conflicting command line parameters. It is not possible to "
@@ -368,6 +358,7 @@ void read_and_init_parameters(int argc, char** argv)
   else if (global_include_only_gap_alignments)
     global_gap_frameshift_mode = 2;
 
+  
   if (global_vulgar_file.empty())
   {
     cerr << "WARNING: You did not specify a vulgar file, so a temporary vulgar "
@@ -391,7 +382,7 @@ void read_and_init_parameters(int argc, char** argv)
 	 << endl;
     good_bye_and_exit(-4);
   }
-
+  
   if (option_set_consensus_threshold && !option_set_consensus_sequence_output_filename ) 
   {
     cerr << "ERROR: You specified a consensus threshold but you do not request "
@@ -509,8 +500,6 @@ void print_parameters(std::ostream &os, const char *s)
     os << s <<   "Frameshift reads used:                                  no\n";
   }
 
-  os << s <<   "Treat all references as independent:                    " << (global_treat_references_as_individual ? "yes\n" : "no\n");
-  
   if (global_report_gap_mode == 1)
     os << s <<   "Report gaps mode:                                       Report all (leading, trailing, internal) gaps with \'-\' character.\n";
   else if (global_report_gap_mode == 2)

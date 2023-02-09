@@ -1,19 +1,20 @@
 #include <iostream>
 #include <fstream>
-#include "faststring2.h"
 #include <cstdlib>
+#include <cstdio>
+#include <cstring>
+#include <vector>
+#include <map>
+#include <ctime>
+#include <iomanip>
+#include "faststring2.h"
 #include "CSequences2.h"
 #include "CSequence_Mol2_1.h"
 #include "Ctriple.h"
-#include <vector>
 #include "CFile/CFile2_1.h"
-#include <map>
 #include "CDnaString2.h"
 #include "global-types-and-parameters_MitoGeneExtractor.h"
-#include <iomanip>
-#include <cstdio>
 #include "statistic_functions.h"
-#include <ctime>
 #include "fastq.h"
 #include "Cfastq-sequences.h"
 
@@ -105,7 +106,6 @@ void append_fastq_files_to_exonerate_input_file(FILE *ofp, vector<string> global
 
     CSequences2 *pseqs = new CSequences2(CSequence_Mol::dna);
     fq_in_collection.add_sequences_to_CSequences_object(pseqs);
-    cout << "Fasta sequences:\n";
     pseqs->ExportSequences(ofp, 'f', UINT_MAX);
     delete pseqs;
   }
@@ -1147,14 +1147,29 @@ int main(int argc, char **argv)
   }
   else
   {
-    char  tmpstr[] = "Concatenated_exonerate_input_XXXXXX";
-    int   fd = mkstemp(tmpstr);
-    FILE  *ofp = fdopen(fd, "w");
+    if (global_tmp_directory.find('~') != string::npos)
+    {
+      cerr << "The character \'~\' (tilde) is not allowed in the string "
+	      "specifying the path to a temporary directory.\nExiting.\n" << endl;
+      exit(-13);
+    }
+    
+    string tmpstring = global_tmp_directory + "/Concatenated_exonerate_input_XXXXXX";
+    cerr << "Filename:" << tmpstring << endl;
 
+      
+    char  *tmpstr = new char [global_tmp_directory.length() + 40];
+    strcpy (tmpstr, tmpstring.c_str());
+    cerr << "Filename:" << tmpstr << endl;
+    int   fd = mkstemp(tmpstr);
+    cerr << "Filename:" << tmpstr << endl;
+
+    FILE  *ofp = fdopen(fd, "w");
     combined_input_sequence_file_created = true;
     if (fd == -1 || ofp == 0)
     {
-      cerr << "ERROR: Could not open the temporary file for the fasta file passed to the Exonerate program." << endl;
+      cerr << "ERROR: Could not open the temporary file for the fasta file "
+	      "passed to the Exonerate program." << endl;
       good_bye_and_exit(-13);
     }
 
@@ -1521,6 +1536,11 @@ int main(int argc, char **argv)
     {
       string final_concat_name = global_input_dna_fasta_file + ".fas";
       rename(global_input_dna_fasta_file.c_str(), final_concat_name.c_str());
+      if (global_verbosity >= 1)
+      {
+	cout << "Concatenated sequence file written to: "
+	     << global_input_dna_fasta_file.c_str() << ".fas" << endl;
+      }
     }
   }
 
@@ -1716,29 +1736,33 @@ int main(int argc, char **argv)
 	  if (hits_to_use_for_target[i] == (vulgar *)-1 )
 	    hits_to_use_for_target[i] = NULL;
 	}
-	
-	unsigned best_score = 0;
 
-	// Find best score:
-	for (std::vector<vulgar*>::size_type i=0; i<hits_to_use_for_target.size(); ++i)
+	if (!global_treat_references_as_individual)
 	{
-	  if (hits_to_use_for_target[i] != NULL &&
-	      hits_to_use_for_target[i]->get_score() > best_score )
+	  unsigned best_score = 0;
+
+	  // Find best score:
+	  for (std::vector<vulgar*>::size_type i=0; i<hits_to_use_for_target.size(); ++i)
 	  {
-	    best_score = hits_to_use_for_target[i]->get_score();
+	    if (hits_to_use_for_target[i] != NULL &&
+		hits_to_use_for_target[i]->get_score() > best_score )
+	    {
+	      best_score = hits_to_use_for_target[i]->get_score();
+	    }
+	  }
+
+	  // Remove all hits that do not have the best score:
+	  for (std::vector<vulgar*>::size_type i=0; i < hits_to_use_for_target.size(); ++i)
+	  {
+	    if (hits_to_use_for_target[i] != NULL &&
+		hits_to_use_for_target[i]->get_score() < best_score)
+	    {
+	      hits_to_use_for_target[i] = NULL;
+	      vector_of_hit_stats_for_targets[i].increment_not_best_score();
+	    }
 	  }
 	}
 
-	// Remove all hits that do not have the best score:
-	for (std::vector<vulgar*>::size_type i=0; i < hits_to_use_for_target.size(); ++i)
-	{
-	  if (hits_to_use_for_target[i] != NULL &&
-	      hits_to_use_for_target[i]->get_score() < best_score)
-	  {
-	    hits_to_use_for_target[i] = NULL;
-	    vector_of_hit_stats_for_targets[i].increment_not_best_score();
-	  }
-	}
       }
 
       // Hits have been assigned to references. Now they should be aligned and
@@ -1878,7 +1902,7 @@ int main(int argc, char **argv)
 
       // Export alignmentfile:
       {
-	string this_output_filename = global_alignment_output_file + "__" + ref_name.c_str() + ".fas";
+	string this_output_filename = global_alignment_output_file + ref_name.c_str() + ".fas";
 	ofstream os;	
 	os.open(this_output_filename.c_str());
 	if (os.fail() )
@@ -1927,7 +1951,7 @@ int main(int argc, char **argv)
 	  }
 	*/
 
-	string outfilename = global_consensus_sequence_output_filename + "__" + ref_name.c_str() + ".fas";
+	string outfilename = global_consensus_sequence_output_filename + ref_name.c_str() + ".fas";
 
 	ofstream os_con(outfilename.c_str());
 	if (os_con.fail() )

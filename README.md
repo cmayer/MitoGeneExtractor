@@ -161,7 +161,7 @@ MitoGeneExtractor -h
  Specifies the fasta file containing the amino acid reference sequences. This file can contain one or multiple reference sequences. All input nucleotide sequences are aligned against all references. Hits with a score higher than the minimum are considered. If a sequence matches multiple reference genes/variants, the sequence will be assigned to the reference for which the alignment score is higher or to both if the scores are equal. 
 
 **-o <string>,  -- <string> (required)**  
- Base name of alignment output file(s). The final output file name will be: BaseName + sequenceNameOfRefernce + .fas
+Specifies the base name of alignment output file(s). Aligned input sequences are written to a file with the name: BaseName + sequenceNameOfRefernce + .fas for each reference sequence.
 
 **-V <string>,  --vulgar_file <string>**  
  Specifies the name of Exonerate vulgar file. If the specified file exists, it will be used for the analysis. If it does not exist MitoGeneExtractor will run Exonerate in order to create the file with this name. The created file will then be used to proceed. If no file is specified with this option, a temporary file called tmp-vulgar.txt will be created and removed after the program run. In this case a warning will be printed to the console.
@@ -171,13 +171,13 @@ MitoGeneExtractor -h
 
 **-V <string>, --vulgar_file <string>**   Name of Exonerate vulgar file. If the specified file exists, it will be used for this analysis. If it does not exist, MitoGeneExtractor will run Exonerate in order to create the file. The created file will then be used to proceed. If no file is specified with this option, a temporary file called tmp-vulgar.txt will be created and removed after the program run. In this case a warning will be printed to the console, since the vulgar file cannot be used again. (Optional, but recommended parameter) 
 
-**-e <string>, --exonerate_program <string>**   Name of the Exonerate program in the system path OR the path to the exonerate program including the program name. Default: exonerate. (Optional parameter)
+**-e <string>, --exonerate_program <string>**   Name of the Exonerate program in the system path OR the path to the Exonerate program including the program name. Default: exonerate. (Optional parameter)
 
 **-n <int>,  --numberOfBpBeyond <int>**  
  Specifies the number of base pairs that are shown beyond the Exonerate alignment. A value of 0 means that the sequence is clipped at the point the Exonerate alignment ends. Values >0 can lead to the inclusion of sequence segments that do not align well with the amino acid sequence and have to be treated with caution. They might belong to chimera, NUMTs, or other problematic sequences. Larger values might be included e.g. if problematic sequences with a well matching seed alignment are of interest. CAUTION: Bases included with this option might not be aligned well or could even belong to stop codons! They should be considered as of lower quality compared to other bases. Bases that are added with this option are added as lower case characters to the output alignment file. A sequence coverage of bases not belonging to these extra bases can be requested with the --minSeqCoverageInAlignment_uppercase option. Default: 0.
 
-**-c <string>,  --consensus_file <string>**  
- If this option is specified, a consensus sequence of all aligned reads is written to the file with the specified name. Normally, this is the intended output. Default: No consensus is written, since no good default output file is known.
+**-c <string>,  --consensus_file <string> (required)**
+Specifies the base name of the consensus sequence output file(s). A consensus sequence with the name baseName + reference-sequence-name + .fas  is written for each reference sequence.
 
 **-t <float>,  --consensus_threshold <float>**  
  This option modifies the consensus threshold. Default: 0.5 which corresponds to 50%.
@@ -215,8 +215,11 @@ MitoGeneExtractor -h
 **--temporaryDirectory <string>**  
  MGE has to create potentially large temporary files, e.g. if multiple input files are specified, or if fastq file are specified. With this option these files will not be created in the directory the program was launched, but in the specified tmp directory. 
 
+**--treat-references-as-individual**  
+Input sequences which can be aligned with different reference sequences are by default assigned only to the references for which the alignment score is equal to the best score achieved by this input sequence. This score competition is switched off if this option is specified. This treats multiple references as if they are specified in independent program runs. 
+
 **--keep-concat-input-file**  
- If multiple input files are specified MGE first creates a concatenated file. By default this file is removed. Use this option if you want to keep this file.
+If multiple input files are specified, MGE first creates a concatenated file. By default this file is removed. Use this option if you want to keep this file.
 
 **--verbosity <int>**  
  Specifies how much run time information is printed to the console. Values: 0: minimal output, 1: important notices, 2: more notices, 3: basic progress, 4: detailed progress, 50-100: debug output, 1000: all output.
