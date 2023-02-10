@@ -1,58 +1,56 @@
 #Snakefile
 configfile: "config.yaml"
-
-## Adapt this file for your own needs. 
 rule all:
     input:
-        expand("{sample}_out_alignment.fas", sample=config["samples"]),
-        expand("{sample}_out_consensus.fas", sample=config["samples"])
+        expand("{gene}/{sample}_consensus_Passeriformes_{gene}.fas", sample=config["samples"], gene=config["genes"], r = config["r_params"], n = config["n_params"], cov=config["cov_params"]),
+        #expand("{gene}/{sample}_r_{r}_cov_{cov}_n_{n}_consensus_Passeriformes_{gene}.fas", sample=config["samples"], gene=config["genes"], r = config["r_params"], n = config["n_params"], cov=config["cov_params"]),
 
-# Decompress fastq file 
-rule fastq_ungzip:
+rule fastq_dump:
     input:
-        "{sample}.fastq.gz"
+        "raw_data/{sample}/{sample}.sra"
     output:
-        "{sample}.fastq"
+        temp("raw_data/{sample}_1.fastq"),
+        temp("raw_data/{sample}_2.fastq")
     shell:
-        "gunzip {input}"
+        "fastq-dump --split-e --readids -O raw_data {input}"
 
-# (Optional but recommended) Trim adaptors and low quality regions from input.
-
-rule TrimGalore:
+rule fastq_concat:
     input:
-        "{sample}t.fastq"
+        "raw_data/{sample}_1.fastq",
+        "raw_data/{sample}_2.fastq"
     output:
-        "{sample}_trimmed.fq"
+        temp("raw_data/{sample}_concat.fastq")
     shell:
-        "perl TrimGalore-0.6.6/trim_galore --no_report_file --dont_gzip --output_dir ./ {input}"
+        "cat {input} > {output}"
 
-# Convert fastq to fasta
-rule fastq2fas:
+rule quality_trim:
     input:
-        "{sample}_trimmed.fq"
+        "raw_data/{sample}_concat.fastq"
     output:
-        "{sample}_trimmed.fas"
+        "trimmed_data/{sample}_concat_trimmed.fq"
     shell:
-        "awk '(NR-1)%4 == 0 || (NR-2)%4==0' {input} | tr '@' '>' > {output}"
+        "perl ~/bin/TrimGalore-0.6.6/trim_galore --no_report_file --dont_gzip --output_dir trimmed_data/ {input}"
 
-# Replace spaces in fasta sequence names with underscores
-rule f2f_newname:
+rule MitoGeneExtractor_default:
     input:
-        "{sample}_trimmed.fas"
+        DNA = "trimmed_data/{sample}_concat_trimmed.fq",
+        AA = "protein_references/Passeriformes_{gene}.fasta"   
     output:
-        "{sample}_trimmed_newname.fas"
+        a = "{gene}/{sample}_alignment_Passeriformes_{gene}.fas",
+        b = "{gene}/{sample}_consensus_Passeriformes_{gene}.fas",
+        c = "{gene}/{sample}_vulgar.txt"
     shell:
-# Call a program that replaces spaces with underscores in the sequence headers of a given fasta file:
-        "fasta2fasta-v1.4 -r ' _' -u {input} {output}"
+        "~/MGE_test/MitoGeneExtractor/MitoGeneExtractor-v1.9.5 --report_gaps_mode 1 -q {input.DNA} -p {input.AA} -o {wildcards.gene}/{wildcards.sample}_alignment_ -c {wildcards.gene}/{wildcards.sample}_consensus_ -V {output.c} -e ~/bin/exonerate"
 
-rule MitoGeneExtractor:
+
+
+rule MitoGeneExtractor_diff_params: #optional rule to provide different parameter combinations
     input:
-        DNA = "{sample}_trimmed_newname.fas",
-        AA = "protein_consensus.fas"
+        DNA = "trimmed_data/{sample}_concat_trimmed.fq",
+        AA = "protein_references/Passeriformes_{gene}.fasta",
+        vulgar = "{gene}/{sample}_vulgar.txt"   
     output:
-        a = "{sample}_out_alignment.fas",
-        b = "{sample}_out_consensus.fas",
-        c = "{sample}_vulgar.txt",
-        d = "{sample}_vulgar.txt.log"
+        a = "{gene}/{sample}_r_{r}_cov_{cov}_n_{n}_alignment_Passeriformes_{gene}.fas",
+        b = "{gene}/{sample}_r_{r}_cov_{cov}_n_{n}_consensus_Passeriformes_{gene}.fas"
     shell:
-        "MitoGeneExtractor-v1.9.3 -d {input.DNA} -p {input.AA} -o {output.a} -c {output.b} -V {output.c} -n 0 -t 0.5 -r 1 
+        "~/MGE_test/MitoGeneExtractor/MitoGeneExtractor-v1.9.5 --report_gaps_mode 1 -q {input.DNA} -p {input.AA} -o {wildcards.gene}/{wildcards.sample}_r_{wildcards.r}_cov_{wildcards.cov}_n_{wildcards.n}_alignment_ -c {wildcards.gene}/{wildcards.sample}_r_{wildcards.r}_cov_{wildcards.cov}_n_{wildcards.n}_consensus_ -V {input.vulgar} -n {wildcards.n} -r {wildcards.r} --minSeqCoverageInAlignment_total {wildcards.cov} -e ~/bin/exonerate"
