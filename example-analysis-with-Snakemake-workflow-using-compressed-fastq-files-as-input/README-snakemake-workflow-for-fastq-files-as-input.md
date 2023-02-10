@@ -44,7 +44,12 @@ perl TrimGalore-0.6.6/trim_galore --no_report_file --dont_gzip --output_dir trim
 perl TrimGalore-0.6.6/trim_galore --no_report_file --dont_gzip --output_dir trimmed_data/ raw_data/SRR12554985_concat.fastq #results will be written to "trimmed_data" dir 
 ```
 
-Finally, call MitoGeneExtractor in default mode to reconstruct e.g. the COX1 gene:
+If you want to organize you MitoGeneExtractor results in different directories, make sure that the path exists before running MitoGeneExtractor. For example, type:
+```
+mkdir COX1
+```
+
+Finally, call MitoGeneExtractor in default mode to reconstruct e.g. the COX1 gene
 ```{r, eval=TRUE}
 ~/MGE_test/MitoGeneExtractor/MitoGeneExtractor-v1.9.5 --report_gaps_mode 1 -q trimmed_data/SRR12554982_concat_trimmed.fq -p protein_references/Passeriformes_COX1.fasta -o COX1/SRR12554982_out_alignment.fas -c COX1/SRR12554982_out_consensus.fas -V COX1/SRR12554982_vulgar.txt -e ~/bin/exonerate
 
