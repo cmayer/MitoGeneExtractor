@@ -45,15 +45,15 @@ cat raw_data/SRR12554985_1.fastq raw_data/SRR12554985_2.fastq > raw_data/SRR1255
 
 Remove adapters and low quality regions:
 ```{r, eval=TRUE}
-perl TrimGalore-0.6.6/trim_galore --no_report_file --dont_gzip --output_dir trimmed/ raw_data/SRR12554982_concat.fastq #results will be written to "trimmed" dir 
-perl TrimGalore-0.6.6/trim_galore --no_report_file --dont_gzip --output_dir trimmed/ raw_data/SRR12554985_concat.fastq #results will be written to "trimmed" dir 
+perl TrimGalore-0.6.6/trim_galore --no_report_file --dont_gzip --output_dir trimmed_data/ raw_data/SRR12554982_concat.fastq #results will be written to "trimmed_data" dir 
+perl TrimGalore-0.6.6/trim_galore --no_report_file --dont_gzip --output_dir trimmed_data/ raw_data/SRR12554985_concat.fastq #results will be written to "trimmed_data" dir 
 ```
 
 Finally, call MitoGeneExtractor in default mode to reconstruct e.g. the COX1 gene:
 ```{r, eval=TRUE}
-~/MGE_test/MitoGeneExtractor/MitoGeneExtractor-v1.9.5 --report_gaps_mode 1 -q trimmed/SRR12554982_concat_trimmed.fq -p protein_references/Passeriformes_COX1.fasta -o COX1/SRR12554982_out_alignment.fas -c COX1/SRR12554982_out_consensus.fas -V COX1/SRR12554982_vulgar.txt -e ~/bin/exonerate
+~/MGE_test/MitoGeneExtractor/MitoGeneExtractor-v1.9.5 --report_gaps_mode 1 -q trimmed_data/SRR12554982_concat_trimmed.fq -p protein_references/Passeriformes_COX1.fasta -o COX1/SRR12554982_out_alignment.fas -c COX1/SRR12554982_out_consensus.fas -V COX1/SRR12554982_vulgar.txt -e ~/bin/exonerate
 
-~/MGE_test/MitoGeneExtractor/MitoGeneExtractor-v1.9.5 --report_gaps_mode 1 -q trimmed/SRR12554985_concat_trimmed.fq -p protein_references/Passeriformes_COX1.fasta -o COX1/SRR12554985_out_alignment.fas -c COX1/SRR12554985_out_consensus.fas -V COX1/SRR12554985_vulgar.txt -e ~/bin/exonerate
+~/MGE_test/MitoGeneExtractor/MitoGeneExtractor-v1.9.5 --report_gaps_mode 1 -q trimmed_data/SRR12554985_concat_trimmed.fq -p protein_references/Passeriformes_COX1.fasta -o COX1/SRR12554985_out_alignment.fas -c COX1/SRR12554985_out_consensus.fas -V COX1/SRR12554985_vulgar.txt -e ~/bin/exonerate
 ```
 In this example, the protein reference file is stored in the protein_references/ directory and contains only the COX1 amino acid sequence. In the provided example workflow, the ND5 gene is additionally reconstructed, because it illustrates, how {wildcards} are used. Note, that it is **NOT** necessary to provide the references individually when you use MitoGeneExtractor version 1.9.5 or higher. 
 
