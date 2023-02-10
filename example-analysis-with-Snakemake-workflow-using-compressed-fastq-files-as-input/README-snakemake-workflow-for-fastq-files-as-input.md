@@ -1,4 +1,4 @@
-# Example analysis using a Snakemake workflow and MitoGeneExtractor to reconstruct multiple mitochondrial genes in multiple fastq files with multiple parameters:
+# Example analysis using a Snakemake workflow and MitoGeneExtractor:
 Since MitoGeneExtractor version 1.9.5, several steps of this example analysis can be directly executed within MitoGeneExtractor. This comprises merging of multiple input files and the reconstruction of more than one gene sequence.
 In addition, implementing quality trimming or the analysis with various parameter combinations in the snakemake analysis workflow can help to scale the analysis to large data sets while maintaining an organized file system. 
 
