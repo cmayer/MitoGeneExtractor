@@ -24,7 +24,7 @@ prefetch -O raw_data/ SRR12554985
 The .sra files are downloaded to the "raw_data" directory
 
 ### Workflow steps:
-In our example workflow, the wildcard {sample} is replaced with the individual sample names found in the config.yaml file, followed by universal file extensions. The workflow from raw sequencing data to the desired consensus sequence will incorporate the following steps. Snakemake will determine dependencies between input and output file based on the user defined rules.
+All the steps described below will be automatically executed by snakemake. Snakemake will determine dependencies between input and output file based on the user defined rules. In our example workflow, the wildcard {sample} is replaced with the individual sample names found in the config.yaml file, followed by universal file extensions. The workflow from raw sequencing data to the desired consensus sequence will incorporate the following steps:
 
 Convert the SRA files to the fastq format with fastq-dump from the SRA toolit. Retain unique reads IDs:
 ```{r, eval=TRUE}
