@@ -1,0 +1,20 @@
+genes:
+  - COX1
+  - ND5
+
+cov_params:
+#  - 1 default of MGE 
+  - 3
+  - 5
+
+r_params:
+#  - 1 default of MGE
+  - 0.8
+
+n_params:
+#  - 0 default of MGE
+  - 3
+  
+samples:
+  - SRR12554982
+  - SRR12554985
