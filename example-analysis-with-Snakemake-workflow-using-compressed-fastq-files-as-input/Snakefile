@@ -1,28 +1,34 @@
-#Snakefile
+#Snakefile to reconstruct multiple genes from multiple samples with multiple parameter combinations
 configfile: "config.yaml"
+
+#The {wildcards} will be replaced with your specification in the confiq.yaml file. 
 rule all:
     input:
-        expand("{gene}/{sample}_consensus_Passeriformes_{gene}.fas", sample=config["samples"], gene=config["genes"], r = config["r_params"], n = config["n_params"], cov=config["cov_params"]),
-        #expand("{gene}/{sample}_r_{r}_cov_{cov}_n_{n}_consensus_Passeriformes_{gene}.fas", sample=config["samples"], gene=config["genes"], r = config["r_params"], n = config["n_params"], cov=config["cov_params"]),
+        expand("{gene}/{sample}_consensus_Passeriformes_{gene}.fas", sample=config["samples"], gene=config["genes"])
+        #expand("{gene}/{sample}_r_{r}_cov_{cov}_n_{n}_consensus_Passeriformes_{gene}.fas", sample=config["samples"], gene=config["genes"], r = config["r_params"], n = config["n_params"], cov=config["cov_params"])
 
+#This requires that fastq-dump/the sra-toolkit is installed        
 rule fastq_dump:
     input:
         "raw_data/{sample}/{sample}.sra"
     output:
-        temp("raw_data/{sample}_1.fastq"),
+        temp("raw_data/{sample}_1.fastq"),  #the temp() function removes intermediate files, when they are no longer needed.
         temp("raw_data/{sample}_2.fastq")
     shell:
         "fastq-dump --split-e --readids -O raw_data {input}"
 
+#This can be done with MitoGenExtractor
+#but if you want to trim your data, it is recommended to concatenate all files beforehand   
 rule fastq_concat:
     input:
         "raw_data/{sample}_1.fastq",
         "raw_data/{sample}_2.fastq"
     output:
-        temp("raw_data/{sample}_concat.fastq")
+        temp("raw_data/{sample}_concat.fastq")  
     shell:
         "cat {input} > {output}"
 
+#trim the data in single-end mode
 rule quality_trim:
     input:
         "raw_data/{sample}_concat.fastq"
@@ -36,15 +42,15 @@ rule MitoGeneExtractor_default:
         DNA = "trimmed_data/{sample}_concat_trimmed.fq",
         AA = "protein_references/Passeriformes_{gene}.fasta"   
     output:
-        a = "{gene}/{sample}_alignment_Passeriformes_{gene}.fas",
-        b = "{gene}/{sample}_consensus_Passeriformes_{gene}.fas",
+        a = "{gene}/{sample}_alignment_Passeriformes_{gene}.fas",   #the output name depends also on the name of your supplied reference and might be adjusted;
+        b = "{gene}/{sample}_consensus_Passeriformes_{gene}.fas",   #here the reference name was 'Passeriformes_COX1.fas'
         c = "{gene}/{sample}_vulgar.txt"
     shell:
         "~/MGE_test/MitoGeneExtractor/MitoGeneExtractor-v1.9.5 --report_gaps_mode 1 -q {input.DNA} -p {input.AA} -o {wildcards.gene}/{wildcards.sample}_alignment_ -c {wildcards.gene}/{wildcards.sample}_consensus_ -V {output.c} -e ~/bin/exonerate"
 
-
-
-rule MitoGeneExtractor_diff_params: #optional rule to provide different parameter combinations
+#optional rule to provide different parameter combinations;
+#this rule will only be executed if you change the required input of the rule all!
+rule MitoGeneExtractor_diff_params: 
     input:
         DNA = "trimmed_data/{sample}_concat_trimmed.fq",
         AA = "protein_references/Passeriformes_{gene}.fasta",
