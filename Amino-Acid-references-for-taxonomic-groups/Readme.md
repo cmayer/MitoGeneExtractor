@@ -1,10 +1,20 @@
 # Amino acid reference sequences
 
-Amino acid reference sequences are needed to align the query sequences, e.g. sequencing reads, against. 
-For conserved genes, such as mitochondrial genes, the same reference can be used for large taxonomic groups. Even a single reference for all vertebrate species and a single reference for all arthropod sequences exist for the COI gene, which can be used to obtain a large proportion of the full COI gene for these groups.
-Only the slightly less conserved beginning and end of these genes require more specific references.
+## Idea: 
+The idea behind MitoGeneExtractor is to align the input sequences (typically reads) with the amino acid sequences of protein coding genes of interest. All input sequences that can be aligned successfully are added to the alignment. Finally a consensus sequence is determined. Currently, the Exonerate program is used to align the input sequences with the amino acid references.
 
-Example:
+## Reason we use an amino acid sequence as a reference:
+
+For mitochondrial genes one finds almost no length altering mutations and small amounts of sequence variation in the amino acid sequence even for large taxonomic groups. Furthermore, length altering mutations are 
+
+This makes the amino acid sequences an ideal reference for extracting these genes. 
+
+We even found that general reference sequences for vertebrates and arthropod can be used to extract large parts of the mitochondrial genes for all taxa from these group we have tested. Only the slightly less conserved beginning and end of these genes require more specific references.
+
+In arthropods, some taxa have short deletion in the COI sequence sequences and an adapted reference could be used to better capture these difference.
+
+
+## Example:
 
 Comparison of general COI reference for all vertebrate species and the reference used in Brasseuer et al. specific for Passeriformes (general vertebrate reference on top, Passeriformes (song birds) specific reference blow):
 
@@ -28,19 +38,22 @@ LHGCPPPYHTFEEP---------
 IHGCPPPFHTFEEPAFVQVQSQE
 ```
 
+We have left out the stop codon at the end of the sequence in this example. For song birds there are two main variants of the COI gene, one with a stop codon at position 1551 and one with a stop codon at position 1554.
+
 The references differ slightly. In particular, the Passeriformes has one additional amino acid at the beginning and 9 additional amino acids at the end.
-These would not be extracted with the general reference. In the example analysis we show however that the barcode region extracted with both references are identical in the given example. The general vertebrate reference can be a good starting point in many cases. For many other vertebrate groups the differences are even smaller than for song birds.
+These would not be extracted with the general reference. In the example analysis we show however that the middle part that includes the barcode region is extracted with both references and that the extracted barcode regions are identical. The general vertebrate reference can be a good starting point in many cases. For many other vertebrate groups the differences are even smaller than for song birds.
 
 If the whole COI shall be extracted from start to end, specific references should be preferred.
 
 
-Reference sequences for different mitochondrial genes shall be added over time to this repository, so that all users cannot only profit from the MitoGeneExtractor program, but also from a list of available references.
+## The folder Amino-Acid-references-for-taxonomic-groups
 
-## The reference file
+Reference sequences for different mitochondrial genes and different taxonomic groups shall be added over time to this repository, so that all users cannot only profit from the MitoGeneExtractor program, but also from a list of available references.
 
-The reference file, which must be a file in the fasta format, has to contain one or multiple amino acid reference sequences.
 
-In an MGE run, the input nucleotide sequences will be aligned (with Exonerate) against all reference sequences in this file and reads that align well are retained.
+## The amino acid reference file given to MitoGeneExtractor
+
+The reference file, which must be a file in the fasta format, has to contain at least one, but can contain any number of amino acid reference sequences. This can be different genes we want to extract in one program run and also different variants of the same genes. If this file contains multiple sequences, all input sequences will aligned with all references with MitoGeneExtractor.
 
 The sequence names of the reference sequences will be used as part of the output filenames. Therefore they should not contain symbols not allowed in filenames. MGE might change sequence names if they contain illegal characters.
 
@@ -55,4 +68,9 @@ Multiple reference genes and multiple variants of these can be combined in one r
 If multiple significantly different variants of the same gene can occur in the input sequences, all variants can be added to the reference file. Input sequences that align to multiple references will be assigned to the reference for which the alignment has the highest alignment score. If input sequences have the same alignment score to multiple reference sequences, they are assigned to all references.
 
 Multiple reference genes and multiple variants of these can be combined in one reference file.
+
+### To which reference sequences are the input sequences assigned if the align with multiple reference sequences?
+
+
+
 
