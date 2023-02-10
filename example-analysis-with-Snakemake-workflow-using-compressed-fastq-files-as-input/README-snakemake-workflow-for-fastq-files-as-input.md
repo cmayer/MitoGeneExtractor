@@ -6,11 +6,11 @@ In addition, implementing quality trimming or the analysis with various paramete
 Before starting the analyses, the user needs to provide all necessary input data. Please also have in mind that you might want to adjust the example workflow according to your directory structure. Further, if other versions of the used software are installed, some parameter names might have changed.
 For the example workflow, you would need to provide the following files:
 
-- Protein reference(s) for MitoGeneExtractor in FASTA format  
+- Protein reference(s) for MitoGeneExtractor in FASTA format (See references in this folder). References are assumed to be in the directory ./protein_references/
 - Snakefile (See example file in this folder)
 - A quality trimming software such as TrimGalore! installed. TrimGalore!, which is a wrapper to the cutadapt software is used in the present workflow for this purpose, but any other software can be used. 
 - The configuration file in .yaml format (See config.yaml file in this folder) 
-- Raw sequencing data
+- Raw sequencing data. Raw data is assumed to be in the directory ./raw_data/
 
 For this example download the following SRA files from NCBI:
 https://www.ncbi.nlm.nih.gov/sra/?term=SRR12554982 and https://www.ncbi.nlm.nih.gov/sra/?term=SRR12554985
