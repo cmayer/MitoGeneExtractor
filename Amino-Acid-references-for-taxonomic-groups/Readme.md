@@ -5,13 +5,13 @@ The idea behind MitoGeneExtractor is to align the input sequences (typically rea
 
 ## Reason we use an amino acid sequence as a reference:
 
-For mitochondrial genes one finds almost no length altering mutations and small amounts of sequence variation in the amino acid sequence even for large taxonomic groups. Furthermore, length altering mutations are 
+For mitochondrial genes one finds almost no length altering mutations and small amounts of sequence variation in the amino acid sequence even for large taxonomic groups. 
 
 This makes the amino acid sequences an ideal reference for extracting these genes. 
 
 We even found that general reference sequences for vertebrates and arthropod can be used to extract large parts of the mitochondrial genes for all taxa from these group we have tested. Only the slightly less conserved beginning and end of these genes require more specific references.
 
-In arthropods, some taxa have short deletion in the COI sequence sequences and an adapted reference could be used to better capture these difference.
+In arthropods, some taxa have short deletion in the COI sequence sequences and an adapted reference could be used to better capture these difference. We will document this here in more detail in the future.
 
 
 ## Example:
