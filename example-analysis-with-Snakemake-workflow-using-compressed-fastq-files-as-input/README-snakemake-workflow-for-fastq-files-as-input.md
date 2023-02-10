@@ -44,10 +44,11 @@ perl TrimGalore-0.6.6/trim_galore --no_report_file --dont_gzip --output_dir trim
 perl TrimGalore-0.6.6/trim_galore --no_report_file --dont_gzip --output_dir trimmed_data/ raw_data/SRR12554985_concat.fastq #results will be written to "trimmed_data" dir 
 ```
 
-If you want to organize you MitoGeneExtractor results in different directories, make sure that the path exists before running MitoGeneExtractor. For example, type:
+If you want to organize your MitoGeneExtractor results in different directories without using snakemake, make sure that the path exists before running MitoGeneExtractor. For example, type:
 ```
 mkdir COX1
 ```
+Snakemake will handle this for you directly, so this does not need to be included in the Snakefile.
 
 Finally, call MitoGeneExtractor in default mode to reconstruct e.g. the COX1 gene
 ```{r, eval=TRUE}
