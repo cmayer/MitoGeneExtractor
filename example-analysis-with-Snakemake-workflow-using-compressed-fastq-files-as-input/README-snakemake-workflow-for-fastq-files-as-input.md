@@ -52,10 +52,11 @@ Snakemake will handle this for you directly, so this does not need to be include
 
 Finally, call MitoGeneExtractor in default mode to reconstruct e.g. the COX1 gene
 ```{r, eval=TRUE}
-~/MGE_test/MitoGeneExtractor/MitoGeneExtractor-v1.9.5 --report_gaps_mode 1 -q trimmed_data/SRR12554982_concat_trimmed.fq -p protein_references/Passeriformes_COX1.fasta -o COX1/SRR12554982_out_alignment.fas -c COX1/SRR12554982_out_consensus.fas -V COX1/SRR12554982_vulgar.txt -e ~/bin/exonerate
+~/MGE_test/MitoGeneExtractor/MitoGeneExtractor-v1.9.5 --report_gaps_mode 1 -q trimmed_data/SRR12554982_concat_trimmed.fq -p protein_references/Passeriformes_COX1.fasta -o COX1/SRR12554982_alignment_ -c COX1/SRR12554982_consensus_ -V COX1/SRR12554982_vulgar.txt -e ~/bin/exonerate
 
-~/MGE_test/MitoGeneExtractor/MitoGeneExtractor-v1.9.5 --report_gaps_mode 1 -q trimmed_data/SRR12554985_concat_trimmed.fq -p protein_references/Passeriformes_COX1.fasta -o COX1/SRR12554985_out_alignment.fas -c COX1/SRR12554985_out_consensus.fas -V COX1/SRR12554985_vulgar.txt -e ~/bin/exonerate
+~/MGE_test/MitoGeneExtractor/MitoGeneExtractor-v1.9.5 --report_gaps_mode 1 -q trimmed_data/SRR12554985_concat_trimmed.fq -p protein_references/Passeriformes_COX1.fasta -o COX1/SRR12554985_alignment_ -c COX1/SRR12554985_consensus_ -V COX1/SRR12554985_vulgar.txt -e ~/bin/exonerate
 ```
+
 In this example, the protein reference file is stored in the protein_references/ directory and contains only the COX1 amino acid sequence. In the provided example workflow, the ND5 gene is additionally reconstructed, because it illustrates, how {wildcards} are used. Note, that it is **NOT** necessary to provide the references individually when you use MitoGeneExtractor version 1.9.5 or higher. 
 
 ### Execution:
@@ -77,7 +78,7 @@ You could execute snakemake via the command line. In this mode, snakemake will r
 snakemake --cluster \"qsub\" --jobs 3 #"qsub" stands for the submission command for a SGE system. Snakemake will submit 3 jobs simultaneosuly.
 ```
 
-Alternatively, you can run snakemake via submitting a jobscript with the following command:
+Alternatively, you can run snakemake via submitting a jobscript with the following command (see Snakemake_job.sh in this directory):
 
 ```
 snakemake --cores 3 #Snakemakem will distribute the rule execution over 3 cores. In our example, each rule claim one core, allowing to run 3 jobs simultaneosuly.
