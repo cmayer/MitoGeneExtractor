@@ -69,8 +69,15 @@ If multiple significantly different variants of the same gene can occur in the i
 
 Multiple reference genes and multiple variants of these can be combined in one reference file.
 
-### To which reference sequences are the input sequences assigned if the align with multiple reference sequences?
+### To which reference sequences are the input sequences assigned if they align with multiple reference sequences?
 
+1) If a reads aligns to the same reference twice or more often, this is usually considered to be a problem. 
+   - If the \verb|--includeDoubleHits| command line option is specified, the read with the highest score is included and the one with the inferior score is ignored.
+   - If the \verb|--includeDoubleHits| command line option is not specified, non of the reads will be used.
 
+2) If a read aligns to different reference sequences, e.g. to multiple sightly different references of the same gene reads are added to the references as follows:
+  - If the \verb|--treat-references-as-individual| command line option is specified, reads are assigned to all references.
+  - If the \verb|--treat-references-as-individual| command line option is not specified, reads are assigned to the reference for which the alignment score is highest. If the same best alignment score is obtained when aligning the read to multiple references, the read is added to all references.
 
+Approach 2) allows multiple references to be specified and reads being assigned to all references in regions that are identical, but they are assigned to the best fitting reference in regions the references differ.
 
