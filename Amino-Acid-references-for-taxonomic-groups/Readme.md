@@ -72,7 +72,7 @@ Multiple reference genes and multiple variants of these can be combined in one r
 ### To which reference sequences are the input sequences assigned if they align with multiple reference sequences?
 
 1) If a reads aligns to the same reference twice or more often, this is usually considered to be a problem. 
-   - If the ```--includeDoubleHits``` command line option is specified, the read with the highest score is included and the one with the inferior score is ignored.
+   - If the ```--includeDoubleHits``` command line option is specified, the read with the highest score is included and the once with the inferior score are ignored.
    - If the ```--includeDoubleHits``` command line option is not specified, non of the reads will be used.
 
 2) If a read aligns to different reference sequences, e.g. to multiple sightly different references of the same gene reads are added to the references as follows:
