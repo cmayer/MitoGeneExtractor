@@ -79,5 +79,5 @@ Multiple reference genes and multiple variants of these can be combined in one r
   - If the ```--treat-references-as-individual``` command line option is specified, reads are assigned to all references.
   - If the ```--treat-references-as-individual``` command line option is not specified, reads are assigned to the reference for which the alignment score is highest. If the same best alignment score is obtained when aligning the read to multiple references, the read is added to all references.
 
-2) allows multiple references to be specified and reads being assigned to all references in regions that are identical, but they are assigned to the best fitting reference in regions the references differ.
+(2) allows multiple references to be specified and reads being assigned to all references in regions that are identical, but they are assigned to the best fitting reference in regions the references differ.
 
