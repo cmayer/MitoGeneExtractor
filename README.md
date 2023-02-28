@@ -262,7 +262,8 @@ Currently, we are exploring the utility of using HMMs, namely nhmmer as another 
 - Marie Brasseur, ZFMK/LIB, Bonn, Germany: Snakemake pipeline and analyses for publication.
 
 ## Reference: When using MitoGeneExtractor please cite:
-Brasseur ... 2023 ...
+Brasseur, M.V., Astrin, J.J., Geiger, M.F., Mayer, C., 2023. MitoGeneExtractor: Efficient extraction of mitochondrial genes from next-generation sequencing libraries. Methods in Ecology and Evolution.
+[https://besjournals.onlinelibrary.wiley.com/doi/10.1111/2041-210X.14075](https://besjournals.onlinelibrary.wiley.com/doi/10.1111/2041-210X.14075)
 
 Since MitoGeneExtractor uses the Exonerate program, please also cite:
 
