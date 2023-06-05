@@ -86,10 +86,10 @@ To install MitoGeneExtractor, do one of the following:
 - Clone the MitoGeneExtractor project to your computer. The link can be found by clicking on the "Code" pulldown menu at the top of this page.
 - Download the zipped project folder and extract the folder. The link can be found by clicking on the "Code" pulldown menu at the top of this page.  
 
-Now enter the MitoGeneExractor-vx.x folder on the command line and run the make program by typing "make" and hitting return. The make program should be preinstalled on all Linux distributions. On MacOS it is included in the command line developer tools (see above). 
+Now enter the mitogeneextractor folder on the command line and run the make program by typing "make" and hitting return. The make program should be preinstalled on all Linux distributions. On MacOS it is included in the command line developer tools (see above). 
 
 ```{r, eval=TRUE}
-cd/MitoGeneExractor-vx.x
+cd mitogeneextractor
 make
 ```
 
