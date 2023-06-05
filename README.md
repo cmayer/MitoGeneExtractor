@@ -93,7 +93,7 @@ cd/MitoGeneExractor-vx.x
 make
 ```
 
-The make program will generate an executable called MitoGeneExtractor_. Either copy this to a directory in your path or reference it by its full path on the command line.
+The make program will generate an executable called MitoGeneExtractor_vx.y.z, where x.y.z is the version number. Either copy this to a directory in your path or reference it by its full path on the command line.
 
 <!---
 In rare cases, the Exonerate program  quits/crashes unexpectedly.  Interestingly, when rerunning Exonerate, there is a good chance that it will not abort. Why rerunning Exonerate can be successful is a mystery. It has been checked that successful runs always create the same expected output. MitoGeneExtractor can identify, if Exonerate aborted the run and will try up to 10 times by rerunning Exonerate. The log output of MitoGeneExtractor will report the run count for the successful run. --->
@@ -101,11 +101,11 @@ In rare cases, the Exonerate program  quits/crashes unexpectedly.  Interestingly
 ## Get help and a full list of command line options:
 Type  
 ```{r, eval=TRUE}
-MitoGeneExtractor -h
+MitoGeneExtractor-vx.y.z -h
 ```
 if MitoGeneExtractor is in your PATH and otherwise
 ```{r, eval=TRUE}
-Path-to-MitoGeneExtractor/MitoGeneExtractor -h 
+Path-to-MitoGeneExtractor/MitoGeneExtractor-vx.y.z -h 
 ```
 to display a full list of command line options of MitoGeneExtractor. 
 
@@ -120,17 +120,17 @@ Furthermore assume that the amino acid reference sequence is stored in the COI-r
 Then the following command could be used to attempt to reconstruct the COI sequence from the read data in the query-input.fas file:
 
 ```{r, eval=TRUE}
-MitoGeneExtractor  -d query-input.fas -p COI-reference.fas -V vulgar.txt -o out-alignment.fas -n 0 -c out-consensus.fas -t 0.5 -r 1 -C 2
+MitoGeneExtractor-vx.y.z  -d query-input.fas -p COI-reference.fas -V vulgar.txt -o out-alignment.fas -n 0 -c out-consensus.fas -t 0.5 -r 1 -C 2
 ```
 Specifying the name of the vulgar file is optional, but recommended as this is the most-time consuming step. If the file exists, it is used as input instead of calling Exonerate to create it. If it does not exist, the name is used to create the vulgar file. The -C 2 option specifies the genetic code (here: vertebrate mitochondrial), the -t 0.5 option specifies the consensus threshold and the -r 1 and -n 0 options are used for a stricter alignment quality (see options for details). 
 
 If your read data is in fastq format, you could run the same analysis via this command:
 ```{r, eval=TRUE}
-MitoGeneExtractor  -d query-input.fq -p COI-reference.fas -V vulgar.txt -o out-alignment.fas -n 0 -c out-consensus.fas -t 0.5 -r 1 -C 2
+MitoGeneExtractor-vx.y.z  -d query-input.fq -p COI-reference.fas -V vulgar.txt -o out-alignment.fas -n 0 -c out-consensus.fas -t 0.5 -r 1 -C 2
 ```
 If you have multiple input files (e.g. paired-end data (PE) and single-end (SE) data) you cand specify this as follows:
 ```{r, eval=TRUE}
-MitoGeneExtractor  -d PE_query-input_1.fq PE_query-input_2.fq SE_query-input.fq -p COI-reference.fas -V vulgar.txt -o out-alignment.fas -n 0 -c out-consensus.fas -t 0.5 -r 1 -C 2
+MitoGeneExtractor-vx.y.z  -d PE_query-input_1.fq PE_query-input_2.fq SE_query-input.fq -p COI-reference.fas -V vulgar.txt -o out-alignment.fas -n 0 -c out-consensus.fas -t 0.5 -r 1 -C 2
 ```
 Note, that the order of file names does not matter. It is also possible to simultaneously specify input data in fastq and fasta format.
 
@@ -147,7 +147,7 @@ An example snakemake analysis can be found [here](https://github.com/cmayer/Mito
 
 ## Command line options:
 A full list of the command line options is available when typing
-MitoGeneExtractor -h
+MitoGeneExtractor-vx.y.z -h
 
 **-d <string>,  --dna_fasta_file <string>  (accepted multiple times)**   
  Specifies the input query nucleotide sequence files in the fasta format. Sequences are expected not to include gap characters. This option can be specified multiple times if multiple input files shall be analysed in one run. If sequence files contain reads, they should have been quality filtered before being used as input for this program. This option can be combined with multiple input files in the fastq format (see -q option).
