@@ -126,11 +126,11 @@ Specifying the name of the vulgar file is optional, but recommended as this is t
 
 If your read data is in fastq format, you could run the same analysis via this command:
 ```{r, eval=TRUE}
-MitoGeneExtractor-vx.y.z  -d query-input.fq -p COI-reference.fas -V vulgar.txt -o out-alignment.fas -n 0 -c out-consensus.fas -t 0.5 -r 1 -C 2
+MitoGeneExtractor-vx.y.z  -q query-input.fq -p COI-reference.fas -V vulgar.txt -o out-alignment.fas -n 0 -c out-consensus.fas -t 0.5 -r 1 -C 2
 ```
 If you have multiple input files (e.g. paired-end data (PE) and single-end (SE) data) you cand specify this as follows:
 ```{r, eval=TRUE}
-MitoGeneExtractor-vx.y.z  -d PE_query-input_1.fq PE_query-input_2.fq SE_query-input.fq -p COI-reference.fas -V vulgar.txt -o out-alignment.fas -n 0 -c out-consensus.fas -t 0.5 -r 1 -C 2
+MitoGeneExtractor-vx.y.z  -q PE_query-input_1.fq -q PE_query-input_2.fq -q SE_query-input.fq -p COI-reference.fas -V vulgar.txt -o out-alignment.fas -n 0 -c out-consensus.fas -t 0.5 -r 1 -C 2
 ```
 Note, that the order of file names does not matter. It is also possible to simultaneously specify input data in fastq and fasta format.
 
