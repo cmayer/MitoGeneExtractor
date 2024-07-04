@@ -24,6 +24,9 @@ Mitochondrial reads are often found as byproduct in sequencing libraries obtaine
 ## List of input sources for which MitoGeneExtractor did not work in our tests:
 - Long reads from MinION, Oxford Nanopore (Tested on a small number of libraries. See the supplementary materials of the publication for details.) 
 
+## Asked questions and problems users had
+
+See the Questions and problems page.
 
 ## Arguments pro MitoGeneExtractor:
 
