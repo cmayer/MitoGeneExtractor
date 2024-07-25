@@ -1,0 +1,153 @@
+import os
+import csv
+from glob import glob
+import yaml
+
+
+#Define config
+configfile: "config-BGE_testing.yaml"
+
+
+#Load config
+config = yaml.safe_load(open("config-BGE_testing.yaml"))
+
+
+#Parse samples from CSV
+def parse_samples(samples_file):
+    samples = {}
+    with open(samples_file, mode='r') as infile:
+        reader = csv.DictReader(infile)
+        for row in reader:
+            sample_id = row['ID']
+            forward_read = row['forward']
+            reverse_read = row['reverse']
+            samples[sample_id] = {"R1": forward_read, "R2": reverse_read}
+    return samples
+
+samples = parse_samples(config["samples_file"])
+
+
+#Define sample and gene combinations
+sample_gene_combinations = expand("{gene}/{sample}_con_insecta_{gene}.fas", sample=samples.keys(), gene=config["genes"])
+
+
+rule all:
+    input:
+        sample_gene_combinations
+
+
+#Rule to ensure necessary directories exist
+rule directories_exist:
+    output:
+        directory("raw_data"),
+        directory("trimmed_data"),
+        directory("protein_references")
+    shell:
+        """
+        mkdir -p raw_data trimmed_data protein_references
+        """
+
+
+#Rule to handle .fastq.gz files and clean headers
+rule gunzip_and_clean_headers:
+    input:
+        R1=lambda wildcards: samples[wildcards.sample]["R1"],
+        R2=lambda wildcards: samples[wildcards.sample]["R2"]
+    output:
+        R1_temp="raw_data/{sample}_R1_temp.fastq",
+        R2_temp="raw_data/{sample}_R2_temp.fastq"
+    shell:
+        """
+        # Check if input is gzipped and decompress if needed
+        if [[ {input.R1} == *.gz ]]; then
+            gzip -cd {input.R1} > {output.R1_temp}
+        else
+            cp {input.R1} {output.R1_temp}
+        fi
+
+        if [[ {input.R2} == *.gz ]]; then
+            gzip -cd {input.R2} > {output.R2_temp}
+        else
+            cp {input.R2} {output.R2_temp}
+        fi
+        
+        sed -i 's/ /_/g' {output.R1_temp}
+        sed -i 's/ /_/g' {output.R2_temp}
+        """
+
+
+#Run fastp for paired-end reads
+rule fastp_pe:
+    input:
+        R1="raw_data/{sample}_R1_temp.fastq",
+        R2="raw_data/{sample}_R2_temp.fastq"
+    output:
+        R1_trimmed="trimmed_data/{sample}_R1_trimmed.fastq",
+        R2_trimmed="trimmed_data/{sample}_R2_trimmed.fastq",
+        report="trimmed_data/{sample}_fastp_report.html",
+        json="trimmed_data/{sample}_fastp_report.json"
+    log:
+        out="trimmed_data/{sample}_fastp.out",
+        err="trimmed_data/{sample}_fastp.err"
+    shell:
+        """
+        fastp -i {input.R1} -I {input.R2} \
+              -o {output.R1_trimmed} -O {output.R2_trimmed} \
+              -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCA \
+              -A AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT \
+              --dedup \
+              --trim_poly_g \
+              -h {output.report} -j {output.json} \
+              > {log.out} 2> {log.err}
+        """
+
+
+
+#Concatenate PE fastq files into a single file
+rule fastq_concat:
+    input:
+        R1="trimmed_data/{sample}_R1_trimmed.fastq",
+        R2="trimmed_data/{sample}_R2_trimmed.fastq"
+    output:
+        temp("trimmed_data/{sample}_concat.fastq")
+    shell:
+        """
+        cat {input.R1} {input.R2} > {output}
+        """
+
+
+
+#Trim the concatenated fastq file
+rule quality_trim:
+    input:
+        "trimmed_data/{sample}_concat.fastq"
+    output:
+        "trimmed_data/{sample}_concat_trimmed.fq"
+    shell:
+        """
+        trim_galore --no_report_file --dont_gzip --output_dir trimmed_data/ {input}
+        """
+
+
+
+#Run MitoGeneExtractor on trimmed fastq file
+rule MitoGeneExtractor_default:
+    input:
+        DNA="trimmed_data/{sample}_concat_trimmed.fq",
+        AA="protein_references/insecta_{gene}.fasta"
+    output:
+        alignment="{gene}/{sample}_align_insecta_{gene}.fas",
+        consensus="{gene}/{sample}_con_insecta_{gene}.fas",
+        vulgar="{gene}/{sample}_vulgar.txt"
+    log:
+        out="{gene}/{sample}_summary.out",
+        err="{gene}/{sample}_summary.err"
+    shell:
+        """
+        ../../MitoGeneExtractor-v1.9.5 -q {input.DNA} -p {input.AA} \
+        -o {wildcards.gene}/{wildcards.sample}_align_ \
+        -c {wildcards.gene}/{wildcards.sample}_con_ \
+        -V {output.vulgar} --verbosity 40 -n 0 -C 5 -r 1 -t 0.5 > {log.out} 2> {log.err}
+        """
+
+
