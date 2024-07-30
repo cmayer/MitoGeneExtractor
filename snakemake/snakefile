@@ -4,15 +4,12 @@ from glob import glob
 import yaml
 
 
-#Define config
-configfile: "config-BGE_testing.yaml"
-
-
-#Load config
+#Define and load config
+configfile: "config3-samplesCSV_insecta.yaml"
 config = yaml.safe_load(open("config-BGE_testing.yaml"))
 
 
-#Parse samples from CSV
+#Parse samples from csv
 def parse_samples(samples_file):
     samples = {}
     with open(samples_file, mode='r') as infile:
@@ -29,6 +26,12 @@ samples = parse_samples(config["samples_file"])
 
 #Define sample and gene combinations
 sample_gene_combinations = expand("{gene}/{sample}_con_insecta_{gene}.fas", sample=samples.keys(), gene=config["genes"])
+#sample_gene_combinations = expand("{gene}/{sample}_r_{r}_cov_{cov}_n_{n}_s_{s}_con_{gene}.fas", sample=samples.keys(), gene=config["genes"]), r = config["r_params"], n = config["n_params"], cov = config["cov_params"]), s = config["s_params"]
+
+
+#Define output directory
+output_dir = "/gpfs/nhmfsa/bulk/share/data/mbl/share/scratch/MGE"
+
 
 
 rule all:
@@ -36,15 +39,15 @@ rule all:
         sample_gene_combinations
 
 
+
 #Rule to ensure necessary directories exist
 rule directories_exist:
     output:
-        directory("raw_data"),
-        directory("trimmed_data"),
-        directory("protein_references")
+        directory(os.path.join(output_dir, "raw_data")),
+        directory(os.path.join(output_dir, "trimmed_data")),
     shell:
         """
-        mkdir -p raw_data trimmed_data protein_references
+        mkdir -p {output.raw_data} {output.trimmed_data}
         """
 
 
@@ -54,8 +57,8 @@ rule gunzip_and_clean_headers:
         R1=lambda wildcards: samples[wildcards.sample]["R1"],
         R2=lambda wildcards: samples[wildcards.sample]["R2"]
     output:
-        R1_temp="raw_data/{sample}_R1_temp.fastq",
-        R2_temp="raw_data/{sample}_R2_temp.fastq"
+        R1_temp=os.path.join(output_dir, "raw_data/{sample}_R1_temp.fastq"),
+        R2_temp=os.path.join(output_dir, "raw_data/{sample}_R2_temp.fastq")
     shell:
         """
         # Check if input is gzipped and decompress if needed
@@ -76,19 +79,20 @@ rule gunzip_and_clean_headers:
         """
 
 
-#Run fastp for paired-end reads
+
+#Rule to run fastp for PE reads
 rule fastp_pe:
     input:
-        R1="raw_data/{sample}_R1_temp.fastq",
-        R2="raw_data/{sample}_R2_temp.fastq"
+        R1=os.path.join(output_dir, "raw_data/{sample}_R1_temp.fastq"),
+        R2=os.path.join(output_dir, "raw_data/{sample}_R2_temp.fastq")
     output:
-        R1_trimmed="trimmed_data/{sample}_R1_trimmed.fastq",
-        R2_trimmed="trimmed_data/{sample}_R2_trimmed.fastq",
-        report="trimmed_data/{sample}_fastp_report.html",
-        json="trimmed_data/{sample}_fastp_report.json"
+        R1_trimmed=os.path.join(output_dir, "trimmed_data/{sample}_R1_trimmed.fastq"),
+        R2_trimmed=os.path.join(output_dir, "trimmed_data/{sample}_R2_trimmed.fastq"),
+        report=os.path.join(output_dir, "trimmed_data/{sample}_fastp_report.html"),
+        json=os.path.join(output_dir, "trimmed_data/{sample}_fastp_report.json")
     log:
-        out="trimmed_data/{sample}_fastp.out",
-        err="trimmed_data/{sample}_fastp.err"
+        out=os.path.join(output_dir, "trimmed_data/{sample}_fastp.out"),
+        err=os.path.join(output_dir, "trimmed_data/{sample}_fastp.err")
     shell:
         """
         fastp -i {input.R1} -I {input.R2} \
@@ -103,13 +107,14 @@ rule fastp_pe:
 
 
 
-#Concatenate PE fastq files into a single file
+
+#Rule to concatenate PE fastq files
 rule fastq_concat:
     input:
-        R1="trimmed_data/{sample}_R1_trimmed.fastq",
-        R2="trimmed_data/{sample}_R2_trimmed.fastq"
+        R1=os.path.join(output_dir, "trimmed_data/{sample}_R1_trimmed.fastq"),
+        R2=os.path.join(output_dir, "trimmed_data/{sample}_R2_trimmed.fastq")
     output:
-        temp("trimmed_data/{sample}_concat.fastq")
+        temp(os.path.join(output_dir, "trimmed_data/{sample}_concat.fastq"))
     shell:
         """
         cat {input.R1} {input.R2} > {output}
@@ -117,37 +122,52 @@ rule fastq_concat:
 
 
 
-#Trim the concatenated fastq file
+#Rule to trim concatenated fastq file
 rule quality_trim:
     input:
-        "trimmed_data/{sample}_concat.fastq"
+        os.path.join(output_dir, "trimmed_data/{sample}_concat.fastq")
     output:
-        "trimmed_data/{sample}_concat_trimmed.fq"
+        os.path.join(output_dir, "trimmed_data/{sample}_concat_trimmed.fq")
     shell:
         """
-        trim_galore --no_report_file --dont_gzip --output_dir trimmed_data/ {input}
+        trim_galore --no_report_file --dont_gzip --output_dir {output_dir}/trimmed_data/ {input}
         """
 
 
 
-#Run MitoGeneExtractor on trimmed fastq file
+#Rule to run MitoGeneExtractor on trimmed and concatenated fastq file
 rule MitoGeneExtractor_default:
     input:
-        DNA="trimmed_data/{sample}_concat_trimmed.fq",
+        DNA=os.path.join(output_dir, "trimmed_data/{sample}_concat_trimmed.fq"),
         AA="protein_references/insecta_{gene}.fasta"
     output:
-        alignment="{gene}/{sample}_align_insecta_{gene}.fas",
-        consensus="{gene}/{sample}_con_insecta_{gene}.fas",
-        vulgar="{gene}/{sample}_vulgar.txt"
+        alignment=os.path.join(output_dir, "{gene}/{sample}_align_insecta_{gene}.fas"),
+        consensus=os.path.join(output_dir, "{gene}/{sample}_con_insecta_{gene}.fas"),
+        vulgar=os.path.join(output_dir, "{gene}/{sample}_vulgar.txt")
     log:
-        out="{gene}/{sample}_summary.out",
-        err="{gene}/{sample}_summary.err"
+        out=os.path.join(output_dir, "{gene}/{sample}_summary.out"),
+        err=os.path.join(output_dir, "{gene}/{sample}_summary.err")
     shell:
         """
         ../../MitoGeneExtractor-v1.9.5 -q {input.DNA} -p {input.AA} \
-        -o {wildcards.gene}/{wildcards.sample}_align_ \
-        -c {wildcards.gene}/{wildcards.sample}_con_ \
-        -V {output.vulgar} --verbosity 40 -n 0 -C 5 -r 1 -t 0.5 > {log.out} 2> {log.err}
+        -o {output.alignment} \
+        -c {output.consensus} \
+        -V {output.vulgar} \
+        -n 0 -C 5 -r 1 -t 0.5 \
+        > {log.out} 2> {log.err}
         """
 
 
+
+#optional rule to provide different parameter combinations;
+#this rule will only be executed if you change the required input of the rule all!
+rule MitoGeneExtractor_diff_params: 
+    input:
+        DNA = "trimmed_data/{sample}_concat_trimmed.fq",
+        AA = "protein_references/insecta_{gene}.fasta",
+        vulgar = "{gene}/{sample}_vulgar.txt"   
+    output:
+        a = "{gene}/{sample}_r_{r}_cov_{cov}_n_{n}_s_{s}_align_{gene}.fas",
+        b = "{gene}/{sample}_r_{r}_cov_{cov}_n_{n}_s_{s}_con_{gene}.fas"
+    shell:
+        "../../MitoGeneExtractor-v1.9.5 -q {input.DNA} -p {input.AA} -o {wildcards.gene}/{wildcards.sample}_r_{wildcards.r}_cov_{wildcards.cov}_n_{wildcards.n}_s_{wildcards.s}_align -c {wildcards.gene}/{wildcards.sample}_r_{wildcards.r}_cov_{wildcards.cov}_n_{wildcards.n}__s_{wildcards.s}con -V {input.vulgar} -n {wildcards.n} -r {wildcards.r} --minSeqCoverageInAlignment_total {wildcards.cov} --verbosity 10"
