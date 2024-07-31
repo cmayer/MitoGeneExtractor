@@ -5,8 +5,8 @@ import yaml
 
 
 #Define and load config
-configfile: "config3-samplesCSV_insecta.yaml"
-config = yaml.safe_load(open("config-BGE_testing.yaml"))
+configfile: "config.yaml"
+config = yaml.safe_load(open("config.yaml"))
 
 
 #Parse samples from csv
