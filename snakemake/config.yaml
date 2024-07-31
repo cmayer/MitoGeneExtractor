@@ -1,4 +1,4 @@
-samples_file: "/home/danip3/MitoGeneExtractor-main/BGE-test/mge_test_snakemake/BGE_test_samples.csv"
+samples_file: "./BGE_test_samples.csv"
 
 genes:
   - cox1
