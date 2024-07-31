@@ -5,8 +5,8 @@ import yaml
 
 
 #Define and load config
-configfile: "config.yaml"
-config = yaml.safe_load(open("config.yaml"))
+configfile: "config3-samplesCSV_insecta.yaml"
+config = yaml.safe_load(open("config3-samplesCSV_insecta.yaml"))
 
 
 #Parse samples from csv
@@ -24,19 +24,20 @@ def parse_samples(samples_file):
 samples = parse_samples(config["samples_file"])
 
 
-#Define sample and gene combinations
-sample_gene_combinations = expand("{gene}/{sample}_con_insecta_{gene}.fas", sample=samples.keys(), gene=config["genes"])
-#sample_gene_combinations = expand("{gene}/{sample}_r_{r}_cov_{cov}_n_{n}_s_{s}_con_{gene}.fas", sample=samples.keys(), gene=config["genes"]), r = config["r_params"], n = config["n_params"], cov = config["cov_params"]), s = config["s_params"]
-
-
 #Define output directory
-output_dir = "/gpfs/nhmfsa/bulk/share/data/mbl/share/scratch/MGE"
+output_dir = "/gpfs/nhmfsa/bulk/share/data/mbl/share/scratch/MGE/"
 
+
+expanded_files = expand(os.path.join(output_dir, "{gene}/{sample}_con_insecta_{gene}.fas"), sample=samples.keys(), gene=config["genes"])
 
 
 rule all:
     input:
-        sample_gene_combinations
+        expanded_files
+
+#expand("{gene}/{sample}_r_{r}_cov_{cov}_n_{n}_s_{s}_con_{gene}.fas", sample=samples.keys(), gene=config["genes"]), r = config["r_params"], n = config["n_params"], cov = config["cov_params"]), s = config["s_params"]
+
+print("Expanded target files:", expanded_files)
 
 
 
@@ -150,8 +151,8 @@ rule MitoGeneExtractor_default:
     shell:
         """
         ../../MitoGeneExtractor-v1.9.5 -q {input.DNA} -p {input.AA} \
-        -o {output.alignment} \
-        -c {output.consensus} \
+        -o {wildcards.gene}/{wildcards.sample}_align_ \
+        -c {wildcards.gene}/{wildcards.sample}_con_ \
         -V {output.vulgar} \
         -n 0 -C 5 -r 1 -t 0.5 \
         > {log.out} 2> {log.err}
@@ -159,15 +160,22 @@ rule MitoGeneExtractor_default:
 
 
 
+
+
+
 #optional rule to provide different parameter combinations;
 #this rule will only be executed if you change the required input of the rule all!
-rule MitoGeneExtractor_diff_params: 
-    input:
-        DNA = "trimmed_data/{sample}_concat_trimmed.fq",
-        AA = "protein_references/insecta_{gene}.fasta",
-        vulgar = "{gene}/{sample}_vulgar.txt"   
-    output:
-        a = "{gene}/{sample}_r_{r}_cov_{cov}_n_{n}_s_{s}_align_{gene}.fas",
-        b = "{gene}/{sample}_r_{r}_cov_{cov}_n_{n}_s_{s}_con_{gene}.fas"
-    shell:
-        "../../MitoGeneExtractor-v1.9.5 -q {input.DNA} -p {input.AA} -o {wildcards.gene}/{wildcards.sample}_r_{wildcards.r}_cov_{wildcards.cov}_n_{wildcards.n}_s_{wildcards.s}_align -c {wildcards.gene}/{wildcards.sample}_r_{wildcards.r}_cov_{wildcards.cov}_n_{wildcards.n}__s_{wildcards.s}con -V {input.vulgar} -n {wildcards.n} -r {wildcards.r} --minSeqCoverageInAlignment_total {wildcards.cov} --verbosity 10"
+#rule MitoGeneExtractor_diff_params: 
+#    input:
+#        DNA = "trimmed_data/{sample}_concat_trimmed.fq",
+#        AA = "protein_references/insecta_{gene}.fasta",
+#        vulgar = "{gene}/{sample}_vulgar.txt"   
+#    output:
+#        a = "{gene}/{sample}_r_{r}_cov_{cov}_n_{n}_s_{s}_align_{gene}.fas",
+#        b = "{gene}/{sample}_r_{r}_cov_{cov}_n_{n}_s_{s}_con_{gene}.fas"
+#    shell:
+#        "../../MitoGeneExtractor-v1.9.5 -q {input.DNA} -p {input.AA} \
+#        -o {wildcards.gene}/{wildcards.sample}_r_{wildcards.r}_cov_{wildcards.cov}_n_{wildcards.n}_s_{wildcards.s}_align \
+#        -c {wildcards.gene}/{wildcards.sample}_r_{wildcards.r}_cov_{wildcards.cov}_n_{wildcards.n}__s_{wildcards.s}_con \
+#        -V {input.vulgar} -n {wildcards.n} -r {wildcards.r} --minSeqCoverageInAlignment_total {wildcards.cov} \
+#        --verbosity 10"
