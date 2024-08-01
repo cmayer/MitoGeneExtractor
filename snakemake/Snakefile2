@@ -1,0 +1,186 @@
+import os
+import csv
+from glob import glob
+import yaml
+
+
+#Define and load config
+configfile: "config4-samplesrefsCSV.yaml"
+config = yaml.safe_load(open("config4-samplesrefsCSV.yaml"))
+
+
+#Parse samples from csv
+def parse_samples(samples_file):
+    print(f"Parsing samples from file: {samples_file}")
+    samples = {}
+    references = {}
+    with open(samples_file, mode='r') as infile:
+        reader = csv.DictReader(infile)
+        for row in reader:
+            sample_id = row['ID']
+            forward_read = row['forward']
+            reverse_read = row['reverse']
+            reference_name = row['reference_name']
+            reference_path = row['reference_path']
+            samples[sample_id] = {
+                "R1": forward_read,
+                "R2": reverse_read,
+                "reference_name": reference_name,
+                "reference_path": reference_path
+            }
+            print(f"Sample: {sample_id} -> Reference Name: {reference_name}, Reference Path: {reference_path}")
+    print(f"Samples parsed: {samples}")
+    return samples
+
+samples = parse_samples(config["samples_file"])
+
+
+
+#Define output directory
+#output_dir = "/gpfs/nhmfsa/bulk/share/data/mbl/share/scratch/MGE/"
+#print(f"Output directory: {output_dir}")
+
+
+expanded_files = expand("{gene}/{sample}_con_{gene}_{reference_name}.fas",
+                        sample=samples.keys(), gene=config["genes"],
+                        reference_name=[samples[s]["reference_name"] for s in samples])
+
+
+
+rule all:
+    input:
+        expanded_files
+
+
+print(f"Expanded target files: {expanded_files}")
+
+
+
+#Rule to ensure necessary directories exist
+rule directories_exist:
+    output:
+        directory("raw_data"),
+        directory("trimmed_data"),
+    shell:
+        """
+        mkdir -p {output.raw_data} {output.trimmed_data}
+        """
+
+
+#Rule to handle .fastq.gz files and clean headers
+rule gunzip_and_clean_headers:
+    input:
+        R1=lambda wildcards: samples[wildcards.sample]["R1"],
+        R2=lambda wildcards: samples[wildcards.sample]["R2"]
+    output:
+        R1_temp="raw_data/{sample}_R1_temp.fastq",
+        R2_temp="raw_data/{sample}_R2_temp.fastq"
+    shell:
+        """
+        echo "Decompressing and cleaning headers for {input.R1} and {input.R2}"
+        if [[ {input.R1} == *.gz ]]; then
+            gzip -cd {input.R1} > {output.R1_temp}
+        else
+            cp {input.R1} {output.R1_temp}
+        fi
+
+        if [[ {input.R2} == *.gz ]]; then
+            gzip -cd {input.R2} > {output.R2_temp}
+        else
+            cp {input.R2} {output.R2_temp}
+        fi
+        
+        sed -i 's/ /_/g' {output.R1_temp}
+        sed -i 's/ /_/g' {output.R2_temp}
+        """
+
+
+#Rule to run fastp for PE reads
+rule fastp_pe:
+    input:
+        R1="raw_data/{sample}_R1_temp.fastq",
+        R2="raw_data/{sample}_R2_temp.fastq"
+    output:
+        R1_trimmed="trimmed_data/{sample}_R1_trimmed.fastq",
+        R2_trimmed="trimmed_data/{sample}_R2_trimmed.fastq",
+        report="trimmed_data/{sample}_fastp_report.html",
+        json="trimmed_data/{sample}_fastp_report.json"
+    log:
+        out="trimmed_data/{sample}_fastp.out",
+        err="trimmed_data/{sample}_fastp.err"
+    shell:
+        """
+        echo "Running fastp with the following parameters:"
+        echo "R1: {input.R1}"
+        echo "R2: {input.R2}"
+        echo "R1 Trimmed Output: {output.R1_trimmed}"
+        echo "R2 Trimmed Output: {output.R2_trimmed}"
+        echo "Report Output: {output.report}"
+        echo "JSON Output: {output.json}"
+
+        fastp -i {input.R1} -I {input.R2} \
+              -o {output.R1_trimmed} -O {output.R2_trimmed} \
+              -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCA \
+              -A AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT \
+              --dedup \
+              --trim_poly_g \
+              -h {output.report} -j {output.json} \
+              > {log.out} 2> {log.err}
+        """
+
+
+#Rule to concatenate PE fastq files
+rule fastq_concat:
+    input:
+        R1="trimmed_data/{sample}_R1_trimmed.fastq",
+        R2="trimmed_data/{sample}_R2_trimmed.fastq"
+    output:
+        temp("trimmed_data/{sample}_concat.fastq")
+    shell:
+        """
+        echo "Concatenating {input.R1} and {input.R2} to {output}"
+        cat {input.R1} {input.R2} > {output}
+        """
+
+
+#Rule to trim concatenated fastq file
+rule quality_trim:
+    input:
+        "trimmed_data/{sample}_concat.fastq"
+    output:
+        "trimmed_data/{sample}_concat_trimmed.fq"
+    shell:
+        """
+        echo "Trimming concatenated fastq file {input} to {output}"
+        trim_galore --no_report_file --dont_gzip --output_dir trimmed_data/ {input}
+        """
+
+
+#Rule to run MitoGeneExtractor on trimmed and concatenated fastq file
+rule MitoGeneExtractor_default:
+    input:
+        DNA="trimmed_data/{sample}_concat_trimmed.fq",
+        AA=lambda wildcards: samples[wildcards.sample]["reference_name"]
+    output:
+        alignment="{gene}/{sample}_align_{gene}_{reference_name}.fas",
+        consensus="{gene}/{sample}_con_{gene}_{reference_name}.fas",
+        vulgar="{gene}/{sample}_vulgar.txt"
+    log:
+        out="{gene}/{sample}_summary.out",
+        err="{gene}/{sample}_summary.err"
+    shell:
+        """
+        echo "Running MitoGeneExtractor with the following parameters:" > {log.out}
+        echo "DNA: {input.DNA}" >> {log.out}
+        echo "AA (Reference Path): {input.AA}" >> {log.out}
+        echo "Alignment Output: {output.alignment}" >> {log.out}
+        echo "Consensus Output: {output.consensus}" >> {log.out}
+        echo "Vulgar Output: {output.vulgar}" >> {log.out}
+
+        ../../MitoGeneExtractor-v1.9.5 -q {input.DNA} -p {input.AA} \
+        -o {wildcards.gene}/{wildcards.sample}_align_{wildcards.gene}_ \
+        -c {wildcards.gene}/{wildcards.sample}_con_{wildcards.gene}_ \
+        -V {output.vulgar} \
+        -n 0 -C 5 -r 1 -t 0.5 \
+        > {log.out} 2> {log.err}
+        """
