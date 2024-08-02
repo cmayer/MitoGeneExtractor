@@ -45,8 +45,11 @@ rule MitoGeneExtractor_default:
         a = "{gene}/{sample}_alignment_Passeriformes_{gene}.fas",   #the output name depends also on the name of your supplied reference and might be adjusted;
         b = "{gene}/{sample}_consensus_Passeriformes_{gene}.fas",   #here the reference name was 'Passeriformes_COX1.fas'
         c = "{gene}/{sample}_vulgar.txt"
+    log:
+        out="{gene}/{sample}_summary.out",
+        err="{gene}/{sample}_summary.err"
     shell:
-        "~/MGE_test/MitoGeneExtractor/MitoGeneExtractor-v1.9.5 --report_gaps_mode 1 -q {input.DNA} -p {input.AA} -o {wildcards.gene}/{wildcards.sample}_alignment_ -c {wildcards.gene}/{wildcards.sample}_consensus_ -V {output.c} -e ~/bin/exonerate"
+        "~/MGE_test/MitoGeneExtractor/MitoGeneExtractor-v1.9.5 --report_gaps_mode 1 -q {input.DNA} -p {input.AA} -o {wildcards.gene}/{wildcards.sample}_alignment_ -c {wildcards.gene}/{wildcards.sample}_consensus_ -V {output.c} > {log.out} 2> {log.err} -e ~/bin/exonerate"
 
 #optional rule to provide different parameter combinations;
 #this rule will only be executed if you change the required input of the rule all!
