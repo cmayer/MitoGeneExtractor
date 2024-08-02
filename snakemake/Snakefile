@@ -25,6 +25,21 @@ def parse_samples(samples_file):
 
 samples = parse_samples(config["samples_file"])
 
+#def parse_protein_references(protein_reference_file):
+#    protein_references = {}
+#    with open(protein_reference_file, mode='r') as infile:
+#        reader = csv.DictReader(infile)
+#        print("Protein References CSV content:")
+#        for row in reader:
+#            print(row)  # Print each row to verify content
+#            process_id = row['process_id'].strip()
+#            reference_path = row['reference_path']
+#            reference_name = row['reference_name']
+#            protein_references[process_id] = {'path': reference_path, 'name': reference_name}
+#    return protein_references
+
+#protein_references = parse_protein_references(config["protein_reference_file"])
+
 #Define output directory
 #output_dir = "/gpfs/nhmfsa/bulk/share/data/mbl/share/scratch/MGE/"
 #print(f"Output directory: {output_dir}")
@@ -171,6 +186,3 @@ rule MitoGeneExtractor_default:
         -n 0 -C 5 -r 1 -t 0.5 \
         > {log.out} 2> {log.err}
         """
-
-
-
