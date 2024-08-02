@@ -1,0 +1,18 @@
+samples_file: "./BGE_test_samples.csv"
+
+protein_reference_file: "./BOLD_output_mge_fetch_BGE_test_data.csv"
+
+genes:
+  - cox1
+  
+
+#cov_params:
+#  - 1 
+#  - 5
+
+#r_params:
+#  - 1 default of MGE
+#  - 0.7
+
+#n_params:
+#  - 0 
