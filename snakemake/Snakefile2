@@ -13,12 +13,12 @@ config = yaml.safe_load(open("config2.yaml"))
 
 #Parse samples and protein references from .csv files
 def parse_samples(samples_file):
-    print(f"Parsing samples from file: {samples_file}")
-    print(f"Samples parsed: {samples}")
     samples = {}
     with open(samples_file, mode='r') as infile:
         reader = csv.DictReader(infile)
+        print("Samples CSV content:")
         for row in reader:
+            print(row)  # Print each row to verify content
             sample_id = row['ID']
             forward_read = row['forward']
             reverse_read = row['reverse']
@@ -26,45 +26,47 @@ def parse_samples(samples_file):
     return samples
 
 
-
 def parse_protein_references(protein_reference_file):
     protein_references = {}
     with open(protein_reference_file, mode='r') as infile:
         reader = csv.DictReader(infile)
+        print("Protein References CSV content:")
         for row in reader:
-            process_id = row['process_id']
+            print(row)  # Print each row to verify content
+            process_id = row['process_id'].strip()
             reference_path = row['reference_path']
             reference_name = row['reference_name']
             protein_references[process_id] = {'path': reference_path, 'name': reference_name}
-            print(f"Parsing references from file: {protein_reference_file}")
-            print(f"Sample: {process_id} -> Reference Name: {reference_name}, Reference Path: {reference_path}")
     return protein_references
 
 
+#Load samples and protein references
 samples = parse_samples(config["samples_file"])
 protein_references = parse_protein_references(config["protein_reference_file"])
-
 
 print("Samples:", samples)
 print("Protein References:", protein_references)
 
 
-# Create a mapping from sample_id to reference_name and reference_path
-sample_to_reference = {
-    s_id: protein_references.get(sample['process_id'], {'name': 'default_reference_name', 'path': 'default_reference_path'})
-    for s_id, sample in samples.items()
-}
+#Create a mapping from sample_id to reference_name and reference_path
+sample_to_reference = {}
+for s_id in samples:
+    # Here we assume process_id is somehow linked to sample_id directly
+    # This part assumes that process_id can be derived from sample_id, if that's not the case, you'll need to adjust this.
+    # For demonstration, assuming `s_id` should match `process_id` directly, you might need a different linking logic.
+    process_id = s_id  # Adjust this if your `process_id` is not the same as `sample_id`
+    if process_id in protein_references:
+        sample_to_reference[s_id] = protein_references[process_id]
+    else:
+        print(f"Error: Process ID '{process_id}' not found in protein references for sample '{s_id}'")
 
+print("Sample to Reference Mapping:", sample_to_reference)
 
-#Define output dir & reference names for use in expand
-#output_dir = "/gpfs/nhmfsa/bulk/share/data/mbl/share/scratch/MGE"
-
-
-
+#Define targets based on samples and corresponding protein references
 targets = expand("{gene}/{sample}_con_{reference_name}.fas",
     sample=sample_to_reference.keys(),
     gene=config["genes"],
-    reference_name=[sample_to_reference[s]['name'] for s in sample_to_reference]
+    reference_name=[sample_to_reference[s]['name'] for s in sample_to_reference if sample_to_reference[s]]
 )
 
 
@@ -174,8 +176,7 @@ rule quality_trim:
 rule MitoGeneExtractor_default:
     input:
         DNA="trimmed_data/{sample}_concat_trimmed.fq",
-#        AA=lambda wildcards: protein_references.get(wildcards.sample)
-        AA=lambda wildcards: sample_to_reference[wildcards.sample]['path']  
+        AA=lambda wildcards: sample_to_reference[wildcards.sample]['path']  # Use reference path
     output:
         alignment="{gene}/{sample}_align_{reference_name}.fas",
         consensus="{gene}/{sample}_con_{reference_name}.fas",
@@ -186,7 +187,7 @@ rule MitoGeneExtractor_default:
     shell:
         """
         ../../MitoGeneExtractor-v1.9.5 -q {input.DNA} -p {input.AA} \
-        -o {wildcards.gene}/{wildcards.sample}_align_ \
+        -o {wildcards.gene}/{wildcards.sample}_con_ \
         -c {wildcards.gene}/{wildcards.sample}_con_ \
         -V {output.vulgar} \
         -n 0 -C 5 -r 1 -t 0.5 \
