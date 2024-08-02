@@ -5,8 +5,8 @@ import yaml
 
 
 #Define and load config
-configfile: "config4-samplesrefsCSV.yaml"
-config = yaml.safe_load(open("config4-samplesrefsCSV.yaml"))
+configfile: "config2.yaml"
+config = yaml.safe_load(open("config2.yaml"))
 
 
 #Parse samples from csv
