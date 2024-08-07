@@ -7,7 +7,7 @@
 ## Running options:
 **Snakefile:**
 - Uses config.yaml
-  - Contains path to 'BGE_test_samples.csv' ((lists sample names, and fwd and rev read paths) and an output directory)
+  - Contains path to 'BGE_test_samples.csv' (lists sample names, fwd and rev read paths, and an output directory)
   - Contains different parameter configurations for -s and -r.
 - Uses insecta_cox1.fasta as protein reference (stored in protein_references dir).
 
