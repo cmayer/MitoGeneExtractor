@@ -29,14 +29,12 @@ output_dir = config["output_dir"]
 print("Samples:", samples)
 print(f"Output directory: {output_dir}")
 
-expanded_files = expand(os.path.join(output_dir, "{gene}/{sample}_con_insecta_{gene}.fas"), sample=samples.keys(), gene=config["genes"])
-
-print(f"Expanded target files: {expanded_files}")
 
 
+#Rule ALL
 rule all:
     input:
-        expanded_files
+        expand(os.path.join(output_dir, "{gene}/{sample}_r_{r}_s_{s}_con_insecta_{gene}.fas"), sample=samples.keys(), gene=config["genes"], r = config["r_params"], s = config["s_params"])
 
 
 
@@ -144,9 +142,8 @@ rule quality_trim:
         """
 
 
-
 #Rule to run MitoGeneExtractor on trimmed and concatenated fastq file
-rule MitoGeneExtractor_default:
+rule MitoGeneExtractor_diff_params:
     input:
         DNA=os.path.join(output_dir, "trimmed_data/{sample}_concat_trimmed.fq"),
         AA="protein_references/insecta_{gene}.fasta"
@@ -159,7 +156,7 @@ rule MitoGeneExtractor_default:
         err=os.path.join(output_dir, "{gene}/{sample}_summary.err")
     shell:
         """
-        echo "Running MitoGeneExtractor with the following files:"
+        echo "Running MitoGeneExtractor with the following parameters:"
         echo "DNA: {input.DNA}"
         echo "AA: {input.AA}"
         echo "Alignment Output: {output.alignment}"
@@ -171,6 +168,6 @@ rule MitoGeneExtractor_default:
         -o {wildcards.gene}/{wildcards.sample}_align_  \
         -c {wildcards.gene}/{wildcards.sample}_con_  \
         -V {output.vulgar} \
-        -n 0 -C 5 -r 1 -t 0.5 \
+        -n 0 -t 0.5 -r {wildcards.r} -s {wildcards.s} \
         > {log.out} 2> {log.err}
         """
