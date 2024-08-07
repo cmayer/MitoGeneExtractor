@@ -37,7 +37,7 @@ Usage information output by running 'python 4_mge_tidy-snakemake.py'
 - 'Cleans' and trims sequence headers of consenus sequences.
 
 ### 5_mge_stats-snakemake.py ###
-Usage information output by running 'python 5_mge_stats-snakemake.py'
+Usage information output by running 'python 5_mge_stats-snakemake.py'. Outputs summary stats to .csv file.
 - Reads relevant fields from .out files in 'out' dir:
   -  consensus sequence output (i.e. process ID)
   -  Number of input sequences considered
