@@ -1,5 +1,7 @@
 # MGE via snakemake with added functionality for BGE
 - Run using snakemake.sh
+- Requires BGE_test_samples.csv (Snakefile and Snakefile2) and gene_fetch_BGE_test_data.csv (Snakefile2).
+- Snakemake, TrimGalore, Exonerate, 
 
 ## Running options:
 **Snakefile:** **<-- WORKS**
@@ -11,7 +13,7 @@
 ## To do
 - Get Snakefile2 working (i.e. so MGE can take a samples_file and protein_references_file containing taxa-specific references as input). Current issue relates to snakemake running each sample and protein reference 'all against all'.See Below suggestions from Marie for fixes:
 
-_1.) Snakemake wants create the full factorial wildcard combinations (the all vs all issue):_
+_Snakemake wants create the full factorial wildcard combinations (the all vs all issue):_
 _I think there are different ways to approach this, but one convenient solution might be to add the zip argument in the expand() function which can be used to define how wildcards are combined.
 Have a look at the FAQs https://uk01.l.antigena.com/l/7UWdvSuml33y0zzodngXWW0lKy-ZiJosuND7IIfwJZFbzqRlioq~scYbDghNUGlOtPuSEUzpsOhskfaoYAtsxI8P22vfuWAwG7K8IVzZIKyrJFGO3onMM_bfJ6DOUCZmhzZCl0CgfUUZa0IIyra9qE9-SY_Nxtr-n0HZoEEpYAoMU0dUGJyaVm  under "I don’t want expand to use the product of every wildcard, what can I do?" However, I don't know how this behaves if you have also the {gene} wildcard in there..._
 
