@@ -2,6 +2,7 @@ import os
 import csv
 import yaml
 from snakemake.io import expand
+import pandas as pd
 
 
 
@@ -11,14 +12,12 @@ config = yaml.safe_load(open("config2.yaml"))
 
 
 
-#Parse samples and protein references from .csv files
+#Parse samples from .csv files
 def parse_samples(samples_file):
     samples = {}
     with open(samples_file, mode='r') as infile:
         reader = csv.DictReader(infile)
-        print("Samples CSV content:")
         for row in reader:
-            print(row)  # Print each row to verify content
             sample_id = row['ID']
             forward_read = row['forward']
             reverse_read = row['reverse']
@@ -26,62 +25,65 @@ def parse_samples(samples_file):
     return samples
 
 
+
+#Parse protein references from CSV
 def parse_protein_references(protein_reference_file):
     protein_references = {}
     with open(protein_reference_file, mode='r') as infile:
         reader = csv.DictReader(infile)
-        print("Protein References CSV content:")
         for row in reader:
-            print(row)  # Print each row to verify content
-            process_id = row['process_id'].strip()
-            reference_path = row['reference_path']
+            sample_id = row['ID']
             reference_name = row['reference_name']
-            protein_references[process_id] = {'path': reference_path, 'name': reference_name}
+            reference_path = row['reference_path']
+            protein_references[sample_id] = {"reference_name": reference_name, "reference_path": reference_path}
+    print(f"Protein references parsed: {protein_references}")
     return protein_references
 
 
-#Load samples and protein references
 samples = parse_samples(config["samples_file"])
 protein_references = parse_protein_references(config["protein_reference_file"])
+output_dir = config["output_dir"]
 
 print("Samples:", samples)
 print("Protein References:", protein_references)
+print(f"Output directory: {output_dir}")
 
 
-#Create a mapping from sample_id to reference_name and reference_path
-sample_to_reference = {}
-for s_id in samples:
-    # Here we assume process_id is somehow linked to sample_id directly
-    # This part assumes that process_id can be derived from sample_id, if that's not the case, you'll need to adjust this.
-    # For demonstration, assuming `s_id` should match `process_id` directly, you might need a different linking logic.
-    process_id = s_id  # Adjust this if your `process_id` is not the same as `sample_id`
-    if process_id in protein_references:
-        sample_to_reference[s_id] = protein_references[process_id]
-    else:
-        print(f"Error: Process ID '{process_id}' not found in protein references for sample '{s_id}'")
 
-print("Sample to Reference Mapping:", sample_to_reference)
+#Create lists of samples and corresponding references
+sample_list = list(samples.keys())
+reference_list = [protein_references[sample]["reference_name"] for sample in sample_list]
 
-#Define targets based on samples and corresponding protein references
-targets = expand("{gene}/{sample}_con_{reference_name}.fas",
-    sample=sample_to_reference.keys(),
-    gene=config["genes"],
-    reference_name=[sample_to_reference[s]['name'] for s in sample_to_reference if sample_to_reference[s]]
+print("reference list:", reference_list)
+print("sample list:", sample_list)
+
+
+#Use zip to pair sample_list and reference_list
+sample_reference_pairs = list(zip(sample_list, reference_list))
+print("sample reference pairs:", sample_reference_pairs)
+
+
+#Define targets based on samples and their corresponding references
+expanded_files = expand(
+    os.path.join(output_dir, "{gene}/{sample}_con_{reference_name}.fas"), 
+    gene=config["genes"], 
+    sample=[pair[0] for pair in sample_reference_pairs],
+    reference_name=[pair[1] for pair in sample_reference_pairs]
 )
 
 
+#Rule ALL
 rule all:
     input:
-        targets
-
+        expanded_files
 
 
 
 #Rule to ensure necessary directories exist
 rule directories_exist:
     output:
-        directory("raw_data"),
-        directory("trimmed_data"),
+        directory(os.path.join(output_dir, "raw_data")),
+        directory(os.path.join(output_dir, "trimmed_data")),
     shell:
         """
         mkdir -p {output.raw_data} {output.trimmed_data}
@@ -95,8 +97,8 @@ rule gunzip_and_clean_headers:
         R1=lambda wildcards: samples[wildcards.sample]["R1"],
         R2=lambda wildcards: samples[wildcards.sample]["R2"]
     output:
-        R1_temp="raw_data/{sample}_R1_temp.fastq",
-        R2_temp="raw_data/{sample}_R2_temp.fastq"
+        R1_temp=os.path.join(output_dir, "raw_data/{sample}_R1_temp.fastq"),
+        R2_temp=os.path.join(output_dir, "raw_data/{sample}_R2_temp.fastq")
     shell:
         """
         # Check if input is gzipped and decompress if needed
@@ -121,16 +123,16 @@ rule gunzip_and_clean_headers:
 #Run fastp for paired-end reads
 rule fastp_pe:
     input:
-        R1="raw_data/{sample}_R1_temp.fastq",
-        R2="raw_data/{sample}_R2_temp.fastq"
+        R1=os.path.join(output_dir, "raw_data/{sample}_R1_temp.fastq"),
+        R2=os.path.join(output_dir, "raw_data/{sample}_R2_temp.fastq")
     output:
-        R1_trimmed="trimmed_data/{sample}_R1_trimmed.fastq",
-        R2_trimmed="trimmed_data/{sample}_R2_trimmed.fastq",
-        report="trimmed_data/{sample}_fastp_report.html",
-        json="trimmed_data/{sample}_fastp_report.json"
+        R1_trimmed=os.path.join(output_dir, "trimmed_data/{sample}_R1_trimmed.fastq"),
+        R2_trimmed=os.path.join(output_dir, "trimmed_data/{sample}_R2_trimmed.fastq"),
+        report=os.path.join(output_dir, "trimmed_data/{sample}_fastp_report.html"),
+        json=os.path.join(output_dir, "trimmed_data/{sample}_fastp_report.json")
     log:
-        out="trimmed_data/{sample}_fastp.out",
-        err="trimmed_data/{sample}_fastp.err"
+        out=os.path.join(output_dir, "trimmed_data/{sample}_fastp.out"),
+        err=os.path.join(output_dir, "trimmed_data/{sample}_fastp.err")
     shell:
         """
         fastp -i {input.R1} -I {input.R2} \
@@ -148,10 +150,10 @@ rule fastp_pe:
 #Concatenate PE fastq files into a single file
 rule fastq_concat:
     input:
-        R1="trimmed_data/{sample}_R1_trimmed.fastq",
-        R2="trimmed_data/{sample}_R2_trimmed.fastq"
+        R1=os.path.join(output_dir, "trimmed_data/{sample}_R1_trimmed.fastq"),
+        R2=os.path.join(output_dir, "trimmed_data/{sample}_R2_trimmed.fastq")
     output:
-        temp("trimmed_data/{sample}_concat.fastq")
+        temp(os.path.join(output_dir, "trimmed_data/{sample}_concat.fastq"))
     shell:
         """
         cat {input.R1} {input.R2} > {output}
@@ -162,12 +164,12 @@ rule fastq_concat:
 #Trim the concatenated fastq file
 rule quality_trim:
     input:
-        "trimmed_data/{sample}_concat.fastq"
+        os.path.join(output_dir, "trimmed_data/{sample}_concat.fastq")
     output:
-        "trimmed_data/{sample}_concat_trimmed.fq"
+        os.path.join(output_dir, "trimmed_data/{sample}_concat_trimmed.fq")
     shell:
         """
-        trim_galore --no_report_file --dont_gzip --output_dir /trimmed_data/ {input}
+        trim_galore --no_report_file --dont_gzip --output_dir {output_dir}/trimmed_data/ {input}
         """
 
 
@@ -175,21 +177,24 @@ rule quality_trim:
 #Run MitoGeneExtractor on trimmed fastq file
 rule MitoGeneExtractor_default:
     input:
-        DNA="trimmed_data/{sample}_concat_trimmed.fq",
-        AA=lambda wildcards: sample_to_reference[wildcards.sample]['path']  # Use reference path
+        DNA=os.path.join(output_dir, "trimmed_data/{sample}_concat_trimmed.fq"),
+        AA=lambda wildcards: protein_references[wildcards.sample]["reference_path"]
     output:
-        alignment="{gene}/{sample}_align_{reference_name}.fas",
-        consensus="{gene}/{sample}_con_{reference_name}.fas",
-        vulgar="{gene}/{sample}_vulgar_{reference_name}.txt"
+        alignment=os.path.join(output_dir, "{gene}/{sample}_align_{reference_name}.fas"),
+        consensus=os.path.join(output_dir, "{gene}/{sample}_con_{reference_name}.fas"),
+        vulgar=os.path.join(output_dir, "{gene}/{sample}_vulgar_{reference_name}.txt")
     log:
-        out="{gene}/{sample}_summary_{reference_name}.out",
-        err="{gene}/{sample}_summary_{reference_name}.err"
+        out=os.path.join(output_dir, "{gene}/{sample}_summary_{reference_name}.out"),
+        err=os.path.join(output_dir, "{gene}/{sample}_summary_{reference_name}.err")
+    params:
+        reference_name=lambda wildcards: protein_references[wildcards.sample]["reference_name"]
     shell:
         """
-        ../../MitoGeneExtractor-v1.9.5 -q {input.DNA} -p {input.AA} \
-        -o {wildcards.gene}/{wildcards.sample}_con_ \
+        /home/danip3/MitoGeneExtractor-main/MitoGeneExtractor-v1.9.5 \
+        -q {input.DNA} -p {input.AA} \
+        -o {wildcards.gene}/{wildcards.sample}_align_ \
         -c {wildcards.gene}/{wildcards.sample}_con_ \
-        -V {output.vulgar} \
+        -V {wildcards.gene}/{wildcards.sample}_vulgar \
         -n 0 -C 5 -r 1 -t 0.5 \
         > {log.out} 2> {log.err}
         """
