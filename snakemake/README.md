@@ -1,7 +1,7 @@
 # MGE via snakemake with added functionality for BGE
 - Run using snakemake.sh
 - Requires BGE_test_samples.csv (Snakefile and Snakefile2) and gene_fetch_BGE_test_data.csv (Snakefile2)
-- Snakemake, TrimGalore, and Exonerate installed in conda env
+- Snakemake, TrimGalore, Exonerate, and numpy installed in conda env
 
 ## Running options:
 **Snakefile:**
