@@ -1,4 +1,4 @@
-samples_file: "./BGE_test_samples.csv"
+samples_file: "/home/danip3/MitoGeneExtractor-main/BGE-test/mge_test_snakemake/WK-3860_samples.csv"
 
 output_dir: "/gpfs/nhmfsa/bulk/share/data/mbl/share/scratch/MGE"
 
@@ -6,12 +6,13 @@ genes:
   - cox1
   
 
+r_params:
+  - 1 # default of MGE
+#  - 0.8
+#  - 1.5
 
-#r_params:
-#  - 1 default of MGE
-#  - 0.7
 
-#s_params:
-#  - 100 defualt of MGE
-#  - 80
+s_params:
+  - 100 # defualt of MGE
+#  - 70
 #  - 50
