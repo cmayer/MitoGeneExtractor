@@ -1,4 +1,6 @@
-###REQUIRES BIOPYTHON, PANDAS AND NUMPY INSTALLED IN ACTIVATE CONDA ENV
+### REQUIRES BIOPYTHON, PANDAS AND NUMPY INSTALLED IN ACTIVATE CONDA ENV
+
+
 
 import os
 import sys
@@ -7,9 +9,12 @@ import time
 from Bio.Blast import NCBIWWW, NCBIXML
 import numpy as np
 
+
+
+
 def extract_data_from_out_files(folder_path, output_csv):
     try:
-        data_list = []  # List to store extracted data
+        data_list = []  
 
         for filename in os.listdir(folder_path):
             if filename.endswith(".out"):
@@ -17,7 +22,7 @@ def extract_data_from_out_files(folder_path, output_csv):
                 with open(file_path, 'r') as file:
                     data = {}
                     for line in file:
-                        # Define terms to search for
+#Define terms to search for in MGE .out files
                         terms = [
                             "consensus sequence output",
                             "Number of input sequences considered",
@@ -31,17 +36,16 @@ def extract_data_from_out_files(folder_path, output_csv):
                             "# skipped reads due to low rel. score"  
                         ]
 
-                        # Process each line
                         for term in terms:
                             if term in line:
                                 value = line.split(":")[1].strip()
                                 
-                                # Remove leading and trailing quotes if present
+#Remove leading and trailing quotes if present
                                 if value.startswith('"') and value.endswith('"'):
                                     value = value[1:-1]
 
                                 if term == "consensus sequence output":
-                                    # Extract "BSNHM***-**" from the value
+#Extract "BSNHM***-**" from the value
                                     start_index = value.find("BSNHM")
                                     if start_index != -1:
                                         value = value[start_index:start_index + 11]
@@ -54,41 +58,39 @@ def extract_data_from_out_files(folder_path, output_csv):
                                         data[term] = value
                                 else:
                                     try:
-                                        # Try converting to float
                                         numeric_value = float(value)
-                                        # Convert to int if the value is effectively an integer
+
                                         if numeric_value.is_integer():
                                             data[term] = int(numeric_value)
                                         else:
                                             data[term] = numeric_value
+
                                     except ValueError:
-                                        # If conversion fails, keep the original string value
                                         data[term] = value
 
-                    # Append the extracted data to the list
+#Append extracted data to list
                     if data:
                         data_list.append(data)
 
-        # Create df from list of data
+#Create df from list 
         if data_list:
             summary_df = pd.DataFrame(data_list)
 
-            # Debugging: print DataFrame before dropping rows
             print("Summary DataFrame before dropping rows:")
             print(summary_df)
 
-            # Remove rows with missing values in "Number of input sequences considered"
+#Remove rows with missing values in "Number of input sequences considered"
             if "Number of input sequences considered" in summary_df.columns:
                 summary_df.dropna(subset=["Number of input sequences considered"], inplace=True)
             else:
                 print("Warning: 'Number of input sequences considered' not found in columns.")
 
-            # Ensure numeric columns do not have decimals if they are integers
+#Get rid of decimals if they are integers
             for column in summary_df.select_dtypes(include=['float']).columns:
                 if all(summary_df[column].dropna().apply(float.is_integer)):
                     summary_df[column] = summary_df[column].astype('Int64')
 
-            # Save df as .csv
+#Save df as .csv
             summary_df.to_csv(output_csv, index=False)
             print(f"Cleaned summary stats saved to {output_csv}")
         else:
@@ -96,6 +98,10 @@ def extract_data_from_out_files(folder_path, output_csv):
 
     except FileNotFoundError:
         print(f"Folder '{folder_path}' not found.")
+
+
+
+
 
 def process_fasta_file(fasta_file):
     sequences = {}
@@ -108,15 +114,20 @@ def process_fasta_file(fasta_file):
                     sequences[header] = "".join(sequence)
                 elif header:  # In case there's a header with no sequence
                     sequences[header] = ""
-                header = line.strip().split(" ")[0][1:].split("_")[0]  # Extract header part before the first '_'
+#Extract header part before the first '_'
+                header = line.strip().split(" ")[0][1:].split("_")[0]  
                 sequence = []
             else:
                 sequence.append(line.strip())
         if header and sequence:
-            sequences[header] = "".join(sequence)  # Add the last sequence
-        elif header:  # In case there's a header with no sequence at the end
+            sequences[header] = "".join(sequence)  
+        elif header:  
             sequences[header] = ""
     return sequences
+
+
+
+
 
 def add_fasta_info_to_df(df, fasta_sequences, consensus_column):
     lengths = []
@@ -146,8 +157,9 @@ def add_fasta_info_to_df(df, fasta_sequences, consensus_column):
                 'Subject Coverage': np.nan,
                 'Accession': np.nan
             }
+
         else:
-            sequence_length = len(sequence)
+            sequence_length = sum(1 for char in sequence if char in 'GTAC')
             non_gtac_count = sum(1 for char in sequence if char not in 'GTAC')
             n_count = sequence.count('N')
             dash_tilde_count = sequence.count('-') + sequence.count('~')
@@ -159,7 +171,8 @@ def add_fasta_info_to_df(df, fasta_sequences, consensus_column):
         dash_tilde_counts.append(dash_tilde_count)
         blast_results.append(blast_result)
 
-    # Extract individual BLAST result fields into separate lists
+
+#Extract individual BLAST result fields into separate lists
     df["Sequence Length"] = lengths
     df["N Count"] = n_counts
     df["Dash and Tilde Count"] = dash_tilde_counts
@@ -176,10 +189,13 @@ def add_fasta_info_to_df(df, fasta_sequences, consensus_column):
     
     return df
 
+
+
 def run_blast(sequence):
     try:
         result_handle = NCBIWWW.qblast("blastn", "nt", sequence)
         blast_records = NCBIXML.parse(result_handle)
+
         for blast_record in blast_records:
             for alignment in blast_record.alignments:
                 for hsp in alignment.hsps:
@@ -195,6 +211,7 @@ def run_blast(sequence):
                         'Subject Coverage': f"{hsp.sbjct_start}-{hsp.sbjct_end}",
                         'Accession': alignment.accession
                     }
+
         return {
             'Title': np.nan,
             'Score': np.nan,
@@ -206,6 +223,7 @@ def run_blast(sequence):
             'Subject Coverage': np.nan,
             'Accession': np.nan
         }
+
     except Exception as e:
         print(f"Error running BLAST: {e}")
         return {
@@ -219,9 +237,14 @@ def run_blast(sequence):
             'Subject Coverage': np.nan,
             'Accession': np.nan
         }
+
     finally:
-        # Sleep to handle rate limiting
+#Sleep to handle rate limiting
         time.sleep(5)
+
+
+
+
 if __name__ == "__main__":
     if len(sys.argv) != 4:
         print("""
@@ -231,7 +254,7 @@ if __name__ == "__main__":
         Extract data from MGE .out files, MGE concatenated cox1 consensus sequences in multi-FASTA file, and BLAST results to the output .csv
         
         MGE output:
-        	Length of alignment = length of subject/reference sequence 
+        Length of alignment = length of subject/reference sequence 
                 Sequence found in vulgar file = number of sequences used by exonerate
                 # skipped reads due to low rel. score = number of reads omitted by MGE due to a low relative exonerate alignment score (-r)
 
@@ -246,25 +269,27 @@ if __name__ == "__main__":
         """)
         sys.exit(1)
 
+
     folder_path = sys.argv[1]
     output_csv = sys.argv[2]
     fasta_file = sys.argv[3]
 
-    # Extract data from .out files and save to CSV
+
+
+#Extract data from .out files and save to CSV
     extract_data_from_out_files(folder_path, output_csv)
 
-    # Process FASTA file
+#Process FASTA file
     fasta_sequences = process_fasta_file(fasta_file)
 
-    # Check if the output CSV was created and is not empty
+#Check if the output CSV was created and is not empty
     if os.path.exists(output_csv) and os.path.getsize(output_csv) > 0:
-        # Load the summary DataFrame
         summary_df = pd.read_csv(output_csv)
 
-        # Add FASTA information and BLAST results to DataFrame
+#Add FASTA information and BLAST results to DataFrame
         summary_df = add_fasta_info_to_df(summary_df, fasta_sequences, "consensus sequence output")
 
-        # Save the updated DataFrame to CSV
+#Save the updated DataFrame to CSV
         summary_df.to_csv(output_csv, index=False)
         print(f"Updated summary stats saved to {output_csv}")
     else:
