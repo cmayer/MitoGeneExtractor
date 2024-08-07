@@ -1,19 +1,17 @@
 samples_file: "./BGE_test_samples.csv"
 
+output_dir: "/gpfs/nhmfsa/bulk/share/data/mbl/share/scratch/MGE"
+
 genes:
   - cox1
   
-#cov_params:
-#  - 1 
-#  - 5 default of MGE
+
 
 #r_params:
 #  - 1 default of MGE
 #  - 0.7
 
-#n_params:
-#  - 0 default of MGE
-
 #s_params:
 #  - 100 defualt of MGE
-#  - 70
+#  - 80
+#  - 50
