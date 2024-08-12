@@ -7,8 +7,8 @@ import pandas as pd
 
 
 #Define and load config
-configfile: "config2.yaml"
-config = yaml.safe_load(open("config2.yaml"))
+configfile: "config-samplesCSV_mgefetch-testing.yaml"
+config = yaml.safe_load(open("config-samplesCSV_mgefetch-testing.yaml"))
 
 
 
@@ -32,9 +32,10 @@ def parse_protein_references(protein_reference_file):
     with open(protein_reference_file, mode='r') as infile:
         reader = csv.DictReader(infile)
         for row in reader:
-            sample_id = row['ID']
+            sample_id = row['process_id']
             reference_name = row['reference_name']
             reference_path = row['reference_path']
+            accession_number = row['accession_number']
             protein_references[sample_id] = {"reference_name": reference_name, "reference_path": reference_path}
     print(f"Protein references parsed: {protein_references}")
     return protein_references
@@ -60,16 +61,15 @@ print("sample list:", sample_list)
 
 #Use zip to pair sample_list and reference_list
 sample_reference_pairs = list(zip(sample_list, reference_list))
+
 print("sample reference pairs:", sample_reference_pairs)
 
 
-#Define targets based on samples and their corresponding references
-expanded_files = expand(
-    os.path.join(output_dir, "{gene}/{sample}_con_{reference_name}.fas"), 
-    gene=config["genes"], 
-    sample=[pair[0] for pair in sample_reference_pairs],
-    reference_name=[pair[1] for pair in sample_reference_pairs]
-)
+expanded_files = [
+    os.path.join(output_dir, f"{gene}/{sample}_con_{reference_name}.fas")
+    for gene in config["genes"]
+    for sample, reference_name in sample_reference_pairs
+]
 
 
 #Rule ALL
@@ -186,15 +186,13 @@ rule MitoGeneExtractor_default:
     log:
         out=os.path.join(output_dir, "{gene}/{sample}_summary_{reference_name}.out"),
         err=os.path.join(output_dir, "{gene}/{sample}_summary_{reference_name}.err")
-    params:
-        reference_name=lambda wildcards: protein_references[wildcards.sample]["reference_name"]
-    shell:
+shell:
         """
         /home/danip3/MitoGeneExtractor-main/MitoGeneExtractor-v1.9.5 \
         -q {input.DNA} -p {input.AA} \
         -o {wildcards.gene}/{wildcards.sample}_align_ \
         -c {wildcards.gene}/{wildcards.sample}_con_ \
-        -V {wildcards.gene}/{wildcards.sample}_vulgar \
+        -V {output.vulgar} \
         -n 0 -C 5 -r 1 -t 0.5 \
         > {log.out} 2> {log.err}
         """
