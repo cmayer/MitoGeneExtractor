@@ -20,8 +20,9 @@
   
 - Run using snakemake.sh
 
+**Test run**
 - Raw reads for 12 test samples can be downloaded [here](https://naturalhistorymuseum-my.sharepoint.com/personal/b_price_nhm_ac_uk/_layouts/15/onedrive.aspx?ct=1723035606962&or=Teams%2DHL&ga=1&LOF=1&id=%2Fpersonal%2Fb%5Fprice%5Fnhm%5Fac%5Fuk%2FDocuments%2F%5Ftemp%2F%5FBGEexamples4Felix%2F1%5Fraw%5Fdata). Each read pair must be in seperate subdirectories under a parent directory that can be called anything.
-- BGE_test_sampels. and gene_fetch_BGE_test_data.csv required for test data runs.
+- BGE_test_samples.csv and gene_fetch_BGE_test_data.csv listed in config.yaml.
 
 ## Running options: ##
 **2_snakefile-insecta:**
@@ -36,19 +37,20 @@
 - Uses taxa-specific references from protein_references.csv (examples stored in protein_references_2 dir).
 
 ## To do ##
-- Get different parameter configurations to run in conjunction with insetca or genefetch protein references (see 2_snakefile-insecta for parameter change implementation).
+- Get different parameter configurations to run in conjunction with insecta AND genefetch protein references (see 2_snakefile-insecta for parameter change implementation).
+- Integrate 3_mge_tidy-snakemake.py and 4_mge_stats-snakemake.py (funcitonality) into snakefile
 
 ## MGE output post-processing ##
-Python scripts to organise, trim, concatenate and calculate summary stats from MGE outputs.
+Python scripts to organise outputs into directories, trim consensus sequences and 'clean' header names, concatenate into a multi-fasta, calculate summary stats and run BLAST on each consensus sequence.
 
-### 4_mge_tidy-snakemake.py ###
-Usage information output by running 'python 4_mge_tidy-snakemake.py'
+### 3_mge_tidy-snakemake.py ###
+Usage information output by running 'python 3_mge_tidy-snakemake.py'
 - Organised files into subdirectories (alignment, consensus, err, logs, out) depending on file extension.
-- Concatenates consensus.fas files together (within consensus subdir) and outputs user-specified multi.fasta (highly recommended to include 'cox1' in filename for downstream BOLDigger2 functionality).
-- 'Cleans' and trims sequence headers of consenus sequences.
+- Concatenates consensus.fas files together (within consensus subdir) and outputs user-specified multi-fasta (highly recommended to include 'cox1' in concatenated consensus filename for downstream BOLDigger2 runs).
+- 'Cleans' and trims sequence headers of each consenus sequences.
 
-### 5_mge_stats-snakemake.py ###
-Usage information output by running 'python 5_mge_stats-snakemake.py'. Outputs summary stats to .csv file.
+### 4_mge_stats-snakemake.py ###
+Usage information output by running 'python 4_mge_stats-snakemake.py'. Outputs summary stats to .csv file.
 - Reads relevant fields from .out files in 'out' dir:
   -  consensus sequence output (i.e. process ID)
   -  Number of input sequences considered
@@ -75,4 +77,3 @@ Usage information output by running 'python 5_mge_stats-snakemake.py'. Outputs s
   - BLAST Query Coverage (range of positions in query (input) sequence covered by alignment)
   - BLAST Subject Coverage (range of positions in subject equence covered by alignment)
   - BLAST Accession (top hit accession number)
-
