@@ -9,6 +9,7 @@
 | BSNHM046-24 | abs/path/to/R1.fq.gz | abs/path/to/R2.fq.gz | 3084599 |
 
 - 2_snakefile-genefetch require protein_references.csv (e.g. gene_fetch_BGE_test_data.csv) listed in config.yaml (see below):
+
 | ID | matched_term | accession_number | reference_path | reference_name |
 | --- | --- | --- | --- | --- |
 | BSNHM002-24  | Apataniidae | YP_010586031.1 | abs/path/to/protein_references/BSNHM002-24.fasta | BSNHM002-24 |
