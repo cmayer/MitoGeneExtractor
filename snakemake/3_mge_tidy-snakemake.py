@@ -3,6 +3,7 @@ import sys
 import shutil
 
 
+
 def process_files_in_directory(directory, alignment_dir, consensus_dir, out_dir, err_dir, logs_dir, consensus_files):
     for filename in os.listdir(directory):
         file_path = os.path.join(directory, filename)
@@ -11,6 +12,7 @@ def process_files_in_directory(directory, alignment_dir, consensus_dir, out_dir,
             if 'align' in filename:
                 shutil.move(file_path, os.path.join(alignment_dir, filename))
             elif 'con' in filename:
+                rename_sequence_headers(file_path)
                 shutil.move(file_path, os.path.join(consensus_dir, filename))
                 consensus_files.append(os.path.join(consensus_dir, filename))
         elif filename.lower().endswith('.out'):
@@ -21,21 +23,31 @@ def process_files_in_directory(directory, alignment_dir, consensus_dir, out_dir,
             shutil.move(file_path, os.path.join(logs_dir, filename))
 
 
+
+def rename_sequence_headers(fasta_file):
+    temp_file = fasta_file + ".tmp"
+    filename = os.path.basename(fasta_file)
+    prefix = filename[:11]
+
+    with open(fasta_file, 'r') as infile, open(temp_file, 'w') as outfile:
+        for line in infile:
+            if line.startswith('>'):
+                header = line.strip().replace('Consensus__', '')
+                new_header = f">{prefix}_{header[1:]}"
+                outfile.write(new_header + '\n')
+            else:
+                outfile.write(line)
+
+    os.replace(temp_file, fasta_file)
+
+
+
 def concatenate_fasta_files(files_to_concatenate, output_file):
     with open(output_file, 'w') as outfile:
         for file in files_to_concatenate:
-            filename = os.path.basename(file)
-            #Prefix = first 11 characters of filename (i.e. process ID)
-            prefix = filename[:11]
             with open(file, 'r') as infile:
-                for line in infile:
-                    if line.startswith('>'):
-                        # Update header
-                        header = line.strip().replace('Consensus__', '')
-                        new_header = f">{prefix}_{header[1:]}"
-                        outfile.write(new_header + '\n')
-                    else:
-                        outfile.write(line)
+                outfile.write(infile.read())
+
 
 
 def main():

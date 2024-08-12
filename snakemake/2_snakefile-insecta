@@ -5,8 +5,8 @@ import yaml
 
 
 #Define and load config
-configfile: "config.yaml"
-config = yaml.safe_load(open("config.yaml"))
+configfile: "config-samplesCSV_insecta.yaml"
+config = yaml.safe_load(open("config-samplesCSV_insecta.yaml"))
 
 
 #Parse samples from csv
@@ -148,12 +148,12 @@ rule MitoGeneExtractor_diff_params:
         DNA=os.path.join(output_dir, "trimmed_data/{sample}_concat_trimmed.fq"),
         AA="protein_references/insecta_{gene}.fasta"
     output:
-        alignment=os.path.join(output_dir, "{gene}/{sample}_align_insecta_{gene}.fas"),
-        consensus=os.path.join(output_dir, "{gene}/{sample}_con_insecta_{gene}.fas"),
-        vulgar=os.path.join(output_dir, "{gene}/{sample}_vulgar.txt")
+        alignment=os.path.join(output_dir, "{gene}/{sample}_r_{r}_s_{s}_align_insecta_{gene}.fas"),
+        consensus=os.path.join(output_dir, "{gene}/{sample}_r_{r}_s_{s}_con_insecta_{gene}.fas"),
+        vulgar=os.path.join(output_dir, "{gene}/{sample}_r_{r}_s_{s}_vulgar_insecta_{gene}.txt")
     log:
-        out=os.path.join(output_dir, "{gene}/{sample}_summary.out"),
-        err=os.path.join(output_dir, "{gene}/{sample}_summary.err")
+        out=os.path.join(output_dir, "{gene}/{sample}_r_{r}_s_{s}_summary_insecta_{gene}.out"),
+        err=os.path.join(output_dir, "{gene}/{sample}_r_{r}_s_{s}_summary_insecta_{gene}.err")
     shell:
         """
         echo "Running MitoGeneExtractor with the following parameters:"
@@ -165,8 +165,8 @@ rule MitoGeneExtractor_diff_params:
 
         /home/danip3/MitoGeneExtractor-main/MitoGeneExtractor-v1.9.5 \
         -q {input.DNA} -p {input.AA} \
-        -o {wildcards.gene}/{wildcards.sample}_align_  \
-        -c {wildcards.gene}/{wildcards.sample}_con_  \
+        -o {wildcards.gene}/{wildcards.sample}_r_{wildcards.r}_s_{wildcards.s}_align_  \
+        -c {wildcards.gene}/{wildcards.sample}_r_{wildcards.r}_s_{wildcards.s}_con_  \
         -V {output.vulgar} \
         -n 0 -t 0.5 -r {wildcards.r} -s {wildcards.s} \
         > {log.out} 2> {log.err}
