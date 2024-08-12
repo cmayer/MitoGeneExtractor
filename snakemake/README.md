@@ -1,6 +1,6 @@
 # MGE via snakemake with added functionality for BGE #
 **Requirements:**
-- 2_snakefile-insecta and 2_snakefile-genefetch require samples.csv (e.g. BGE_test_samples.csv) listed in config.yaml files (see below):
+- 2_snakefile-insecta and 2_snakefile-genefetch require path to samples.csv (e.g. BGE_test_samples.csv) listed in config.yaml files (see below):
   
 | ID | forward | reverse | taxid |
 | --- | --- | --- | --- |
@@ -8,7 +8,7 @@
 | BSNHM038-24 | abs/path/to/R1.fq.gz | abs/path/to/R2.fq.gz | 177627 |
 | BSNHM046-24 | abs/path/to/R1.fq.gz | abs/path/to/R2.fq.gz | 3084599 |
 
-- 2_snakefile-genefetch require protein_references.csv (e.g. gene_fetch_BGE_test_data.csv) listed in config.yaml (see below):
+- 2_snakefile-genefetch require path to protein_references.csv (e.g. gene_fetch_BGE_test_data.csv) listed in config.yaml. File generated using 1_gene_fetch.py script (see output below):
 
 | ID | matched_term | accession_number | reference_path | reference_name |
 | --- | --- | --- | --- | --- |
