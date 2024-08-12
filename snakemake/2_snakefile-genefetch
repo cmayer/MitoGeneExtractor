@@ -7,8 +7,8 @@ import pandas as pd
 
 
 #Define and load config
-configfile: "config-samplesCSV_mgefetch-testing.yaml"
-config = yaml.safe_load(open("config-samplesCSV_mgefetch-testing.yaml"))
+configfile: "config-genefetch.yaml"
+config = yaml.safe_load(open("config-genefetch.yaml"))
 
 
 
