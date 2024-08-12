@@ -1,5 +1,5 @@
 # MGE via snakemake with added functionality for BGE #
-** Requirements: **
+**Requirements:**
 - 2_snakefile-insecta and 2_snakefile-genefetch require samples.csv (e.g. BGE_test_samples.csv) listed in config.yaml files (see below):
   
 | ID | forward | reverse | taxid |
