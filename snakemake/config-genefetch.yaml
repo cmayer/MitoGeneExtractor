@@ -1,8 +1,8 @@
-samples_file: "/gpfs/nhmfsa/bulk/share/data/mbl/share/workspaces/groups/genomics-collections/BGE/BGE_scripts/sample_processing/WK-3860_samples.csv"
+samples_file: "path/to/WK-3860_samples.csv"
 
-protein_reference_file: "/gpfs/nhmfsa/bulk/share/data/mbl/share/workspaces/groups/genomics-collections/BGE/BGE_scripts/mge/protein_reference_BGE_1_2-processID/protein_references/BOLD_output_mge_fetch_sum_out.csv"
+protein_reference_file: "path/to/protein_references/BOLD_output_mge_fetch_sum_out.csv"
 
-output_dir: "/gpfs/nhmfsa/bulk/share/data/mbl/share/scratch/MGE"
+output_dir: "path/to/MGE-out"
 
 genes:
   - cox1
@@ -10,16 +10,9 @@ genes:
 
 
 
-#cov_params:
-#  - 1 
-#  - 5 default of MGE
-
 #r_params:
 #  - 1 default of MGE
 #  - 0.7
-
-#n_params:
-#  - 0 default of MGE
 
 #s_params:
 #  - 100 defualt of MGE
