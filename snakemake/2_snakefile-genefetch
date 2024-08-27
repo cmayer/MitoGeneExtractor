@@ -188,7 +188,7 @@ rule MitoGeneExtractor_default:
         err=os.path.join(output_dir, "{gene}/{sample}_summary_{reference_name}.err")
 shell:
         """
-        /home/danip3/MitoGeneExtractor-main/MitoGeneExtractor-v1.9.5 \
+        ../MitoGeneExtractor-v1.9.5 \
         -q {input.DNA} -p {input.AA} \
         -o {wildcards.gene}/{wildcards.sample}_align_ \
         -c {wildcards.gene}/{wildcards.sample}_con_ \
