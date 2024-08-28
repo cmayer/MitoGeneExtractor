@@ -6,8 +6,8 @@
   - path to 'protein_references.csv' (example below - created using [1_gene_fetch.py](https://github.com/SchistoDan/MitoGeneExtractor/blob/main/snakemake/1_gene_fetch.py))
   - path to output directory (new directories will be created)
   - gene of interest (e.g. cox1)
-- activated conda env (with Snakemake, TrimGalore, Exonerate, Fastp, Biopython and Numpy installed)
-- can be run on cluster using 'snakemake.sh'
+- Activated conda env (with Snakemake, TrimGalore, Exonerate, Fastp, Biopython and Numpy installed). See mge_env.yaml
+- Can be run on cluster using 'snakemake.sh'
 
 **samples.csv example**
 | ID | forward | reverse | taxid |
@@ -42,7 +42,7 @@
 **Test run**
 - Raw reads for 12 test samples can be downloaded [here](https://naturalhistorymuseum-my.sharepoint.com/personal/b_price_nhm_ac_uk/_layouts/15/onedrive.aspx?ct=1723035606962&or=Teams%2DHL&ga=1&LOF=1&id=%2Fpersonal%2Fb%5Fprice%5Fnhm%5Fac%5Fuk%2FDocuments%2F%5Ftemp%2F%5FBGEexamples4Felix%2F1%5Fraw%5Fdata). Each read pair must be in seperate subdirectories under a parent directory that can be called anything
 - BGE_test_samples.csv provided (paths to reads and references need to be altered)
-- To generate protein_references.csv - 1_gene_fetch.py run using BOLD_output.csv containing taxonomic ranks for each sample
+- To generate protein_references.csv - 1_gene_fetch.py run using [BOLD_output-test_data.csv](https://github.com/SchistoDan/MitoGeneExtractor/blob/main/snakemake/BOLD_output-test_data.csv) containing taxonomic ranks for each sample
 
 
 ## To do ##
