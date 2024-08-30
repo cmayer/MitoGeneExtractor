@@ -180,6 +180,6 @@ if __name__ == "__main__":
         summary_df = add_fasta_info_to_df(summary_df, fasta_sequences, "consensus sequence output")
 
         summary_df.to_csv(output_csv, index=False)
-        print(f"Updated summary stats saved to {output_csv}")
+        print(f"Summary stats saved to {output_csv}")
     else:
-        print(f"Error: No valid data extracted. The output CSV '{output_csv}' is empty or does not exist.")
+        print(f"Error: No data extracted. The output CSV '{output_csv}' is empty or does not exist.")
