@@ -40,8 +40,8 @@
 
 **Test run**
 - Raw reads for 12 test samples can be downloaded [here](https://naturalhistorymuseum-my.sharepoint.com/personal/b_price_nhm_ac_uk/_layouts/15/onedrive.aspx?ct=1723035606962&or=Teams%2DHL&ga=1&LOF=1&id=%2Fpersonal%2Fb%5Fprice%5Fnhm%5Fac%5Fuk%2FDocuments%2F%5Ftemp%2F%5FBGEexamples4Felix%2F1%5Fraw%5Fdata). Each read pair must be in seperate subdirectories under a parent directory that can be called anything
-- BGE_test_samples.csv provided (paths to reads and references need to be altered)
-- To generate protein_references.csv - 1_gene_fetch.py run using [BOLD_output-test_data.csv](https://github.com/SchistoDan/MitoGeneExtractor/blob/main/snakemake/BOLD_output-test_data.csv) containing taxonomic ranks for each sample
+- samples sheet (BGE_test_samples.csv) provided (paths to reads and references need to be altered)
+- protein_references sheet (gene_fetch_BGE_test_data.csv) provided (in protein_references/).
 
 
 ## To do ##
