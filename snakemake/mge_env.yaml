@@ -1,0 +1,12 @@
+name: mge_env
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - biopython=1.84
+  - exonerate=2.4.0
+  - mamba=1.5.8
+  - snakemake=8.18.1
+  - trim-galore=0.6.10
+  - fastp=0.23.4
