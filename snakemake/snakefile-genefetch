@@ -3,12 +3,12 @@ import csv
 import yaml
 from snakemake.io import expand
 import pandas as pd
-
+import glob
 
 
 #Define and load config
-configfile: "config-genefetch.yaml"
-config = yaml.safe_load(open("config-genefetch.yaml"))
+configfile: "config-samplesCSV_genefetch.yaml"
+config = yaml.safe_load(open("config-samplesCSV_genefetch.yaml"))
 
 
 
@@ -45,49 +45,38 @@ samples = parse_samples(config["samples_file"])
 protein_references = parse_protein_references(config["protein_reference_file"])
 output_dir = config["output_dir"]
 
-print("Samples:", samples)
-print("Protein References:", protein_references)
-print(f"Output directory: {output_dir}")
 
 
 
-#Create lists of samples and corresponding references
+#Create lists of samples and corresponding references, and link them
 sample_list = list(samples.keys())
+
 reference_list = [protein_references[sample]["reference_name"] for sample in sample_list]
 
-print("reference list:", reference_list)
-print("sample list:", sample_list)
-
-
-#Use zip to pair sample_list and reference_list
 sample_reference_pairs = list(zip(sample_list, reference_list))
 
-print("sample reference pairs:", sample_reference_pairs)
 
-
-expanded_files = [
-    os.path.join(output_dir, f"{gene}/{sample}_con_{reference_name}.fas")
-    for gene in config["genes"]
-    for sample, reference_name in sample_reference_pairs
+consensus_files = [
+    os.path.join(output_dir, f"consensus/{sample}_con_{reference}.fas")
+    for sample, reference in sample_reference_pairs
 ]
 
 
-#Rule ALL
+
+print(f"Output directory: {output_dir}")
+print("sample reference pairs:", sample_reference_pairs)
+print(f"Target consensus files: {consensus_files}")
+
+
+
+
+
 rule all:
     input:
-        expanded_files
+        os.path.join(output_dir, "summary_stats.csv")
 
 
 
-#Rule to ensure necessary directories exist
-rule directories_exist:
-    output:
-        directory(os.path.join(output_dir, "raw_data")),
-        directory(os.path.join(output_dir, "trimmed_data")),
-    shell:
-        """
-        mkdir -p {output.raw_data} {output.trimmed_data}
-        """
 
 
 
@@ -97,34 +86,35 @@ rule gunzip_and_clean_headers:
         R1=lambda wildcards: samples[wildcards.sample]["R1"],
         R2=lambda wildcards: samples[wildcards.sample]["R2"]
     output:
-        R1_temp=os.path.join(output_dir, "raw_data/{sample}_R1_temp.fastq"),
-        R2_temp=os.path.join(output_dir, "raw_data/{sample}_R2_temp.fastq")
+        R1_out=os.path.join(output_dir, "raw_data/{sample}_R1_clean.fastq"),
+        R2_out=os.path.join(output_dir, "raw_data/{sample}_R2_clean.fastq")
     shell:
         """
         # Check if input is gzipped and decompress if needed
         if [[ {input.R1} == *.gz ]]; then
-            gzip -cd {input.R1} > {output.R1_temp}
+            gzip -cd {input.R1} > {output.R1_out}
         else
-            cp {input.R1} {output.R1_temp}
+            cp {input.R1} {output.R1_out}
         fi
 
         if [[ {input.R2} == *.gz ]]; then
-            gzip -cd {input.R2} > {output.R2_temp}
+            gzip -cd {input.R2} > {output.R2_out}
         else
-            cp {input.R2} {output.R2_temp}
+            cp {input.R2} {output.R2_out}
         fi
         
-        sed -i 's/ /_/g' {output.R1_temp}
-        sed -i 's/ /_/g' {output.R2_temp}
+        sed -i 's/ /_/g' {output.R1_out}
+        sed -i 's/ /_/g' {output.R2_out}
         """
+
 
 
 	
 #Run fastp for paired-end reads
 rule fastp_pe:
     input:
-        R1=os.path.join(output_dir, "raw_data/{sample}_R1_temp.fastq"),
-        R2=os.path.join(output_dir, "raw_data/{sample}_R2_temp.fastq")
+        R1=os.path.join(output_dir, "raw_data/{sample}_R1_clean.fastq"),
+        R2=os.path.join(output_dir, "raw_data/{sample}_R2_clean.fastq")
     output:
         R1_trimmed=os.path.join(output_dir, "trimmed_data/{sample}_R1_trimmed.fastq"),
         R2_trimmed=os.path.join(output_dir, "trimmed_data/{sample}_R2_trimmed.fastq"),
@@ -147,6 +137,7 @@ rule fastp_pe:
 
 
 
+
 #Concatenate PE fastq files into a single file
 rule fastq_concat:
     input:
@@ -158,6 +149,7 @@ rule fastq_concat:
         """
         cat {input.R1} {input.R2} > {output}
         """
+
 
 
 
@@ -174,25 +166,96 @@ rule quality_trim:
 
 
 
+
 #Run MitoGeneExtractor on trimmed fastq file
 rule MitoGeneExtractor_default:
     input:
         DNA=os.path.join(output_dir, "trimmed_data/{sample}_concat_trimmed.fq"),
         AA=lambda wildcards: protein_references[wildcards.sample]["reference_path"]
     output:
-        alignment=os.path.join(output_dir, "{gene}/{sample}_align_{reference_name}.fas"),
-        consensus=os.path.join(output_dir, "{gene}/{sample}_con_{reference_name}.fas"),
-        vulgar=os.path.join(output_dir, "{gene}/{sample}_vulgar_{reference_name}.txt")
+        alignment=os.path.join(output_dir, "alignment/{sample}_align_{reference_name}.fas"),
+        consensus=os.path.join(output_dir, "consensus/{sample}_con_{reference_name}.fas"),
+        vulgar=os.path.join(output_dir, "logs/{sample}_vulgar_{reference_name}.txt")
     log:
-        out=os.path.join(output_dir, "{gene}/{sample}_summary_{reference_name}.out"),
-        err=os.path.join(output_dir, "{gene}/{sample}_summary_{reference_name}.err")
-shell:
+        out=os.path.join(output_dir, "out/{sample}_summary_{reference_name}.out"),
+        err=os.path.join(output_dir, "err/{sample}_summary_{reference_name}.err")
+    shell:
         """
-        ../MitoGeneExtractor-v1.9.5 \
+        /home/danip3/MitoGeneExtractor-main/MitoGeneExtractor-v1.9.5 \
         -q {input.DNA} -p {input.AA} \
-        -o {wildcards.gene}/{wildcards.sample}_align_ \
-        -c {wildcards.gene}/{wildcards.sample}_con_ \
-        -V {output.vulgar} \
+        -o {output_dir}/alignment/{wildcards.sample}_align_ \
+        -c {output_dir}/consensus/{wildcards.sample}_con_ \
+        -V {output.vulgar}  \
         -n 0 -C 5 -r 1 -t 0.5 \
         > {log.out} 2> {log.err}
         """
+
+
+
+
+
+#Concatenate all consensus fasta files
+rule concatenate_fasta:
+    input:
+        consensus_files
+    output:
+        os.path.join(output_dir, "consensus/cox1_concatenated_consensus.fasta")
+    shell:
+        """
+        cat {input} > {output}
+        """
+
+
+out_files = [
+    os.path.join(output_dir, f"out/{sample}_summary_{reference}.out")
+    for sample, reference in sample_reference_pairs
+]
+
+print(f"Target .out files: {out_files}")
+
+
+
+#Extract data from .out files and generate summary_stats.csv
+rule extract_data_to_csv:
+    input:
+        out_files=expand(os.path.join(output_dir, "out/{sample}_summary_{reference}.out"),
+                         zip, sample=sample_list, reference=reference_list),
+        fasta_file=os.path.join(output_dir, "consensus/cox1_concatenated_consensus.fasta")
+    output:
+        summary_csv=os.path.join(output_dir, "summary_stats.csv")
+    run:
+        data_list = []
+
+        for out_file in input.out_files:
+            with open(out_file, 'r') as file:
+                data = {}
+                for line in file:
+                    terms = [
+                        "consensus sequence output",
+                        "Number of input sequences considered",
+                        "Length of alignment",
+                        "sequence found in vulgar file",
+                        "number of aligned reads",
+                        "Coverage minimum",
+                        "Coverage maximum",
+                        "Coverage mean",
+                        "Coverage median",
+                        "# skipped reads due to low rel. score"
+                    ]
+                    for term in terms:
+                        if term in line:
+                            key = term
+                            value = line.split(term)[-1].strip().replace(":", "")
+                            
+                            #If the term is "consensus sequence output", extract only the final part of the path
+                            if key == "consensus sequence output":
+                                value = value.split('/')[-1]
+                            
+                            data[key] = value
+
+            data_list.append(data)
+
+        #Convert to df and save to csv file
+        df = pd.DataFrame(data_list)
+
+        df.to_csv(output.summary_csv, index=False)
