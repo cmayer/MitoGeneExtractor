@@ -12,7 +12,7 @@ config = yaml.safe_load(open("config.yaml"))
 
 
 
-#Parse samples from .csv files
+#Parse samples from .csv
 def parse_samples(samples_file):
     samples = {}
     with open(samples_file, mode='r') as infile:
@@ -26,7 +26,7 @@ def parse_samples(samples_file):
 
 
 
-#Parse protein references from CSV
+#Parse protein references from .csv
 def parse_protein_references(protein_reference_file):
     protein_references = {}
     with open(protein_reference_file, mode='r') as infile:
@@ -41,15 +41,20 @@ def parse_protein_references(protein_reference_file):
     return protein_references
 
 
+#Set vars from config
 samples = parse_samples(config["samples_file"])
+
 protein_references = parse_protein_references(config["protein_reference_file"])
+
 output_dir = config["output_dir"]
+
 r_values = config["r_params"]
+
 s_values = config["s_params"]
 
 
 
-#Create lists of samples and corresponding references, and link them
+#Create linked list of sample and corresponding reference
 sample_list = list(samples.keys())
 
 reference_list = [protein_references[sample]["reference_name"] for sample in sample_list]
@@ -57,6 +62,8 @@ reference_list = [protein_references[sample]["reference_name"] for sample in sam
 sample_reference_pairs = list(zip(sample_list, reference_list))
 
 
+
+#Logging
 print(f"Output directory: {output_dir}")
 print(f"r params: {r_values}")
 print(f"s params: {s_values}")
@@ -64,7 +71,7 @@ print("reference list:", reference_list)
 
 
 
-
+#ALL
 rule all:
     input:
         os.path.join(output_dir, "summary_stats.csv"), 
@@ -236,6 +243,7 @@ rule rename_fasta_headers:
 
 
 
+
 #Concatenate all consensus fasta files
 rule concatenate_fasta:
     input:
@@ -257,15 +265,12 @@ rule concatenate_fasta:
 
 
 
-
 out_files = [
     os.path.join(output_dir, f"out/{sample}_r_{r}_s_{s}_summary_{reference}.out")
     for sample, reference in sample_reference_pairs
     for r in config["r_params"]
     for s in config["s_params"]
 ]
-
-
 print(f"Target .out files: {out_files}")
 
 
@@ -407,5 +412,3 @@ rule cleanup_files:
         # Touch output to indicate cleanup completion
         with open(output[0], 'w') as f:
             f.write("Cleanup complete.")    
-
-
