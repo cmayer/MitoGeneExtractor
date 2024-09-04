@@ -49,7 +49,7 @@
 - Generate RO-crates
   
 ## MGE output post-processing ##
-As an alternative to running 'snakefile-genefetch', 3_mge_tidy-snakemake.py and 4_mge_stats-snakemake.py supplementary scripts can be run seperately post-MGE.
+As an alternative to running 'snakefile' or 'snakefile_genefetch-fastpmerge', 3_mge_tidy-snakemake.py and 4_mge_stats-snakemake.py supplementary scripts can be run seperately after MGE.
 
 Python scripts to organise outputs into directories, trim consensus sequences and 'clean' header names, concatenate into a multi-fasta, calculate summary stats and run BLAST on each consensus sequence.
 
