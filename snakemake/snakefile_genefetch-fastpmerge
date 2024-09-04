@@ -52,11 +52,17 @@ sample_list = list(samples.keys())
 reference_list = [protein_references[sample]["reference_name"] for sample in sample_list]
 sample_reference_pairs = list(zip(sample_list, reference_list))
 
-
 consensus_files = [
     os.path.join(output_dir, f"consensus/{sample}_con_{reference}.fas")
     for sample, reference in sample_reference_pairs
 ]
+
+
+#print(f"Output directory: {output_dir}")
+
+#print("sample reference pairs:", sample_reference_pairs)
+
+#print(f"Target consensus files: {consensus_files}")
 
 
 
@@ -65,7 +71,6 @@ consensus_files = [
 rule all:
     input:
         os.path.join(output_dir, "summary_stats.csv")
-
 
 
 
@@ -80,8 +85,8 @@ rule fastp_pe:
         report=os.path.join(output_dir, "trimmed_data/reports/{sample}_fastp_report.html"),
         json=os.path.join(output_dir, "trimmed_data/reports/{sample}_fastp_report.json"),
         merged_reads=os.path.join(output_dir, "trimmed_data/{sample}_merged.fq"),
-        unpaired_R1=os.path.join(output_dir, "trimmed_data/unpaired/{sample}_unpaired_R1.fq.gz"),
-        unpaired_R2=os.path.join(output_dir, "trimmed_data/unpaired/{sample}_unpaired_R2.fq.gz")
+        unpaired_R1=os.path.join(output_dir, "trimmed_data/unpaired/{sample}_unpaired_R1.fq"),
+        unpaired_R2=os.path.join(output_dir, "trimmed_data/unpaired/{sample}_unpaired_R2.fq")
     log:
         err=os.path.join(output_dir, "trimmed_data/{sample}_fastp.err")
     shell:
@@ -99,27 +104,49 @@ rule fastp_pe:
               > {log.err}
         """
 
-
-
-
-#Clean headers (sed whitespace)
+#####clean headers 
+#Rule to clean headers (sed whitespace)
 rule clean_headers:
     input:
-        merged_reads=os.path.join(output_dir, "trimmed_data/{sample}_merged.fq")
+        merged_reads=os.path.join(output_dir, "trimmed_data/{sample}_merged.fq"),
+        R1_unpaired=os.path.join(output_dir, "trimmed_data/unpaired/{sample}_unpaired_R1.fq"),
+        R2_unpaired=os.path.join(output_dir, "trimmed_data/unpaired/{sample}_unpaired_R2.fq")
     output:
-        clean_merged=os.path.join(output_dir, "trimmed_data/{sample}_merged_clean.fq")
+        clean_merged=os.path.join(output_dir, "trimmed_data/{sample}_merged_clean.fq"),
+        clean_R1_unpaired=os.path.join(output_dir, "trimmed_data/unpaired/{sample}_unpaired_R1_clean.fq"),
+        clean_R2_unpaired=os.path.join(output_dir, "trimmed_data/unpaired/{sample}_unpaired_R2_clean.fq")
+
     shell:
         """
         sed 's/ /_/g' {input.merged_reads} > {output.clean_merged}
+        sed 's/ /_/g' {input.R1_unpaired} > {output.clean_R1_unpaired}
+        sed 's/ /_/g' {input.R2_unpaired} > {output.clean_R2_unpaired}
         """
 
 
 
 
-#Run MitoGeneExtractor
+
+
+#Concatenate PE fastq files into a single file
+rule concat:
+    input:
+        merged=os.path.join(output_dir, "trimmed_data/{sample}_merged_clean.fq"),
+        R1=os.path.join(output_dir, "trimmed_data/unpaired/{sample}_unpaired_R1_clean.fq"),
+        R2=os.path.join(output_dir, "trimmed_data/unpaired/{sample}_unpaired_R2_clean.fq")
+    output:
+        temp(os.path.join(output_dir, "trimmed_data/{sample}_concat.fastq"))
+    shell:
+        """
+        cat {input.R1} {input.R2} {input.merged} > {output}
+        """
+
+
+
+#Run MitoGeneExtractor on trimmed fastq file
 rule MitoGeneExtractor_default:
     input:
-        DNA=os.path.join(output_dir, "trimmed_data/{sample}_merged_clean.fq"),
+        DNA=os.path.join(output_dir, "trimmed_data/{sample}_concat.fastq"),
         AA=lambda wildcards: protein_references[wildcards.sample]["reference_path"]
     output:
         alignment=os.path.join(output_dir, "alignment/{sample}_align_{reference_name}.fas"),
@@ -154,9 +181,7 @@ rule concatenate_fasta:
         """
 
 
-
-
-Extract data from .out files and generate summary_stats.csv
+# Rule to extract data from .out files and generate a summary CSV
 rule extract_data_to_csv:
     input:
         out_files=expand(os.path.join(output_dir, "out/{sample}_summary_{reference}.out"),
@@ -167,7 +192,13 @@ rule extract_data_to_csv:
     run:
         data_list = []
 
+
         for out_file in input.out_files:
+            
+            if not os.path.isfile(out_file):
+                print(f"File does not exist: {out_file}")
+                continue
+
             with open(out_file, 'r') as file:
                 data = {}
                 for line in file:
@@ -183,20 +214,74 @@ rule extract_data_to_csv:
                         "Coverage median",
                         "# skipped reads due to low rel. score"
                     ]
+
                     for term in terms:
                         if term in line:
                             key = term
                             value = line.split(term)[-1].strip().replace(":", "")
-                            
-                            #If the term is "consensus sequence output", extract only the final part of the path
-                            if key == "consensus sequence output":
-                                value = value.split('/')[-1]
-                            
                             data[key] = value
 
+            print(f"Extracted data from {out_file}: {data}")
+
+            consensus_sequence_output = data.get("consensus sequence output", "").strip()
+            consensus_sequence_output_filename = os.path.basename(consensus_sequence_output)
+
+            consensus_sequence_output_filename = consensus_sequence_output_filename.replace("_con_", "")
+            data['consensus sequence output'] = consensus_sequence_output_filename
+            
+            file_name = os.path.basename(out_file)
+            parts = file_name.split("_")
+            sample_name = "_".join(parts[0:4])  #E.g. BSNHM011-24_r_1.3_s_50
+            reference_name = parts[-1].replace(".out", "")  #E.g. BSNHM011-24
+            data['sample'] = sample_name
+            data['reference'] = reference_name
+            
             data_list.append(data)
 
-        #Convert to df and save to csv file
         df = pd.DataFrame(data_list)
 
+        seq_dict = {}
+
+        with open(input.fasta_file, "r") as fasta_file:
+            current_key = None
+            for line in fasta_file:
+                if line.startswith(">"):
+                    if current_key:  # Save previous sequence data
+                        seq = seq_dict.get(current_key, "")
+                        total_length = len(seq)
+                        num_n = seq.count('N')
+                        num_gaps = seq.count('-') + seq.count('~')
+                        seq_dict[current_key] = {
+                            'total_length': total_length,
+                            'num_n': num_n,
+                            'num_gaps': num_gaps
+                        }
+                    #Strip 'Consensus_' prefix from fasta header for matching purposes
+                    current_key = line.strip().lstrip(">").split()[0]
+                    current_key = current_key.replace("Consensus_", "")  
+                    print(f"Parsed FASTA header: {current_key}")  
+                    seq_dict[current_key] = ""
+
+                else:
+                    if current_key:
+                        seq_dict[current_key] += line.strip()
+
+            if current_key:
+                seq = seq_dict.get(current_key, "")
+                total_length = len(seq)
+                num_n = seq.count('N')
+                num_gaps = seq.count('-') + seq.count('~')
+                seq_dict[current_key] = {
+                    'total_length': total_length,
+                    'num_n': num_n,
+                    'num_gaps': num_gaps
+                }
+
+        df['total_length'] = df['consensus sequence output'].map(lambda x: seq_dict.get(x, {}).get('total_length', None))
+        df['num_n'] = df['consensus sequence output'].map(lambda x: seq_dict.get(x, {}).get('num_n', None))
+        df['num_gaps'] = df['consensus sequence output'].map(lambda x: seq_dict.get(x, {}).get('num_gaps', None))
+
+        df = df.drop(columns=['sample', 'reference'])
+
         df.to_csv(output.summary_csv, index=False)
+        print(f"Summary statistics written to {output.summary_csv}")
