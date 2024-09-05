@@ -28,7 +28,7 @@
 
 ## Running: ##
 **snakefile:** 
-- Uses config-genefetch.yaml
+- Uses config.yaml
   - Contains path to 'samples.csv', an output directory, and 'protein_references.csv'
   - Contains different parameter configurations for -s and -r
 - Uses taxa-specific references from protein_references.csv (requires 1-gene_fetch.py to be run (test data protein_references.csv example provided)).
@@ -44,9 +44,10 @@
 
 
 ## To do ##
-- Integrate 1_gene_fetch.py into snakefile
-- Make Workflow Hub compatible
-- Generate RO-crates
+- Integrate 1_gene_fetch.py into snakefile.
+- Enable pipeline to take multi-fasta protein reference file containing target (taxa-specific) and non-target (possible contaminant) reference sequences.
+- Make Workflow Hub compatible.
+- Generate RO-crates.
   
 ## MGE output post-processing ##
 As an alternative to running 'snakefile' or 'snakefile_genefetch-fastpmerge', 3_mge_tidy-snakemake.py and 4_mge_stats-snakemake.py supplementary scripts can be run seperately after MGE.
