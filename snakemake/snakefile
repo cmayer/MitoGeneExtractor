@@ -7,8 +7,8 @@ import glob
 
 
 #Define and load config
-configfile: "config-Benchmarking_data.yaml"
-config = yaml.safe_load(open("config-Benchmarking_data.yaml"))
+configfile: "config.yaml"
+config = yaml.safe_load(open("config.yaml"))
 
 
 
