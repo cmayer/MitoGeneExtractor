@@ -7,12 +7,12 @@ import glob
 
 
 #Define and load config
-configfile: "config.yaml"
-config = yaml.safe_load(open("config.yaml"))
+configfile: "config-Benchmarking_data.yaml"
+config = yaml.safe_load(open("config-Benchmarking_data.yaml"))
 
 
 
-#Parse samples from .csv
+#Parse samples from .csv files
 def parse_samples(samples_file):
     samples = {}
     with open(samples_file, mode='r') as infile:
@@ -26,7 +26,7 @@ def parse_samples(samples_file):
 
 
 
-#Parse protein references from .csv
+#Parse protein references from CSV
 def parse_protein_references(protein_reference_file):
     protein_references = {}
     with open(protein_reference_file, mode='r') as infile:
@@ -41,20 +41,15 @@ def parse_protein_references(protein_reference_file):
     return protein_references
 
 
-#Set vars from config
 samples = parse_samples(config["samples_file"])
-
 protein_references = parse_protein_references(config["protein_reference_file"])
-
 output_dir = config["output_dir"]
-
-r_values = config["r_params"]
-
-s_values = config["s_params"]
+r = config["r"]
+s = config["s"]
 
 
 
-#Create linked list of sample and corresponding reference
+#Create lists of samples and corresponding references, and link them
 sample_list = list(samples.keys())
 
 reference_list = [protein_references[sample]["reference_name"] for sample in sample_list]
@@ -62,21 +57,29 @@ reference_list = [protein_references[sample]["reference_name"] for sample in sam
 sample_reference_pairs = list(zip(sample_list, reference_list))
 
 
-
-#Logging
 print(f"Output directory: {output_dir}")
-print(f"r params: {r_values}")
-print(f"s params: {s_values}")
+print(f"r params: {r}")
+print(f"s params: {s}")
 print("reference list:", reference_list)
+print("sample reference pairs:", sample_reference_pairs)
 
 
 
-#ALL
+
+
 rule all:
     input:
+        expand(
+            os.path.join(output_dir, "consensus/{sample}_r_{r}_s_{s}_con_{reference_name}.fas"),
+            zip,
+            sample=[s for s, _ in sample_reference_pairs],
+            reference_name=[ref for _, ref in sample_reference_pairs],
+            r=config["r"],
+            s=config["s"]
+        ),
+        os.path.join(output_dir, "consensus/cox1_concatenated_consensus.fasta"),
         os.path.join(output_dir, "summary_stats.csv"), 
         os.path.join(output_dir, "cleanup_complete.txt")
-
 
 
 
@@ -183,10 +186,10 @@ rule MitoGeneExtractor:
         -o {output_dir}/alignment/{wildcards.sample}_r_{wildcards.r}_s_{wildcards.s}_align_ \
         -c {output_dir}/consensus/{wildcards.sample}_r_{wildcards.r}_s_{wildcards.s}_con_ \
         -V {output.vulgar}  \
-        -n 0 -C 5 -r 1 -t 0.5 \
+        -r {wildcards.r} -s {wildcards.s} \
+        -n 0 -C 5 -t 0.5 \
         > {log.out} 2> {log.err}
         """
-
 
 
 
@@ -196,8 +199,8 @@ rule MitoGeneExtractor:
 consensus_files = [
     os.path.join(output_dir, f"consensus/{sample}_r_{r}_s_{s}_con_{reference_name}.fas")
     for sample, reference_name in sample_reference_pairs
-    for r in config["r_params"]
-    for s in config["s_params"]
+    for r in config["r"]
+    for s in config["s"]
 ]
 print(f"Consensus files: {consensus_files}")
 
@@ -205,8 +208,8 @@ print(f"Consensus files: {consensus_files}")
 renamed_files = [
     os.path.join(output_dir, f"consensus/{sample}_r_{r}_s_{s}_con_renamed_{reference_name}.fas")
     for sample, reference_name in sample_reference_pairs
-    for r in config["r_params"]
-    for s in config["s_params"]
+    for r in config["r"]
+    for s in config["s"]
 ]
 print(f"Renamed consensus files: {renamed_files}")
 
@@ -243,15 +246,14 @@ rule rename_fasta_headers:
 
 
 
-
 #Concatenate all consensus fasta files
 rule concatenate_fasta:
     input:
         renamed_consensus=lambda wildcards: [
             os.path.join(output_dir, f"consensus/{sample}_r_{r}_s_{s}_con_renamed_{reference_name}.fas")
             for sample, reference_name in sample_reference_pairs
-            for r in config["r_params"]
-            for s in config["s_params"]
+            for r in config["r"]
+            for s in config["s"]
         ]
     output:
         os.path.join(output_dir, "consensus/cox1_concatenated_consensus.fasta")
@@ -265,12 +267,15 @@ rule concatenate_fasta:
 
 
 
+
 out_files = [
     os.path.join(output_dir, f"out/{sample}_r_{r}_s_{s}_summary_{reference}.out")
     for sample, reference in sample_reference_pairs
-    for r in config["r_params"]
-    for s in config["s_params"]
+    for r in config["r"]
+    for s in config["s"]
 ]
+
+
 print(f"Target .out files: {out_files}")
 
 
@@ -284,16 +289,18 @@ rule extract_data_to_csv:
     output:
         summary_csv=os.path.join(output_dir, "summary_stats.csv")
     run:
-        #Create list to stop .out file data
+        #List holding data from all .out files
         data_list = []
 
         #Iterate through all .out files
         for out_file in input.out_files:
             
+            #Check if the file exists before opening it
             if not os.path.isfile(out_file):
                 print(f"File does not exist: {out_file}")
                 continue
 
+            #Open and read the .out file
             with open(out_file, 'r') as file:
                 data = {}
                 # Extract relevant data from each line
@@ -317,14 +324,13 @@ rule extract_data_to_csv:
                             value = line.split(term)[-1].strip().replace(":", "")
                             data[key] = value
 
-            #Print extracted data for this file
             print(f"Extracted data from {out_file}: {data}")
 
-            #Extract consensus sequence output filename for matching
+            #Extract the relevant part of the consensus sequence output filename for matching
             consensus_sequence_output = data.get("consensus sequence output", "").strip()
             consensus_sequence_output_filename = os.path.basename(consensus_sequence_output)
 
-            #Remove '_con' suffix for matching with sequence headers
+            #Remove '_con' suffix for matching with FASTA headers
             consensus_sequence_output_filename = consensus_sequence_output_filename.replace("_con_", "")
             data['consensus sequence output'] = consensus_sequence_output_filename
             
@@ -336,6 +342,7 @@ rule extract_data_to_csv:
             data['sample'] = sample_name
             data['reference'] = reference_name
             
+            # Append the data for this file to the data list
             data_list.append(data)
 
         df = pd.DataFrame(data_list)
@@ -348,7 +355,7 @@ rule extract_data_to_csv:
             current_key = None
             for line in fasta_file:
                 if line.startswith(">"):
-                    if current_key: 
+                    if current_key:  # Save previous sequence data
                         seq = seq_dict.get(current_key, "")
                         total_length = len(seq)
                         num_n = seq.count('N')
@@ -358,7 +365,6 @@ rule extract_data_to_csv:
                             'num_n': num_n,
                             'num_gaps': num_gaps
                         }
-
                     #Strip 'Consensus_' prefix from fasta header for matching purposes
                     current_key = line.strip().lstrip(">").split()[0]
                     current_key = current_key.replace("Consensus_", "")  
@@ -385,13 +391,15 @@ rule extract_data_to_csv:
         df['num_n'] = df['consensus sequence output'].map(lambda x: seq_dict.get(x, {}).get('num_n', None))
         df['num_gaps'] = df['consensus sequence output'].map(lambda x: seq_dict.get(x, {}).get('num_gaps', None))
 
-        #Drop columns not needrf in summary_stats.csv & write stats
+        #Drop any columns that you may not need in the final CSV, for example:
         df = df.drop(columns=['sample', 'reference'])
+
+        #Write summary stat output
         df.to_csv(output.summary_csv, index=False)
         print(f"Summary statistics written to {output.summary_csv}")
 
 
-#Clean up superfluous files
+
 rule cleanup_files:
     input:
         summary_csv=os.path.join(output_dir, "summary_stats.csv")
@@ -406,7 +414,7 @@ rule cleanup_files:
         else:
             for file in files_to_remove:
                 file_path = os.path.join(consensus_dir, file)
-                print(f"Removing file: {file_path}")  # Debug: Print each file to be removed
+                print(f"Removing file: {file_path}") 
                 os.remove(file_path)
         
         # Touch output to indicate cleanup completion
