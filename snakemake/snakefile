@@ -83,6 +83,8 @@ rule all:
 
 
 
+
+
 #Handle .fq.gz files and clean headers
 rule gunzip_and_clean_headers:
     input:
@@ -420,3 +422,5 @@ rule cleanup_files:
         # Touch output to indicate cleanup completion
         with open(output[0], 'w') as f:
             f.write("Cleanup complete.")    
+
+
