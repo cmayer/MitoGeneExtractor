@@ -7,8 +7,8 @@ import glob
 
 
 #Define and load config
-configfile: "config-contam.yaml"
-config = yaml.safe_load(open("config-contam.yaml"))
+configfile: "config.yaml"
+config = yaml.safe_load(open("config.yaml"))
 
 
 
@@ -345,7 +345,7 @@ rule extract_stats_to_csv:
     output:
         stats=os.path.join(output_dir, "{run_name}.csv")
     params:
-        script="./scripts/mge_contam_stats-list_file.py"
+        script="./scripts/mge_contam_stats.py"
     shell:
         """
         python {params.script} {input.alignment_log} {output.stats}
