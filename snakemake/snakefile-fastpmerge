@@ -44,6 +44,7 @@ def parse_protein_references(protein_reference_file):
 samples = parse_samples(config["samples_file"])
 protein_references = parse_protein_references(config["protein_reference_file"])
 output_dir = config["output_dir"]
+run_name = config["run_name"]
 
 
 
@@ -58,19 +59,33 @@ consensus_files = [
 ]
 
 
-#print(f"Output directory: {output_dir}")
 
-#print("sample reference pairs:", sample_reference_pairs)
-
-#print(f"Target consensus files: {consensus_files}")
-
+print(f"Run name: {run_name}")
+print(f"Output directory: {output_dir}")
+print(f"r params: {r}")
+print(f"s params: {s}")
+print("reference list:", reference_list)
+print("sample reference pairs:", sample_reference_pairs)
 
 
 
 
 rule all:
     input:
-        os.path.join(output_dir, "summary_stats.csv")
+        expand(
+            os.path.join(output_dir, "consensus/{sample}_r_{r}_s_{s}_con_{reference_name}.fas"),
+            zip,
+            sample=[s for s, _ in sample_reference_pairs],
+            reference_name=[ref for _, ref in sample_reference_pairs],
+            r=config["r"],
+            s=config["s"]
+        ),
+        os.path.join(output_dir, f"consensus/{run_name}.fasta"),
+        os.path.join(output_dir, f"{run_name}.csv"), 
+        os.path.join(output_dir, "cleanup_complete.txt")
+
+
+
 
 
 
@@ -104,7 +119,9 @@ rule fastp_pe:
               > {log.err}
         """
 
-#####clean headers 
+
+
+
 #Rule to clean headers (sed whitespace)
 rule clean_headers:
     input:
@@ -143,7 +160,8 @@ rule concat:
 
 
 
-#Run MitoGeneExtractor on trimmed fastq file
+
+#Run MitoGeneExtractor
 rule MitoGeneExtractor_default:
     input:
         DNA=os.path.join(output_dir, "trimmed_data/{sample}_concat.fastq"),
@@ -169,26 +187,27 @@ rule MitoGeneExtractor_default:
 
 
 
-# Rule to concatenate all .fas files in the consensus directory
+#Concatenate all .fas files in the consensus directory
 rule concatenate_fasta:
     input:
         consensus_files
     output:
-        os.path.join(output_dir, "consensus/cox1_concatenated_consensus.fasta")
+        os.path.join(output_dir, f"consensus/{run_name}.fasta")
     shell:
         """
         cat {input} > {output}
         """
 
 
-# Rule to extract data from .out files and generate a summary CSV
+
+#Extract data from .out files and generate a summary CSV
 rule extract_data_to_csv:
     input:
         out_files=expand(os.path.join(output_dir, "out/{sample}_summary_{reference}.out"),
                          zip, sample=sample_list, reference=reference_list),
-        fasta_file=os.path.join(output_dir, "consensus/cox1_concatenated_consensus.fasta")
+        fasta_file=os.path.join(output_dir, f"consensus/{run_name}.fasta")
     output:
-        summary_csv=os.path.join(output_dir, "summary_stats.csv")
+        summary_csv=os.path.join(output_dir, "{run_name}.csv")
     run:
         data_list = []
 
@@ -285,3 +304,40 @@ rule extract_data_to_csv:
 
         df.to_csv(output.summary_csv, index=False)
         print(f"Summary statistics written to {output.summary_csv}")
+
+
+
+
+#Clean up superfluous files
+rule cleanup_files:
+    input:
+        summary_csv=os.path.join(output_dir, f"{run_name}.csv")
+    output:
+        touch(os.path.join(output_dir, "cleanup_complete.txt"))
+    run:
+        consensus_dir = os.path.join(output_dir, "consensus")
+        log_dir = os.path.join(output_dir, "logs")
+
+
+        # Remove all consensus files (except renamed ones)
+        files_to_remove = [f for f in os.listdir(consensus_dir) 
+                           if f.endswith(".fas") and "renamed" not in f]
+        
+        if files_to_remove:
+            for file in files_to_remove:
+                file_path = os.path.join(consensus_dir, file)
+                print(f"Removing file: {file_path}")
+                os.remove(file_path)
+
+        # Remove all .log files in the logs directory
+        log_files = glob.glob(os.path.join(log_dir, "*.log"))
+        if log_files:
+            for log_file in log_files:
+                print(f"Removing log file: {log_file}")
+                os.remove(log_file)
+        
+        with open(output[0], 'w') as f:
+            f.write("Cleanup complete.")
+
+
+
