@@ -47,6 +47,9 @@ output_dir = config["output_dir"]
 r = config["r"]
 s = config["s"]
 
+run_name = config["run_name"]
+
+
 
 
 #Create lists of samples and corresponding references, and link them
@@ -57,6 +60,7 @@ reference_list = [protein_references[sample]["reference_name"] for sample in sam
 sample_reference_pairs = list(zip(sample_list, reference_list))
 
 
+print(f"Run name: {run_name}")
 print(f"Output directory: {output_dir}")
 print(f"r params: {r}")
 print(f"s params: {s}")
@@ -77,8 +81,8 @@ rule all:
             r=config["r"],
             s=config["s"]
         ),
-        os.path.join(output_dir, "consensus/cox1_concatenated_consensus.fasta"),
-        os.path.join(output_dir, "summary_stats.csv"), 
+        os.path.join(output_dir, f"consensus/{run_name}.fasta"),
+        os.path.join(output_dir, f"{run_name}.csv"), 
         os.path.join(output_dir, "cleanup_complete.txt")
 
 
@@ -258,7 +262,7 @@ rule concatenate_fasta:
             for s in config["s"]
         ]
     output:
-        os.path.join(output_dir, "consensus/cox1_concatenated_consensus.fasta")
+        os.path.join(output_dir, f"consensus/{run_name}.fasta")
     shell:
         """
         cat {input} > {output}
@@ -289,7 +293,7 @@ rule extract_data_to_csv:
         out_files=out_files,
         fasta_file=os.path.join(output_dir, "consensus/cox1_concatenated_consensus.fasta")
     output:
-        summary_csv=os.path.join(output_dir, "summary_stats.csv")
+        summary_csv=os.path.join(output_dir, "{run_name}.csv")
     run:
         #List holding data from all .out files
         data_list = []
@@ -404,7 +408,7 @@ rule extract_data_to_csv:
 
 rule cleanup_files:
     input:
-        summary_csv=os.path.join(output_dir, "summary_stats.csv")
+        summary_csv=os.path.join(output_dir, f"{run_name}.csv")
     output:
         touch(os.path.join(output_dir, "cleanup_complete.txt"))
     run:
