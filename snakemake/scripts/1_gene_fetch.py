@@ -12,8 +12,8 @@ from functools import wraps
 
 
 # Set your email and API key
-Entrez.email = "###########"  # Add your email for Entrez here
-Entrez.api_key = "#########"  # Add your NCBI API key here
+Entrez.email = ########"  # Add your email for Entrez here
+Entrez.api_key = "#####"  # Add your NCBI API key here
 
 
 
