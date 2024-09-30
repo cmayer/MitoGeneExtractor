@@ -9,27 +9,14 @@ import os
 from Bio import Entrez, SeqIO
 from functools import wraps
 
-# Set your email and API key
-Entrez.email = "###########################"
-Entrez.api_key = "#########################"
 
-def retry(ExceptionToCheck, tries=4, delay=3, backoff=2):
-    """Retry calling the decorated function using an exponential backoff."""
-    def deco_retry(f):
-        @wraps(f)
-        def f_retry(*args, **kwargs):
-            mtries, mdelay = tries, delay
-            while mtries > 1:
-                try:
-                    return f(*args, **kwargs)
-                except ExceptionToCheck as e:
-                    print(f"{e}, Retrying in {mdelay} seconds...")
-                    time.sleep(mdelay)
-                    mtries -= 1
-                    mdelay *= backoff
-            return f(*args, **kwargs)
-        return f_retry
-    return deco_retry
+
+# Set your email and API key
+Entrez.email = "###########"  # Add your email for Entrez here
+Entrez.api_key = "#########"  # Add your NCBI API key here
+
+
+
 
 def usage():
     """
@@ -49,7 +36,9 @@ def usage():
     python 1_gene_fetch.py taxonomy.csv cox1 ./protein_references samples.csv
     """)
 
-@retry(Exception, tries=4, delay=3, backoff=2)
+
+
+
 def fetch_protein_seq_by_taxonomy(taxonomy, gene_name, retmax=1):
     """
     Fetches protein sequences from NCBI RefSeq based on taxonomy and gene name.
@@ -86,11 +75,11 @@ def fetch_protein_seq_by_taxonomy(taxonomy, gene_name, retmax=1):
                     # Update best records and rank if found a better match (lower rank)
                     best_records = records
                     best_rank = f"{rank_name.capitalize()}: {rank}"
-                    found_sequence = True  # Set the flag indicating a sequence was found
+                    found_sequence = True  #Set  flag indicating sequence found
                 else:
                     print(f"No sequences found for {rank_name.capitalize()}: {rank}. Trying next level...")
                     if found_sequence:
-                        break  # Exit the loop early if a sequence was already found
+                        break  #Exit loop if sequence already found
 
             except Exception as e:
                 print(f"Error fetching data for {rank_name.capitalize()}: {rank}: {e}")
@@ -102,7 +91,9 @@ def fetch_protein_seq_by_taxonomy(taxonomy, gene_name, retmax=1):
 
     return best_records, best_rank
 
-@retry(Exception, tries=4, delay=3, backoff=2)
+
+
+
 def fetch_tax_id_by_name(organism_name):
     """
     Fetches the taxonomic ID for a given organism name from NCBI.
@@ -120,7 +111,9 @@ def fetch_tax_id_by_name(organism_name):
         return search_results["IdList"][0]
     return None
 
-@retry(Exception, tries=4, delay=3, backoff=2)
+
+
+
 def fetch_taxonomy_by_id(tax_id):
     """
     Retrieves full taxonomy information for a given taxonomic ID.
@@ -143,6 +136,9 @@ def fetch_taxonomy_by_id(tax_id):
         print(f"Error fetching taxonomy for tax_id {tax_id}: {e}")
         return None
 
+
+
+
 def validate_order(input_order, fetched_taxonomy):
     """
     Validates if the 'Order' rank in fetched taxonomy matches the input taxonomy.
@@ -158,12 +154,18 @@ def validate_order(input_order, fetched_taxonomy):
         print("Fetched taxonomy is None, cannot validate.")
         return False
 
-    fetched_order = next((lineage['ScientificName'] for lineage in fetched_taxonomy.get('LineageEx', []) if lineage['Rank'] == 'order'), None)
+    fetched_order = next(
+        (lineage['ScientificName'] for lineage in fetched_taxonomy.get('LineageEx', []) if lineage['Rank'].lower() == 'order'),
+        None
+    )
 
     if input_order and fetched_order:
         if input_order.lower() != fetched_order.lower():
             return False
     return True
+
+
+
 
 def format_taxonomy(lineage):
     """
@@ -183,6 +185,9 @@ def format_taxonomy(lineage):
         if lineage_item['Rank'].lower() in rank_order and lineage_item['Rank'].lower() != 'clade'
     )
     return taxonomy_str
+
+
+
 
 def determine_delimiter(file_path):
     """
@@ -209,6 +214,9 @@ def determine_delimiter(file_path):
         print("Unsupported file extension. Please provide a .csv or .tsv file for taxonomy.")
         sys.exit(1)
 
+
+
+
 if __name__ == "__main__":
     if len(sys.argv) != 5:
         usage()
@@ -219,28 +227,33 @@ if __name__ == "__main__":
     user_output_directory = sys.argv[3]
     samples_file = sys.argv[4]
 
-    # Check if input taxonomy file exists
+
+    #Check input taxonomy exists
     if not os.path.exists(input_file):
         print(f"Error: The file '{input_file}' does not exist.")
         usage()
         sys.exit(1)
 
-    # Check if samples.csv file exists
+
+    #Check samples.csv exists
     if not os.path.exists(samples_file):
         print(f"Error: The file '{samples_file}' does not exist.")
         usage()
         sys.exit(1)
 
-    # Determine delimiter based on file extension
+
+    #Determine delimiter based on file extension
     delimiter = determine_delimiter(input_file)
     print(f"Using delimiter '{delimiter}' for taxonomy file.")
 
-    # Check user-specified output directory exists, create if not
+
+    #Check user-specified output directory exists, create if not
     if not os.path.exists(user_output_directory):
         os.makedirs(user_output_directory)
         print(f"Created output directory: {user_output_directory}")
 
-    # Load Process IDs from samples.csv
+
+    #Load Process IDs from samples.csv
     valid_process_ids = set()
     try:
         with open(samples_file, newline='') as samples_csv:
@@ -254,12 +267,19 @@ if __name__ == "__main__":
 
     summary_output = []
 
-    # Process taxonomy file
+
+    #Process taxonomy file
     try:
         with open(input_file, newline='') as taxonomy_file:
             reader = csv.DictReader(taxonomy_file, delimiter=delimiter)
+
+            fieldnames_lower = [field.lower() for field in reader.fieldnames]
+
             for row in reader:
-                process_id = row.get('Process ID', '').strip()  # Adjusted to match 'Process ID'
+
+                row_lower = {k.lower(): v for k, v in row.items()}
+
+                process_id = row_lower.get('process id', '').strip()
 
                 if not process_id:
                     print("Warning: Missing 'Process ID' in a row. Skipping.")
@@ -267,23 +287,28 @@ if __name__ == "__main__":
 
                 print(f"\nProcessing Process ID: {process_id}")
 
-                # Skip rows where Process ID doesn't match the samples.csv Process IDs
+
+
+                #Skip rows where Process ID doesn't match the samples.csv Process IDs
                 if process_id not in valid_process_ids:
                     print(f"Skipping Process ID: {process_id} (not in samples.csv)")
                     continue
 
+
+                #Extract taxonomy ranks with case-insensitive keys
                 taxonomy = {
-                    'order': row.get('order', '').strip(),
-                    'family': row.get('family', '').strip(),
-                    'genus': row.get('genus', '').strip(),
-                    'species': row.get('species', '').strip()
+                    'order': row_lower.get('order', '').strip(),
+                    'family': row_lower.get('family', '').strip(),
+                    'genus': row_lower.get('genus', '').strip(),
+                    'species': row_lower.get('species', '').strip()
                 }
 
                 print(f"Taxonomy: order='{taxonomy['order']}', family='{taxonomy['family']}', genus='{taxonomy['genus']}', species='{taxonomy['species']}'")
 
                 records, matched_rank = fetch_protein_seq_by_taxonomy(taxonomy.values(), gene_name, retmax=1)
 
-                # Fetch NCBI taxonomy for matched_rank using organism name extracted from the returned protein sequence to get corresponding tax_id
+
+                #Fetch NCBI taxonomy for matched_rank using organism name extracted from the returned protein sequence to get corresponding tax_id
                 if records:
                     organism_name = records[0].annotations.get('organism', '')
                     tax_id = fetch_tax_id_by_name(organism_name)
@@ -298,7 +323,8 @@ if __name__ == "__main__":
                     fetched_taxonomy = None
                     matched_validated = False
 
-                # Write sequences to fasta with process ID as filename and seq header
+
+                #Write sequences to fasta with process ID as filename and seq header
                 if records:
                     for record in records:
                         accession_number = record.id
@@ -314,14 +340,14 @@ if __name__ == "__main__":
                             print(f"Error writing FASTA file '{fasta_filepath}': {e}")
                             continue
 
-                        # Convert fetched taxonomy to a string
                         if fetched_taxonomy:
                             lineage = fetched_taxonomy.get('LineageEx', [])
                             taxonomy_str = format_taxonomy(lineage)
                         else:
                             taxonomy_str = "Not available"
 
-                        # Add fields to summary output.csv
+
+                        #Add fields to summary output.csv
                         summary_output.append({
                             'process_id': process_id,
                             'matched_term': matched_rank if matched_rank else "None",
@@ -332,7 +358,8 @@ if __name__ == "__main__":
                             'ncbi_taxonomy': taxonomy_str  # Add filtered taxonomy to output
                         })
 
-                        # Print accession number for fetched seq and its taxonomic rank
+
+                        #Print accession number for fetched seq and its taxonomic rank
                         print(f"Fetched sequence accession: {accession_number} for {matched_rank}")
 
                 time.sleep(1)
@@ -341,7 +368,8 @@ if __name__ == "__main__":
         print(f"Error processing taxonomy file '{input_file}': {e}")
         sys.exit(1)
 
-    # Write summary_output to CSV
+
+    #Write summary_output to CSV
     summary_output_file = os.path.join(
         user_output_directory,
         f"{os.path.splitext(os.path.basename(input_file))[0]}_gene_fetch_summary.csv"
@@ -362,5 +390,8 @@ if __name__ == "__main__":
             writer.writerows(summary_output)
         print(f"\nSummary output saved to {summary_output_file}.")
     except Exception as e:
+        print(f"Error writing summary CSV '{summary_output_file}': {e}")
+        sys.exit(1)
+
         print(f"Error writing summary CSV '{summary_output_file}': {e}")
         sys.exit(1)
