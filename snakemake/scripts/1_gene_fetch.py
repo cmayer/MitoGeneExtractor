@@ -1,6 +1,5 @@
 ###Grabs closest cox1 protein reference sequence for each sample using BOLD-downloaded taxonomic rankings, 
-###outputs the cox1.fasta seqs to a user specified dir, and outputs Process ID, matched term, accession number, 
-###ref seq name, absolute path to ref seq, and validates returned protein reference taxonomy to BOLD-downloaded taxonomy
+###outputs the cox1.fasta seqs to a user specified dir and outputs a protein_reference.csv
 
 
 import csv
