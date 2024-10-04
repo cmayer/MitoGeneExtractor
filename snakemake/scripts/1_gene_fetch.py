@@ -1,7 +1,3 @@
-###Grabs closest cox1 protein reference sequence for each sample using BOLD-downloaded taxonomic rankings, 
-###outputs the cox1.fasta seqs to a user specified dir and outputs a protein_reference.csv
-
-
 import csv
 import sys
 import time
@@ -11,6 +7,7 @@ from Bio import Entrez, SeqIO
 from functools import wraps
 from ratelimit import limits, sleep_and_retry
 from requests.exceptions import RequestException
+
 
 
 
@@ -29,19 +26,23 @@ def usage():
     <samples.csv>: Path to input CSV file containing Process IDs to match (with column 'ID').
 
     Example:
-    python 1_gene_fetch.py taxonomy.csv cox1 ./protein_references samples.csv
+    python 1_gene_fetch.py path/to/taxonomy.csv cox1 path/to/protein_references path/to/samples.csv
     """)
 
 
-#Set your email and API key
-Entrez.email = "d.parsons@nhm.ac.uk"  
-Entrez.api_key = "1866f9734a06f26bc5895a84387542ac9308"  
 
 
+#Set email and API key
+Entrez.email = "#####@#####"  
+Entrez.api_key = "#########"  
 
-#Constants for rate limiting (Entrez API limits with key = 10/sec)
+
+#Consta
+
+nts for rate limiting (Entrez API limits with key = 10/sec)
 MAX_CALLS_PER_SECOND = 10
 ONE_SECOND = 1
+
 
 
 
@@ -51,7 +52,7 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] %(message)s',
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler("gene_fetch.log")
+        logging.FileHandler("gene_fetch-up_rank.log")
     ]
 )
 logger = logging.getLogger()
@@ -60,10 +61,7 @@ logger = logging.getLogger()
 
 
 
-
-
-
-#Retry decorator for entrez search functions
+#Retry decorator for Entrez search functions
 def retry(ExceptionToCheck, tries=3, delay=1, backoff=2):
     def deco_retry(f):
         @wraps(f)
@@ -84,6 +82,8 @@ def retry(ExceptionToCheck, tries=3, delay=1, backoff=2):
 
 
 
+
+
 @sleep_and_retry
 @limits(calls=MAX_CALLS_PER_SECOND, period=ONE_SECOND)
 @retry((RequestException, RuntimeError), tries=4, delay=1, backoff=2)
@@ -92,6 +92,9 @@ def entrez_esearch(**kwargs):
     Wrapper for Entrez.esearch with rate limiting and retry.
     """
     return Entrez.esearch(**kwargs)
+
+
+
 
 
 @sleep_and_retry
@@ -106,207 +109,185 @@ def entrez_efetch(**kwargs):
 
 
 
-def fetch_protein_seq_by_taxonomy(taxonomy, gene_name, retmax=1):
+
+
+def fetch_protein_seq_by_taxonomy(taxonomy, gene_name, retmax=1000):
     """
-    Fetches protein sequences from NCBI RefSeq based on taxonomy and gene name.
+    Fetches the longest protein sequence from NCBI based on taxonomy and gene name.
+    Iterates from species to order, updating the best sequence found at each level.
 
     Parameters:
     - taxonomy (iterable): Taxonomic ranks (order, family, genus, species).
     - gene_name (str): Name of the gene to search for.
-    - retmax (int): Maximum number of records to retrieve.
+    - retmax (int): Maximum number of records to retrieve at each level.
 
     Returns:
-    - tuple: (list of SeqRecord objects, matched_rank as str)
+    - tuple: (list of SeqRecord objects, matched_rank as str, ncbi_taxonomy as list)
     """
-
     best_rank = None
-    best_records = []
-    found_sequence = False
-    rank_priority = ["order", "family", "genus", "species"]
+    best_record = None
+    ncbi_taxonomy = []
 
-    #Iterate over ranks from order to species
-    for rank, rank_name in zip(taxonomy, rank_priority):
-        if rank:
-            search_term = f"{gene_name}[Gene] AND {rank}[Organism] AND refseq[filter]"
+    rank_priority = ["species", "genus", "family", "order"]  
+    length_threshold = 500
+
+    #Iterate over ranks from species to order
+    for rank_name in rank_priority:
+        rank = taxonomy.get(rank_name)
+
+        if rank:  #Check if the current rank is not empty
+            search_term = f"{gene_name}[Gene] AND {rank}[Organism] AND 500:1000[SLEN]"
             logger.debug(f"Search term for {rank_name}: {search_term}")
+
             try:
-                search_handle = entrez_esearch(db="protein", term=search_term, retmax=retmax)
+                total_ids = []
+                search_handle = entrez_esearch(db="protein", term=search_term, retmax=retmax)  
                 search_results = Entrez.read(search_handle)
                 search_handle.close()
 
-                if search_results["IdList"]:
-                    ids = search_results["IdList"]
-                    logger.info(f"Fetching {gene_name} sequence: {ids} for {rank_name.capitalize()}: {rank}")
-                    fetch_handle = entrez_efetch(db="protein", id=ids, rettype="gb", retmode="text")
+                logger.info(f"Total records found for {rank_name} ({rank}): {search_results['Count']}")
+
+                if not search_results["IdList"]:
+                    logger.warning(f"No sequences found for {rank_name.capitalize()}: {rank}. Trying next level...")
+                    continue
+
+                total_ids.extend(search_results["IdList"])
+                logger.info(f"Fetched {len(total_ids)} IDs for {rank_name}: {rank}")
+
+                #Fetch records in batches
+                for start in range(0, len(total_ids), retmax):
+                    batch_ids = total_ids[start:start + retmax]
+                    logger.debug(f"Fetching IDs: {batch_ids}")
+                    fetch_handle = entrez_efetch(db="protein", id=batch_ids, rettype="gp", retmode="text")
                     records = list(SeqIO.parse(fetch_handle, "genbank"))
                     fetch_handle.close()
 
-                    #Update best records and rank if found a better match (lower rank)
-                    best_records = records
-                    best_rank = f"{rank_name.capitalize()}: {rank}"
-                    found_sequence = True 
-                else:
-                    logger.warning(f"No sequences found for {rank_name.capitalize()}: {rank}. Trying next level...")
-                    if found_sequence:
-                        break  
+                    if records:
+                        #Check each record, update best_record if necessary and fetch full NCBI taxonomy from record
+                        for record in records:
+                            record_length = len(record.seq)
+                            fetched_taxonomy = record.annotations.get("taxonomy", [])  
+                            ncbi_taxonomy_str = ", ".join(fetched_taxonomy)  
+
+                            logger.info(f"Fetched NCBI taxonomy for {record.id}: {ncbi_taxonomy_str}")
+
+                            if record_length >= length_threshold:
+                                if best_record is None:
+                                    best_record = record
+                                    best_rank = f"{rank_name.capitalize()}: {rank}"
+                                    ncbi_taxonomy = fetched_taxonomy  
+                                    logger.info(f"First sequence found at {best_rank}: {record.id} with length {record_length}")
+                                elif record_length > len(best_record.seq):
+                                    best_record = record
+                                    best_rank = f"{rank_name.capitalize()}: {rank}"
+                                    ncbi_taxonomy = fetched_taxonomy  #Update NCBI taxonomy if a better record is found
+                                    logger.info(f"Replacing sequence with longer sequence at {best_rank}: {record.id}, length: {record_length}")
+                            else:
+                                logger.info(f"Sequence at {rank_name}: {record.id} is too short (length {record_length}). Skipping...")
+
+                    #Only stop if a valid sequence has been found (length > 500)
+                    if best_record is not None and len(best_record.seq) >= length_threshold:
+                        logger.info(f"Stopping search as sequence found at {best_rank}")
+                        break
 
             except Exception as e:
-                logger.error(f"Error fetching data for {rank_name.capitalize()}: {rank}: {e}")
+                logger.error(f"Error fetching data for {rank_name.capitalize()} ({rank}): {e}")
+
+        #If a valid sequence is found, break out of the loop
+        if best_record is not None:
+            break  #Stop searching after the first valid sequence
+
+    if best_record is None:
+        logger.warning(f"No sequences found for taxonomy levels: {taxonomy}.")
+        return [], None, []
+
+    logger.info(f"Final best sequence found at {best_rank}: {best_record.id}, length: {len(best_record.seq)}")
+    return [best_record], best_rank, ncbi_taxonomy  #Return fetched NCBI taxonomy
 
 
-    if not best_records:
-        logger.warning(f"No sequences found for taxonomy {taxonomy} and gene {gene_name}.")
-
-    return best_records, best_rank
 
 
 
-
-@retry((RequestException, RuntimeError), tries=4, delay=1, backoff=2)
-def fetch_tax_id_by_name(organism_name):
+def validate_taxonomy(ncbi_taxonomy):
     """
-    Fetches the taxonomic ID for a given organism name from NCBI.
-
+    Validate the NCBI taxonomy at the phylum level.
+    
     Parameters:
-    - organism_name (str): Scientific name of the organism.
-
+    - ncbi_taxonomy (list): List of taxonomic ranks from NCBI.
+    
     Returns:
-    - str or None: Taxonomic ID if found, else None.
+    - bool: True if the taxonomy belongs to Arthropoda, Mollusca, or Annelida, else False.
     """
+    valid_phyla = {"Arthropoda", "Mollusca", "Annelida"}
 
+    if not ncbi_taxonomy:
+        logger.warning("NCBI taxonomy is empty.")
+        return False  #Empty taxonomy
 
-    try:
-        search_handle = entrez_esearch(db="taxonomy", term=organism_name, retmax=1)
-        search_results = Entrez.read(search_handle)
-        search_handle.close()
-        if search_results["IdList"]:
-            tax_id = search_results["IdList"][0]
-            logger.debug(f"Tax ID for {organism_name}: {tax_id}")
-            return tax_id
+    #Split taxonomy string into list
+    taxonomy_list = [rank.strip() for rank in ncbi_taxonomy]
+
+    #Check for at least 4 ranks to access phylum (index 3 = phylum)
+    if len(taxonomy_list) >= 4:
+        phylum = taxonomy_list[3]  
+        if phylum in valid_phyla:
+            logger.info(f"Validated taxonomy with Phylum: {phylum} as valid.")
+            return True
         else:
-            logger.warning(f"No Tax ID found for organism: {organism_name}")
-            return None
-    except Exception as e:
-        logger.error(f"Error fetching Tax ID for {organism_name}: {e}")
-        return None
-
-
-
-
-@retry((RequestException, RuntimeError), tries=4, delay=1, backoff=2)
-def fetch_taxonomy_by_id(tax_id):
-    """
-    Retrieves full taxonomy information for a given taxonomic ID.
-
-    Parameters:
-    - tax_id (str): Taxonomic ID.
-
-    Returns:
-    - dict or None: Taxonomy information if found, else None.
-    """
-
-
-    try:
-        handle = entrez_efetch(db="taxonomy", id=tax_id, retmode="xml")
-        records = Entrez.read(handle)
-        handle.close()
-        if records:
-            logger.debug(f"Fetched taxonomy for Tax ID {tax_id}")
-            return records[0]
-        else:
-            logger.warning(f"No taxonomy records found for Tax ID {tax_id}")
-            return None
-    except Exception as e:
-        logger.error(f"Error fetching taxonomy for tax_id {tax_id}: {e}")
-        return None
-
-
-
-
-def validate_order(input_order, fetched_taxonomy):
-    """
-    Validates if the 'Order' rank in fetched taxonomy matches the input taxonomy.
-
-    Parameters:
-    - input_order (str): The 'order' rank from input taxonomy.
-    - fetched_taxonomy (dict): The fetched taxonomy information from NCBI.
-
-    Returns:
-    - bool: True if matched or input_order is not provided, False otherwise.
-    """
-
-
-    if not fetched_taxonomy:
-        logger.warning("Fetched taxonomy is None, cannot validate.")
-        return False
-
-    fetched_order = next(
-        (lineage['ScientificName'] for lineage in fetched_taxonomy.get('LineageEx', []) if lineage['Rank'].lower() == 'order'),
-        None
-    )
-
-    if input_order and fetched_order:
-        if input_order.lower() != fetched_order.lower():
-            logger.warning(f"Order mismatch: input '{input_order}' vs fetched '{fetched_order}'")
+            logger.warning(f"Taxonomy Phylum: {phylum} is not valid.")
             return False
-    return True
-
-
-
-
-def format_taxonomy(lineage):
-    """
-    Formats the taxonomy lineage into a readable string.
-
-    Parameters:
-    - lineage (list): List of lineage dictionaries from NCBI taxonomy.
-
-    Returns:
-    - str: Formatted taxonomy string.
-    """
-
-
-    #Filter out clades and start from 'Kingdom'
-    rank_order = ["kingdom", "phylum", "class", "order", "family", "genus", "species"]
-    taxonomy_str = "; ".join(
-        f"{lineage_item['Rank'].capitalize()}: {lineage_item['ScientificName']}"
-        for lineage_item in lineage
-        if lineage_item['Rank'].lower() in rank_order and lineage_item['Rank'].lower() != 'clade'
-    )
-    return taxonomy_str
+    else:
+        logger.warning("Taxonomy list does not have enough ranks to determine phylum.")
+        return False
 
 
 
 
 def determine_delimiter(file_path):
     """
-    Determines the delimiter of the input taxonomy file based on its extension.
+    Determine the delimiter for the CSV file based on its extension.
 
     Parameters:
-    - file_path (str): Path to the taxonomy file.
+    - file_path (str): Path to the input file.
 
     Returns:
-    - str: Delimiter character.
+    - str: The delimiter used in the CSV file.
     """
-
-
-    _, ext = os.path.splitext(file_path)
-    if ext.lower() == '.csv':
-        # Further check for common delimiters
-        with open(file_path, 'r') as f:
-            first_line = f.readline()
-            if ';' in first_line:
-                logger.debug("Detected ';' as delimiter for CSV file.")
-                return ';'
-            else:
-                logger.debug("Detected ',' as delimiter for CSV file.")
-                return ','
-    elif ext.lower() == '.tsv':
-        logger.debug("Detected tab delimiter for TSV file.")
+    if file_path.endswith('.tsv'):
         return '\t'
-    else:
-        logger.error("Unsupported file extension. Please provide a .csv or .tsv file for taxonomy.")
-        sys.exit(1)
+    return ','  #Default to comma
+
+
+
+
+def read_existing_summary(summary_output_file):
+    """
+    Read existing summary entries from the output summary CSV file and determine if the file is empty.
+
+    Parameters:
+    - summary_output_file (str): Path to the summary output file.
+
+    Returns:
+    - tuple: (list of existing summary entries, is_file_empty)
+             existing_entries: list of entries from the file.
+             is_file_empty: boolean indicating if the file is empty.
+    """
+    existing_entries = []
+    
+    #Check if file exists
+    if os.path.exists(summary_output_file):
+        #Check if file is empty
+        if os.stat(summary_output_file).st_size == 0:
+            return existing_entries, True  
+        else:
+            #If file not empty, read existing entries
+            with open(summary_output_file, 'r', newline='') as summary_csv:
+                reader = csv.DictReader(summary_csv)
+                existing_entries = list(reader)
+            return existing_entries, False  
+    
+    return existing_entries, True  
+
 
 
 
@@ -321,9 +302,10 @@ def main():
     user_output_directory = sys.argv[3]
     samples_file = sys.argv[4]
 
+    #Set retmax global variable (i.e. how many records to search at each rank)
+    retmax = 1000
 
-
-    #Check Inputs exist
+    #Check inputs exist
     if not os.path.exists(input_file):
         logger.error(f"The file '{input_file}' does not exist.")
         usage()
@@ -334,13 +316,11 @@ def main():
         usage()
         sys.exit(1)
 
-
-    #Determine input delimitera based on file extension
+    #Determine input delimiter based on file extension
     delimiter = determine_delimiter(input_file)
     logger.info(f"Using delimiter '{delimiter}' for taxonomy file.")
 
-
-    #Check/Create output dire
+    #Check/Create output directory
     if not os.path.exists(user_output_directory):
         try:
             os.makedirs(user_output_directory)
@@ -348,7 +328,6 @@ def main():
         except Exception as e:
             logger.error(f"Failed to create output directory '{user_output_directory}': {e}")
             sys.exit(1)
-
 
     #Load Process IDs from samples.csv
     valid_process_ids = set()
@@ -364,18 +343,25 @@ def main():
 
     summary_output = []
 
-
     #Process input taxonomy file
     try:
         with open(input_file, newline='') as taxonomy_file:
             reader = csv.DictReader(taxonomy_file, delimiter=delimiter)
 
+            #Create a list of field names in lowercase for consistency
             fieldnames_lower = [field.lower() for field in reader.fieldnames]
+
+            #Check for existing summary entries
+            summary_output_file = os.path.join(
+                user_output_directory,
+                f"{os.path.splitext(os.path.basename(input_file))[0]}_gene_fetch_summary.csv"
+            )
+            existing_entries = read_existing_summary(summary_output_file)
 
             for row in reader:
                 row_lower = {k.lower(): v for k, v in row.items()}
 
-                process_id = row_lower.get('process id', '').strip()
+                process_id = row_lower.get('process id', '').strip()  
 
                 if not process_id:
                     logger.warning("Missing 'Process ID' in a row. Skipping.")
@@ -398,91 +384,96 @@ def main():
 
                 logger.info(f"Taxonomy: order='{taxonomy['order']}', family='{taxonomy['family']}', genus='{taxonomy['genus']}', species='{taxonomy['species']}'")
 
+                #Fetch records using fetch_protein_seq_by_taxonomy function
+                records, matched_rank, ncbi_taxonomy = fetch_protein_seq_by_taxonomy(taxonomy, gene_name, retmax=retmax)
 
-                #Fetch protein sequences using function
-                records, matched_rank = fetch_protein_seq_by_taxonomy(taxonomy.values(), gene_name, retmax=1)
-
-
-                #Fetch NCBI taxonomy and validate order to mitigate homonym matches (experimental)
-                if records:
-                    organism_name = records[0].annotations.get('organism', '')
-                    tax_id = fetch_tax_id_by_name(organism_name)
-
-                    if tax_id:
-                        fetched_taxonomy = fetch_taxonomy_by_id(tax_id)
-                        matched_validated = validate_order(taxonomy['order'], fetched_taxonomy)
-                    else:
-                        fetched_taxonomy = None
-                        matched_validated = False
-                else:
-                    fetched_taxonomy = None
-                    matched_validated = False
-
+                #Validate taxonomy
+                tax_validated = validate_taxonomy(ncbi_taxonomy)
 
                 #Write Sequences to fasta file for each Process ID
                 if records:
                     for record in records:
                         accession_number = record.id
-                        record.id = process_id
+                        record.id = process_id  #Using process_id here
                         record.description = ""
+                        sequence_length = len(record.seq)  #Get the length of the sequence
+
                         fasta_filename = f"{process_id}.fasta"
                         fasta_filepath = os.path.abspath(os.path.join(user_output_directory, fasta_filename))
+
+                        #Append the new sequence to the FASTA file (or create if it doesn't exist)
                         try:
-                            with open(fasta_filepath, "w") as output_handle:
+                            with open(fasta_filepath, "a") as output_handle: 
                                 SeqIO.write([record], output_handle, "fasta")
                             logger.info(f"Written FASTA file: {fasta_filepath}")
                         except Exception as e:
                             logger.error(f"Error writing FASTA file '{fasta_filepath}': {e}")
                             continue
 
-                        if fetched_taxonomy:
-                            lineage = fetched_taxonomy.get('LineageEx', [])
-                            taxonomy_str = format_taxonomy(lineage)
-                        else:
-                            taxonomy_str = "Not available"
-
-
                         #Add info to summary output
                         summary_output.append({
                             'process_id': process_id,
-                            'matched_term': matched_rank if matched_rank else "None",
-                            'accession_number': accession_number,
+                    	   'matched_term': matched_rank if matched_rank else "None",
+                    	   'accession_number': accession_number,
+                            'length': sequence_length,
                             'reference_name': process_id,
                             'reference_path': fasta_filepath,
-                            'matched_validated': 'true' if matched_validated else 'false',
-                            'ncbi_taxonomy': taxonomy_str  # Add filtered taxonomy to output
+                            'tax_validated': 'true' if tax_validated else 'false',
+                            'ncbi_taxonomy': ", ".join(ncbi_taxonomy)  #Include NCBI taxonomy in CSV output
                         })
+                        
+                        logger.info(f"Fetched sequence accession: {accession_number}, length: {sequence_length} for {matched_rank}")
+                else:
+                    summary_output.append({
+                        'process_id': process_id,
+                        'matched_term': "None",
+                        'accession_number': "None",
+                        'length': "None",
+                        'reference_name': process_id,
+                        'reference_path': "None",
+                        'tax_validated': "false",
+                        'ncbi_taxonomy': "None"
+                    })
 
-                        logger.info(f"Fetched sequence accession: {accession_number} for {matched_rank}")
+                    logger.warning(f"No protein sequence found for Process ID {process_id}.")
+
+
+            #Write summary output csv
+            try:
+
+                #Read existing summary entries and check if the file is empty
+                existing_entries, file_empty = read_existing_summary(summary_output_file)
+
+                with open(summary_output_file, "a" if not file_empty else "w", newline='') as summary_csv:
+                    fieldnames = [
+                        'process_id',
+                        'matched_term',
+                        'accession_number',
+                        'length',
+                        'reference_name',
+                        'reference_path',
+                        'tax_validated',
+                        'ncbi_taxonomy'
+                    ]
+                    writer = csv.DictWriter(summary_csv, fieldnames=fieldnames)
+
+                    #If the file is empty, write the header
+                    if file_empty:
+                        writer.writeheader()
+
+                    #Append new rows to the file
+                    writer.writerows(summary_output)
+
+                logger.info(f"\nSummary output saved to {summary_output_file}.")
+
+            except Exception as e:
+                logger.error(f"Error writing summary CSV '{summary_output_file}': {e}")
+                sys.exit(1)
 
     except Exception as e:
         logger.error(f"Error processing taxonomy file '{input_file}': {e}")
         sys.exit(1)
 
-
-    #Write summary output csv
-    summary_output_file = os.path.join(
-        user_output_directory,
-        f"{os.path.splitext(os.path.basename(input_file))[0]}_gene_fetch_summary.csv"
-    )
-    try:
-        with open(summary_output_file, "w", newline='') as summary_csv:
-            fieldnames = [
-                'process_id',
-                'matched_term',
-                'accession_number',
-                'reference_name',
-                'reference_path',
-                'matched_validated',
-                'ncbi_taxonomy'
-            ]
-            writer = csv.DictWriter(summary_csv, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(summary_output)
-        logger.info(f"\nSummary output saved to {summary_output_file}.")
-    except Exception as e:
-        logger.error(f"Error writing summary CSV '{summary_output_file}': {e}")
-        sys.exit(1)
 
 
 if __name__ == "__main__":
