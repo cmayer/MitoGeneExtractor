@@ -6,6 +6,10 @@ import pandas as pd
 import glob
 
 
+
+print("Configuration loaded:", config)
+
+
 #Parse samples from .csv files
 def parse_samples(samples_file):
     samples = {}
@@ -17,7 +21,6 @@ def parse_samples(samples_file):
             reverse_read = row['reverse']
             samples[sample_id] = {"R1": forward_read, "R2": reverse_read}
     return samples
-
 
 
 
@@ -35,9 +38,9 @@ def parse_protein_references(protein_reference_file):
     return protein_references
 
 
+print("Loaded config keys:", config.keys())
 
-
-samples= parse_samples(config["samples_file"])
+samples = parse_samples(config["samples_file"])
 protein_references = parse_protein_references(config["protein_reference_file"])
 
 output_dir = config["output_dir"]
@@ -59,10 +62,8 @@ reference_list = [protein_references[sample]["reference_name"] for sample in sam
 sample_reference_pairs = list(zip(sample_list, reference_list))
 
 
-
-
 print(f"Run name: {run_name}")
-print(f"MGE executor path: {mge_path}")
+print(f"MGE executor path: {config['mge_path']}")
 print(f"Output directory: {output_dir}")
 print(f"r params: {r}")
 print(f"s params: {s}")
@@ -93,14 +94,15 @@ rule all:
 
 
 
-#Create dir for .out files
 rule create_out_dir:
     output:
-        directory(os.path.join(output_dir, "out/")) 
-    run:
-        out_dir = output[0]
-        if not os.path.exists(out_dir):
-            os.makedirs(out_dir)
+        directory(os.path.join(output_dir, "out"))
+    shell:
+        """
+        mkdir -p {output}
+        touch {output}/.snakemake_timestamp
+        echo "Directory created or already exists."
+        """
 
 
 
@@ -112,8 +114,8 @@ rule gunzip_and_clean_headers:
         R1=lambda wildcards: samples[wildcards.sample]["R1"],
         R2=lambda wildcards: samples[wildcards.sample]["R2"]
     output:
-        R1_out=os.path.join(output_dir, "raw_data/{sample}_R1_clean.fastq"),
-        R2_out=os.path.join(output_dir, "raw_data/{sample}_R2_clean.fastq")
+        R1_out=temp(os.path.join(output_dir, "raw_data/{sample}_R1_clean.fastq")),
+        R2_out=temp(os.path.join(output_dir, "raw_data/{sample}_R2_clean.fastq"))
     shell:
         """
         #Check if reads are gzipped and decompress using pigz
@@ -189,16 +191,16 @@ rule fastq_concat:
 
 
 
-#Trim concatenated fastq file
+#Trim the concatenated fastq file
 rule quality_trim:
     input:
         os.path.join(output_dir, "trimmed_data/{sample}_concat.fastq")
     output:
-        os.path.join(output_dir, "trimmed_data/{sample}_concat_trimmed.fq")
+        temp(os.path.join(output_dir, "trimmed_data/{sample}_concat_trimmed.fq"))
     threads: 4
     shell:
         """
-        trim_galore --cores {threads} --no_report_file --dont_gzip --output_dir {output_dir}/trimmed_data/ {input}
+        trim_galore --cores {threads} --dont_gzip --output_dir {output_dir}/trimmed_data/ {input}
         """
 
 
@@ -206,9 +208,7 @@ rule quality_trim:
 
 
 
-
-
-#Run MGE
+#Run MitoGeneExtractor
 rule MitoGeneExtractor:
     input:
         DNA=os.path.join(output_dir, "trimmed_data/{sample}_concat_trimmed.fq"),
@@ -222,25 +222,27 @@ rule MitoGeneExtractor:
         err=os.path.join(output_dir, "err/{sample}_r_{r}_s_{s}_summary_{reference_name}.err")
     params:
         mge_executor=config["mge_path"]
+    threads:
+        workflow.cores * 0.2
     shell:
         """
-
         #echo input.AA list to log
         echo "Input AA files: {input.AA}" > {log.out}
 
-
         {params.mge_executor} \
-        -q {input.DNA} -p {input.AA} \
+        -q {input.DNA} \
+        -p {input.AA} \
         -o {output_dir}/alignment/{wildcards.sample}_r_{wildcards.r}_s_{wildcards.s}_align_ \
         -c {output_dir}/consensus/{wildcards.sample}_r_{wildcards.r}_s_{wildcards.s}_con_ \
-        -V {output.vulgar}  \
-        -r {wildcards.r} -s {wildcards.s} \
-        -n 0 -C 5 -t 0.5 \
-        --verbosity 50 \
+        -V {output.vulgar} \
+        -r {wildcards.r} \
+        -s {wildcards.s} \
+        -n 0 \
+        -C 5 \
+        -t 0.5 \
+        --verbosity 10 \
         > {log.out} 2> {log.err}
         """
-
-
 
 
 
@@ -253,6 +255,7 @@ consensus_files = [
     for s in config["s"]
 ]
 print(f"Consensus files: {consensus_files}")
+
 
 
 renamed_files = [
@@ -293,7 +296,7 @@ rule rename_fasta_headers:
             with open(input_file, 'r') as infile, open(output_file, 'w') as outfile:
                 for line in infile:
                     if line.startswith('>'):
-                        outfile.write(f">Consensus_{sample}_r_{r}_s_{s}_{con_suffix}\n")
+                        outfile.write(f">{sample}_r_{r}_s_{s}_{con_suffix}\n")
                     else:
                         outfile.write(line)
 
@@ -303,7 +306,7 @@ rule rename_fasta_headers:
 
 
 
-#Concatenate all consensus files
+#Concatenate all consensus fasta files
 rule concatenate_fasta:
     input:
         renamed_consensus=lambda wildcards: [
@@ -325,7 +328,7 @@ rule concatenate_fasta:
 
 
 
-#Create list of alignment files for downstream stats
+#Create list of alignment files for stats
 rule create_alignment_log:
     input:
         alignment_files=lambda wildcards: glob.glob(os.path.join(output_dir, "alignment/*_align_*.fas")),
@@ -350,14 +353,15 @@ rule create_alignment_log:
 rule extract_stats_to_csv:
     input:
         alignment_log=os.path.join(output_dir, "alignment/alignment_files.log"),
-        out_file_dir=os.path.join(output_dir, "out/")
+        out_dir=os.path.join(output_dir, "out/"),
+        concat_cons=os.path.join(output_dir, f"consensus/{run_name}.fasta")
     output:
         stats=os.path.join(output_dir, "{run_name}.csv")
     params:
-        script="./scripts/mge_contam_stats.py"
+        script="/gpfs/nhmfsa/bulk/share/data/mbl/share/scratch/MGE/workflow/scripts/mge_contam_stats-list_and_out_file.py"
     shell:
         """
-        python {params.script} {input.alignment_log} {output.stats} {input.out_file_dir}
+        python {params.script} {input.alignment_log} {output.stats} {input.out_dir}
         """
 
 
@@ -374,18 +378,14 @@ rule cleanup_files:
     output:
         touch(os.path.join(output_dir, "cleanup_complete.txt"))
     run:
-        #Remove all .log files in the logs dir
+        #Remove all .log files in logs dir
         log_dir = os.path.join(output_dir, "logs")
-
         log_files = glob.glob(os.path.join(log_dir, "*.log"))
 
         if log_files:
             for log_file in log_files:
                 print(f"Removing log file: {log_file}")
                 os.remove(log_file)
-        
+
         with open(output[0], 'w') as f:
             f.write("Cleanup complete.")
-   
-
-
