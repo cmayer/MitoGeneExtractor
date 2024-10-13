@@ -223,7 +223,7 @@ rule MitoGeneExtractor:
     params:
         mge_executor=config["mge_path"]
     threads:
-        workflow.cores * 0.2
+        workflow.cores * 0.5
     shell:
         """
         #echo input.AA list to log
