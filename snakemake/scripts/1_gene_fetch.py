@@ -258,36 +258,50 @@ def main():
     # Create output_directory if it does not exist
     os.makedirs(output_directory, exist_ok=True)
 
-
-    # Check if protein_references.csv already exists    
+    # Check if protein_references.csv already exists
     output_csv_path = os.path.join(output_directory, "protein_references.csv")
 
-    if os.path.exists(output_csv_path):
-        logger.info(f"Output CSV file '{output_csv_path}' already exists. Skipping processing.")
-        return
+    # Dictionary to keep track of existing process_ids
+    existing_entries = {}
 
-    # Prepare the output CSV file with headers
-    with open(output_csv_path, mode='w', newline='') as summary_file:
+    if os.path.exists(output_csv_path):
+        logger.info(f"Output CSV file '{output_csv_path}' already exists. Checking existing entries...")
+        with open(output_csv_path, mode='r') as summary_file:
+            reader = csv.DictReader(summary_file)
+            for row in reader:
+                existing_entries[row['process_id']] = row  # Store existing entries by process_id
+
+    # Prepare the output CSV file with append mode, write headers only if file is new
+    file_exists = os.path.exists(output_csv_path)
+    with open(output_csv_path, mode='a', newline='') as summary_file:
         summary_writer = csv.writer(summary_file)
-        summary_writer.writerow(['process_id', 'taxid', 'accession_number', 'sequence_length', 
-                                 'matched_rank', 'ncbi_taxonomy', 'reference_name', 'reference_path'])
-        summary_file.flush()
+        if not file_exists:
+            # Write header only if the file is new
+            summary_writer.writerow(['process_id', 'taxid', 'accession_number', 'sequence_length', 
+                                     'matched_rank', 'ncbi_taxonomy', 'reference_name', 'reference_path'])
+            summary_file.flush()
 
         # Read input samples.csv file and process each TaxID
         with open(samples_csv, newline='') as samples_file:
             reader = csv.DictReader(samples_file)
             process_ids = [row['ID'] for row in reader]  
-            num_process_ids = len(process_ids) 
+            num_process_ids = len(process_ids)
 
             logger.info(f"Detected {num_process_ids} process IDs in input samples.csv.")
 
             # Reset reader to iterate over again
             samples_file.seek(0)
-            next(reader)  
+            next(reader)  # Skip header
 
             for row in reader:
                 taxid = row['taxid']
-                process_id = row['ID'] 
+                process_id = row['ID']
+
+                # Check if this process_id already exists in the protein_references.csv
+                if process_id in existing_entries:
+                    logger.info(f"Process ID {process_id} already has an entry in protein_references.csv. Skipping.")
+                    continue
+
                 logger.info(f"Processing TaxID: {taxid} for Process ID: {process_id}")
 
                 # Fetch full taxonomy and rank for logging
@@ -309,14 +323,14 @@ def main():
                     # Change header to the process_id
                     best_record.id = process_id  
                     best_record.name = ""  
-                    best_record.description = ""  
+                    best_record.description = ""
 
                     SeqIO.write(best_record, output_seq_path, "fasta")
                     logger.info(f"Written sequence to '{output_seq_path}'.")
 
                     # Extract reference_name and reference_path
                     reference_name = process_id  
-                    reference_path = os.path.abspath(output_seq_path)  
+                    reference_path = os.path.abspath(output_seq_path)
 
                     # Write fields to protein_references.csv
                     summary_writer.writerow([
@@ -329,9 +343,9 @@ def main():
                         reference_name,
                         reference_path
                     ])
-                    summary_file.flush()  
+                    summary_file.flush()
                 else:
                     logger.warning(f"No valid record found for TaxID {taxid}.")
-
 if __name__ == "__main__":
     main()
+
