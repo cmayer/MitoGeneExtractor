@@ -10,7 +10,7 @@
   - Gene of interest (e.g. cox1)
   - Parameters: r (Exonerate relative score threshold) and s (Exonerate minimum score threshold)
 - Activated conda env - See mge_env.yaml
-- Can be run on cluster using 'snakemake.sh'
+- Can be run on a cluster using 'snakemake.sh'
 
 **samples.csv example**
 | ID | forward | reverse | taxid |
