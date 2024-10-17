@@ -8,9 +8,13 @@ dependencies:
   - mamba=1.5.8
   - snakemake=8.18.1
   - trim-galore=0.6.10
+  - cutadapt=4.9
   - fastp=0.23.4
   - pigz=2.8
+  - pandas=2.2.2
+  - bbmap=39.01
+  - pip=24.2
   - pip:
-      - biopython=1.84
-      - ratelimit=2.2.1
+      - biopython==1.84
+      - ratelimit==2.2.1
 
