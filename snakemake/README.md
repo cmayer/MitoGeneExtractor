@@ -43,7 +43,7 @@
     - <gene_name>: Name of gene to search for in NCBI RefSeq database (e.g., cox1/COX1).
     - <output_directory>: Path to directory to save output files (will save .fasta files and summary CSV in this directory). The directory will be created if it does not exist.
     - <samples.csv>: Path to input CSV file containing Process IDs (ID column) and TaxIDs (taxid column).
-- If the script fails during a run, it can be rerun using the same inputs as it will skip IDs with entries in the protein_references.csv and .fasta files already present in the output directory.
+- 'Checkpointing 'available: If the script fails during a run, it can be rerun using the same inputs and it will skip IDs with entries already in the protein_references.csv and with .fasta files already present in the output directory.
 - Manually review the protein_references.csv after running as homonyms may lead to incorrect protein references being fetched on occasion.
 
 ### 4. Edit config.yaml for run ###
