@@ -94,18 +94,6 @@ rule all:
 
 
 
-rule create_out_dir:
-    output:
-        directory(os.path.join(output_dir, "out"))
-    shell:
-        """
-        mkdir -p {output}
-        touch {output}/.snakemake_timestamp
-        echo "Directory created or already exists."
-        """
-
-
-
 
 
 #Handle .fq.gz files and clean headers
@@ -222,8 +210,6 @@ rule MitoGeneExtractor:
         err=os.path.join(output_dir, "err/{sample}_r_{r}_s_{s}_summary_{reference_name}.err")
     params:
         mge_executor=config["mge_path"]
-    threads:
-        workflow.cores * 0.5
     shell:
         """
         #echo input.AA list to log
@@ -353,24 +339,28 @@ rule create_alignment_log:
 rule extract_stats_to_csv:
     input:
         alignment_log=os.path.join(output_dir, "alignment/alignment_files.log"),
-        out_dir=os.path.join(output_dir, "out/"),
-        concat_cons=os.path.join(output_dir, f"consensus/{run_name}.fasta")
+        out_files=expand(os.path.join(output_dir, "out/{sample}_r_{r}_s_{s}_summary_{reference_name}.out"),
+                         zip, 
+                         sample=[s for s, _ in sample_reference_pairs],
+                         reference_name=[ref for _, ref in sample_reference_pairs],
+                         r=config["r"],
+                         s=config["s"]),
+        concat_cons=os.path.join(output_dir, f"consensus/{run_name}.fasta")  
     output:
         stats=os.path.join(output_dir, "{run_name}.csv")
     params:
-        script="./scripts/mge_contam_stats.py"
+        script="/gpfs/nhmfsa/bulk/share/data/mbl/share/scratch/MGE/workflow/scripts/mge_contam_stats-list_and_out_file.py",
+        out_dir=os.path.join(output_dir, "out/")
     shell:
         """
-        python {params.script} {input.alignment_log} {output.stats} {input.out_dir}
+        python {params.script} {input.alignment_log} {output.stats} {params.out_dir}
         """
 
 
 
 
 
-
-
-
+   
 #Clean up superfluous files
 rule cleanup_files:
     input:
@@ -378,14 +368,16 @@ rule cleanup_files:
     output:
         touch(os.path.join(output_dir, "cleanup_complete.txt"))
     run:
-        #Remove all .log files in logs dir
         log_dir = os.path.join(output_dir, "logs")
-        log_files = glob.glob(os.path.join(log_dir, "*.log"))
 
+        #Remove all .log files in log dir
+        log_files = glob.glob(os.path.join(log_dir, "*.log"))
         if log_files:
             for log_file in log_files:
                 print(f"Removing log file: {log_file}")
                 os.remove(log_file)
-
+        
         with open(output[0], 'w') as f:
             f.write("Cleanup complete.")
+
+
