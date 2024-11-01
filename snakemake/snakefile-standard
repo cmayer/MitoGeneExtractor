@@ -349,7 +349,7 @@ rule extract_stats_to_csv:
     output:
         stats=os.path.join(output_dir, "{run_name}.csv")
     params:
-        script="/gpfs/nhmfsa/bulk/share/data/mbl/share/scratch/MGE/workflow/scripts/mge_contam_stats-list_and_out_file.py",
+        script="path/to/mge_stats.py",
         out_dir=os.path.join(output_dir, "out/")
     shell:
         """
