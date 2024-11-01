@@ -2,7 +2,6 @@ name: mge_env
 channels:
   - conda-forge
   - bioconda
-  - defaults
 dependencies:
   - exonerate=2.4.0
   - mamba=1.5.8
