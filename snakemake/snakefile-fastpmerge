@@ -7,6 +7,8 @@ import glob
 
 
 
+print("Configuration loaded:", config)
+
 
 #Parse samples from .csv files
 def parse_samples(samples_file):
@@ -52,6 +54,7 @@ mge_path = config["mge_path"]
 
 
 
+
 #Create lists of samples and corresponding references, and link them
 sample_list = list(samples.keys())
 
@@ -60,15 +63,13 @@ reference_list = [protein_references[sample]["reference_name"] for sample in sam
 sample_reference_pairs = list(zip(sample_list, reference_list))
 
 
-
-
 print(f"Run name: {run_name}")
-print(f"MGE executor path: {mge_path}")
 print(f"Output directory: {output_dir}")
 print(f"r params: {r}")
 print(f"s params: {s}")
 print("reference list:", reference_list)
 print("sample reference pairs:", sample_reference_pairs)
+
 
 
 
@@ -93,19 +94,7 @@ rule all:
 
 
 
-#Create dir for .out files
-rule create_out_dir:
-    output:
-        directory(os.path.join(output_dir, "out/")) 
-    run:
-        out_dir = output[0]
-        if not os.path.exists(out_dir):
-            os.makedirs(out_dir)
 
-
-
-
-#Run fastp for paired-end reads (dedup, adapter and poly g trim, and merge)
 rule fastp_pe:
     input:
         R1=lambda wildcards: samples[wildcards.sample]["R1"],
@@ -115,9 +104,9 @@ rule fastp_pe:
         R2_trimmed=os.path.join(output_dir, "trimmed_data/{sample}_R2_trimmed.fq.gz"),
         report=os.path.join(output_dir, "trimmed_data/reports/{sample}_fastp_report.html"),
         json=os.path.join(output_dir, "trimmed_data/reports/{sample}_fastp_report.json"),
-        merged_reads=os.path.join(output_dir, "trimmed_data/{sample}_merged.fq"),
-        unpaired_R1=os.path.join(output_dir, "trimmed_data/unpaired/{sample}_unpaired_R1.fq"),
-        unpaired_R2=os.path.join(output_dir, "trimmed_data/unpaired/{sample}_unpaired_R2.fq")
+        merged_reads=temp(os.path.join(output_dir, "trimmed_data/{sample}_merged.fq")),
+        unpaired_R1=temp(os.path.join(output_dir, "trimmed_data/unpaired/{sample}_unpaired_R1.fq")),
+        unpaired_R2=temp(os.path.join(output_dir, "trimmed_data/unpaired/{sample}_unpaired_R2.fq"))
     log:
         err=os.path.join(output_dir, "trimmed_data/{sample}_fastp.err")
     shell:
@@ -138,12 +127,12 @@ rule fastp_pe:
 
 
 
-#Rule to clean headers (sed whitespace)
+
 rule clean_headers:
     input:
-        merged_reads=os.path.join(output_dir, "trimmed_data/{sample}_merged.fq"),
+        merged_reads=os.path.join(output_dir, "trimmed_data/{sample}_merged.fq")
     output:
-        clean_merged=os.path.join(output_dir, "trimmed_data/{sample}_merged_clean.fq"),
+        clean_merged=os.path.join(output_dir, "trimmed_data/{sample}_merged_clean.fq")
     shell:
         """
         sed 's/ /_/g' {input.merged_reads} > {output.clean_merged}
@@ -155,8 +144,6 @@ rule clean_headers:
 
 
 
-
-#Run MitoGeneExtractor
 rule MitoGeneExtractor_default:
     input:
         DNA=os.path.join(output_dir, "trimmed_data/{sample}_merged_clean.fq"),
@@ -167,7 +154,7 @@ rule MitoGeneExtractor_default:
         vulgar=os.path.join(output_dir, "logs/{sample}_vulgar_r_{r}_s_{s}_{reference_name}.txt")
     log:
         out=os.path.join(output_dir, "out/{sample}_r_{r}_s_{s}_summary_{reference_name}.out"),
-        err=os.path.join(output_dir, "err/{sample}_r_{r}_s_{s}_summary_{reference_name}.err")
+        err=os.path.join(output_dir, "err/{sample}_r_{r}_s_{s}_summary_{reference_name}.err"),
     params:
         mge_executor=config["mge_path"]
     shell:
@@ -184,8 +171,6 @@ rule MitoGeneExtractor_default:
         -n 0 -C 5 -t 0.5 \
         > {log.out} 2> {log.err}
         """
-
-
 
 
 
@@ -236,7 +221,7 @@ rule rename_fasta_headers:
             with open(input_file, 'r') as infile, open(output_file, 'w') as outfile:
                 for line in infile:
                     if line.startswith('>'):
-                        outfile.write(f">Consensus_{sample}_r_{r}_s_{s}_{con_suffix}\n")
+                        outfile.write(f">{sample}_r_{r}_s_{s}_{con_suffix}_fastp\n")
                     else:
                         outfile.write(line)
 
@@ -279,18 +264,26 @@ rule create_alignment_log:
 
 
 
+
 #Extract stats from alignment files using custom python script
 rule extract_stats_to_csv:
     input:
         alignment_log=os.path.join(output_dir, "alignment/alignment_files.log"),
-        out_file_dir=os.path.join(output_dir, "out/")
+        out_files=expand(os.path.join(output_dir, "out/{sample}_r_{r}_s_{s}_summary_{reference_name}.out"),
+                         zip, 
+                         sample=[s for s, _ in sample_reference_pairs],
+                         reference_name=[ref for _, ref in sample_reference_pairs],
+                         r=config["r"],
+                         s=config["s"]),
+        concat_cons=os.path.join(output_dir, f"consensus/{run_name}.fasta")  
     output:
         stats=os.path.join(output_dir, "{run_name}.csv")
     params:
-        script="./scripts/mge_contam_stats.py"
+        script="path/to/mge_stats.py",
+        out_dir=os.path.join(output_dir, "out/")
     shell:
         """
-        python {params.script} {input.alignment_log} {output.stats} {input.out_file_dir}
+        python {params.script} {input.alignment_log} {output.stats} {params.out_dir}
         """
 
 
@@ -307,7 +300,6 @@ rule cleanup_files:
         log_dir = os.path.join(output_dir, "logs")
 
         log_files = glob.glob(os.path.join(log_dir, "*.log"))
-
         if log_files:
             for log_file in log_files:
                 print(f"Removing log file: {log_file}")
