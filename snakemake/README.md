@@ -1,14 +1,17 @@
 # MGE via snakemake with added functionality for BGE #
 ## Requirements: ##
-- snakefile
+- Snakefile
 - config.yaml (containing:)
   - Name of MitoGeneExtractor run (will be used for naming summary stats output and concatenated consensus fasta file).
   - Path to 'MitoGeneExtractor-vx.y.z' file (see installation guidance on main readme)
-  - Path to'samples.csv' (example below)
+  - Path to 'samples.csv' (example below)
   - Path to 'protein_references.csv' (example below)
   - Path to output directory (new directories will be created)
   - Gene of interest (e.g. cox1)
   - Parameters: r (Exonerate relative score threshold) and s (Exonerate minimum score threshold)
+  - Read pre-processing mode. Options: 'merge' or 'conat'.
+    - merge = adapter- and poly g-trimming, deduplication and PE read merging (fastp)-> 'cleaning' of sequence headers -> MGE
+    - concat = gunzip and 'cleaning' of sequence headers -> adapter- and poly g-trimming, and deduplication (fastp) -> concatenation of PE reads -> read trimming (cutadapt) -> MGE
 - Activated conda env - See mge_env.yaml
 - Can be run on a cluster using 'snakemake.sh'
 
@@ -27,8 +30,10 @@
 ### 1. Clone github repository ###
 
 ### 2. Generate samples.csv ###
-- Can be created via [sample-processing](https://github.com/bge-barcoding/sample-processing) workflow or manually.
-
+- Can be created via [sample-processing](https://github.com/bge-barcoding/sample-processing) workflow, or manually.
+- Column 1 can be named 'ID', 'process_id', 'Process ID', 'process id', 'Process id', 'PROCESS ID', 'sample', 'SAMPLE', or 'Sample'.
+- Reads must be PE, and can be gzipped or gunzipped.
+  
 **samples.csv example**
 | ID | forward | reverse | taxid |
 | --- | --- | --- | --- |
@@ -39,7 +44,7 @@
 ### 3. Fetch sample-specific protein references using 1_gene_fetch.py ###
 - [1_gene_fetch.py](https://github.com/SchistoDan/MitoGeneExtractor/blob/main/snakemake/1_gene_fetch.py) fetches sample-specific protein (pseudo)references using taxonomic ids and creates protein_references.csv required in config.yaml 
 1_gene_fetch.py usage:
- - *python 1_gene_fetch.py <gene_name> <output_directory> <samples.csv*
+ - *python 1_gene_fetch.py <gene_name> <output_directory> <samples.csv>*
     - <gene_name>: Name of gene to search for in NCBI RefSeq database (e.g., cox1/COX1).
     - <output_directory>: Path to directory to save output files (will save .fasta files and summary CSV in this directory). The directory will be created if it does not exist.
     - <samples.csv>: Path to input CSV file containing Process IDs (ID column) and TaxIDs (taxid column).
@@ -50,10 +55,8 @@
 - Update config.yaml with neccessary paths and variables.
 
 ### 5. Run snakefile ###
-- Snakefile = 'standard' MGE snakemake pipeline
-- Snakefile-fastp = Utilises a fastp merge step as a QC alternative to the 'standard' MGE pipeline.
 - Locally: snakemake --snakefile <Snakefile> --configfile <config.yaml>
-  - Optional: '-n' for dry run. '-p' to print shell commands to log.
+  - Optional: '-n' for dry run. '-p' to print shell commands to log. '--unlock' to unlock directory after 'failed' run.
 - Cluster: See snakemake.sh
   - Optional: '--rerun-incomplete' to resume a previously failed run.
 
@@ -68,7 +71,7 @@
 - mge_contam_stats.py = This script (incorporated into 'rule extract_stats_to_csv') will use alignment fasta files and MGE.out files to generate summary statistics.
 
 ## To do ##
-- Solve homonym issue in 1_gene_fetch.py
+- Integrate BBsplit contam screen as an additional pre-processing mode.
 - Integrate 1_gene_fetch.py into snakefile.
 - Make Workflow Hub compatible.
 - Generate RO-crates.
