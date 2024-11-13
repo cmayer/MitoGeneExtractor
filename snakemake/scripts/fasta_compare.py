@@ -11,7 +11,17 @@ import logging
 from datetime import datetime
 
 
+###This script analyzes FASTA files containing DNA sequences, evaluates sequence quality based on various metrics, 
+###and selects the best sequences based on specific quality criteria. It processes both full sequences and barcode regions (positions 40-700), 
+###outputting filtered sequences to separate FASTA files and providing detailed analysis in a CSV file.
 
+##OUTPUT_CSV: Path where the analysis results CSV file will be saved
+##OUTPUT_FASTA: Path where the best full sequences FASTA file will be saved
+##OUTPUT_BARCODE_FASTA: Path where the best barcode sequences FASTA file will be saved
+##INPUT_FILES: One or more input FASTA files to analyze (space-separated)
+##Optional:
+#--log-file LOG_FILE: Specify a custom path for the log file (default: creates timestamped log in current directory)
+#--verbose, -v: Enable detailed debug logging
 
 def setup_logging(log_file=None):
     """
