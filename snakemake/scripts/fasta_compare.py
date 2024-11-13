@@ -10,6 +10,9 @@ from pathlib import Path
 import logging
 from datetime import datetime
 
+
+
+
 def setup_logging(log_file=None):
     """
     Set up logging configuration.
@@ -27,6 +30,10 @@ def setup_logging(log_file=None):
         ]
     )
 
+
+
+
+
 def validate_files(input_files, output_csv, output_fasta):
     """
     Validate input and output file paths.
@@ -39,13 +46,13 @@ def validate_files(input_files, output_csv, output_fasta):
     Returns:
         bool: True if validation passes, False otherwise
     """
-    # Check input files exist
+    #Check input files exist
     for file in input_files:
         if not os.path.exists(file):
             logging.error(f"Input file does not exist: {file}")
             return False
         
-    # Check output directories exist or can be created
+    #Check output directories exist, or create them
     for output_file in [output_csv, output_fasta]:
         output_dir = os.path.dirname(output_file)
         if output_dir and not os.path.exists(output_dir):
@@ -56,12 +63,15 @@ def validate_files(input_files, output_csv, output_fasta):
                 logging.error(f"Cannot create output directory {output_dir}: {e}")
                 return False
                 
-    # Check output files don't exist or can be overwritten
+    #Check output files don't already exist, if so overwrite
     for output_file in [output_csv, output_fasta]:
         if os.path.exists(output_file):
             logging.warning(f"Output file already exists and will be overwritten: {output_file}")
             
     return True
+
+
+
 
 def analyse_fasta(file_path):
     """
@@ -74,36 +84,36 @@ def analyse_fasta(file_path):
         dict: A dictionary containing analysis results for each sequence in the FASTA file.
     """
     try:
-        # Initialize dictionaries
+        #Initialise dictionaries
         results = {}
         sequences = {}
         
-        # Count total sequences for progress reporting
+        #Count total sequences for progress reporting
         total_sequences = sum(1 for _ in SeqIO.parse(file_path, "fasta"))
         processed = 0
 
-        # Parse the FASTA file using Biopython's SeqIO
+        #Parse the FASTA file
         for record in SeqIO.parse(file_path, "fasta"):
             try:
                 processed += 1
-                if processed % 100 == 0:  # Log progress every 100 sequences
+                if processed % 100 == 0:  #Log progress every 100 sequences
                     logging.info(f"Processing {file_path}: {processed}/{total_sequences} sequences")
 
-                # Get the sequence ID (header) and the sequence itself
+                #Get the sequence ID (header) and the sequence itself
                 seq_id = record.id
                 seq = str(record.seq)
                 
-                # Store the complete record
+                #Store the complete record
                 sequences[seq_id] = record
 
-                # Clean and split seq_id into process_id and parameters
+                #Clean and split seq_id into process_id and parameters
                 seq_id_clean = seq_id.replace("Consensus_", "") if seq_id.startswith("Consensus_") else seq_id
 
-                # Initialize process_id and parameters
+                #Initialise process_id and parameters
                 process_id = seq_id_clean
                 parameters = ""
 
-                # Extract process_id and parameters
+                #Extract process_id and parameters
                 if '_r_' in seq_id_clean:
                     param_start_idx = seq_id_clean.index('_r_')
                     process_id = seq_id_clean[:param_start_idx]
@@ -111,27 +121,27 @@ def analyse_fasta(file_path):
 
                 logging.debug(f"Detected process_id: {process_id}, parameters: {parameters}")
 
-                # Calculate sequence metrics
+                #Calculate sequence metrics
                 length = len(seq)
                 leading_gaps = len(seq) - len(seq.lstrip('-'))
                 trailing_gaps = len(seq) - len(seq.rstrip('-'))
                 internal_gaps = seq.count('-') + seq.count('~') - leading_gaps - trailing_gaps
                 ambiguous_bases = seq.count('N')
 
-                # Calculate longest stretch without gaps
+                #Calculate longest stretch without gaps
                 longest_stretch = max(len(s) for s in re.split('-|~', seq))
 
-                # Analyse barcode region (positions 40-700)
+                #Analyse barcode region (positions 40-700)
                 subseq = seq[39:700]
                 barcode_length = len(subseq)
                 barcode_ambiguous_bases = subseq.count('N')
                 barcode_longest_stretch = max(len(s) for s in re.split('-|~', subseq))
 
-                # Determine ranks
+                #Determine ranks
                 barcode_rank = calculate_barcode_rank(barcode_ambiguous_bases, barcode_longest_stretch)
                 full_rank = calculate_full_rank(ambiguous_bases)
 
-                # Store results
+                #Store results
                 results[seq_id] = {
                     'file': file_path,
                     'length': length,
@@ -160,6 +170,10 @@ def analyse_fasta(file_path):
         logging.error(f"Error analyzing file {file_path}: {str(e)}")
         return {}
 
+
+
+
+
 def calculate_barcode_rank(barcode_ambiguous_bases, barcode_longest_stretch):
     """Calculate barcode rank based on criteria."""
     if barcode_ambiguous_bases == 0:
@@ -173,6 +187,10 @@ def calculate_barcode_rank(barcode_ambiguous_bases, barcode_longest_stretch):
             return 4
     return 5 if barcode_ambiguous_bases >= 1 else 6
 
+
+
+
+
 def calculate_full_rank(ambiguous_bases):
     """Calculate full rank based on criteria."""
     if ambiguous_bases == 0:
@@ -180,6 +198,10 @@ def calculate_full_rank(ambiguous_bases):
     elif ambiguous_bases >= 1:
         return 2
     return 3
+
+
+
+
 
 def format_sequence(seq_record, trim_gaps=True, convert_internal_gaps=True):
     """
@@ -196,16 +218,16 @@ def format_sequence(seq_record, trim_gaps=True, convert_internal_gaps=True):
     sequence = str(seq_record.seq)
     
     if trim_gaps:
-        # Trim leading and trailing gaps
+        #Trim leading and trailing gaps
         sequence = sequence.strip('-').strip('~')
     
     if convert_internal_gaps:
-        # First remove ~ characters and stitch sequence
+        #First remove ~ characters and stitch sequence
         sequence = sequence.replace('~', '')
-        # Then replace remaining gaps (-) with N
+        #Then replace remaining gaps (-) with N
         sequence = re.sub(r'-', 'N', sequence)
     
-    # Create new sequence record with formatted sequence
+    #Create new sequence record with formatted sequence
     new_record = SeqRecord(
         Seq(sequence),
         id=seq_record.id,
@@ -213,6 +235,10 @@ def format_sequence(seq_record, trim_gaps=True, convert_internal_gaps=True):
     )
     
     return new_record
+
+
+
+
 
 def format_barcode_sequence(seq_record):
     """
@@ -224,13 +250,13 @@ def format_barcode_sequence(seq_record):
     Returns:
         SeqRecord: Formatted barcode sequence record
     """
-    # Extract barcode region (positions 40-700, 0-based indexing)
+    #Extract barcode region (positions 40-700, 0-based indexing)
     sequence = str(seq_record.seq)[39:700]
     
-    # Format gaps according to rules
+    #Format gaps according to rules
     formatted_sequence = format_barcode_gaps(sequence)
     
-    # Since we're keeping the longest fragment, no need to trim N's
+    #Since we're keeping the longest fragment, no need to trim N's
     new_record = SeqRecord(
         Seq(formatted_sequence),
         id=seq_record.id,
@@ -238,6 +264,9 @@ def format_barcode_sequence(seq_record):
     )
     
     return new_record
+
+
+
 
 def format_barcode_gaps(sequence):
     """
@@ -252,10 +281,10 @@ def format_barcode_gaps(sequence):
     Returns:
         str: Formatted sequence containing the longest fragment with ~ removed
     """
-    # First handle ~ characters by removing them and stitching sequence
+    #First handle ~ characters by removing them and stitching sequence
     sequence = sequence.replace('~', '')
     
-    # # Now handle remaining gaps (-). Split sequence by gaps of length > 6
+    #Now handle remaining gaps (-). Split sequence by gaps of length > 6
     fragments = []
     current_fragment = []
     gap_count = 0
@@ -270,22 +299,24 @@ def format_barcode_gaps(sequence):
                 gap_count = 0
         else:
             if gap_count > 0 and gap_count <= 6:
-                # Fill small gaps with N
+                #Fill small gaps with N
                 current_fragment.extend(['N'] * gap_count)
             gap_count = 0
             current_fragment.append(char)
     
-    # Add the last fragment if exists
+    #Add last fragment if exists
     if current_fragment:
         fragments.append(''.join(current_fragment))
     
-    # Find the longest fragment
+    #Find and get longest fragment
     if not fragments:
         return ""
-    
-    # Get the longest fragment
     longest_fragment = max(fragments, key=len)
     return longest_fragment
+
+
+
+
 
 def format_sequence_id(process_id, parameters):
     """
@@ -300,6 +331,10 @@ def format_sequence_id(process_id, parameters):
     """
     return f"{process_id}|{parameters}" if parameters else process_id
 
+
+
+
+
 def select_sequences_for_process(results):
     """
     Select the best sequences for a process based on ranking criteria.
@@ -311,15 +346,15 @@ def select_sequences_for_process(results):
     Returns:
         tuple: (best_full_sequence, best_barcode_sequence) or (None, None) if no qualifying sequences
     """
-    # First try to find sequences with full_rank 1
+    #First try to find sequences with full_rank 1
     rank1_sequences = [
         result for result in results
         if (result['full_rank'] == 1 and result['barcode_rank'] in [1, 2, 3])
     ]
     
-    # If we found rank 1 sequences, use those
+    #If we found rank 1 sequences, use those
     if rank1_sequences:
-        # Sort by criteria
+        #Sort by criteria
         best_sequence = min(rank1_sequences, key=lambda x: (
             x['barcode_rank'],
             -x['barcode_longest_stretch'],
@@ -327,14 +362,14 @@ def select_sequences_for_process(results):
         ))
         return best_sequence, best_sequence
     
-    # If no rank 1 sequences, try rank 2 sequences for barcode
+    #If no rank 1 sequences, try rank 2 sequences for barcode
     rank2_sequences = [
         result for result in results
         if (result['full_rank'] == 2 and result['barcode_rank'] in [1, 2, 3])
     ]
     
     if rank2_sequences:
-        # Sort by criteria
+        #Sort by criteria
         best_sequence = min(rank2_sequences, key=lambda x: (
             x['barcode_rank'],
             -x['barcode_longest_stretch'],
@@ -343,6 +378,9 @@ def select_sequences_for_process(results):
         return None, best_sequence
     
     return None, None
+
+
+
 
 def write_best_sequences(best_sequences, output_fasta, output_barcode_fasta):
     """
@@ -359,14 +397,14 @@ def write_best_sequences(best_sequences, output_fasta, output_barcode_fasta):
         selection_records = {}
         
         for process_id, sequence_data in best_sequences.items():
-            # Get all results for this process_id
-            results = sequence_data[1]  # Access the list of results directly
+            #Get all results for this process_id
+            results = sequence_data[1]  #Access the list of results directly
             
-            # Select best sequences using criteria
+            #Select best sequences using criteria
             best_full, best_barcode = select_sequences_for_process(results)
             
             if best_full or best_barcode:
-                # Process full sequence if we have one
+                #Process full sequence, if we have one
                 if best_full:
                     seq_record = best_full['sequence_record']
                     new_id = format_sequence_id(best_full['process_id'], best_full['parameters'])
@@ -381,7 +419,7 @@ def write_best_sequences(best_sequences, output_fasta, output_barcode_fasta):
                         'barcode_selected_seq': best_barcode['seq_id'] if best_barcode else None
                     }
                 
-                # Process barcode sequence if we have one
+                #Process barcode sequence, if we have one
                 if best_barcode:
                     seq_record = best_barcode['sequence_record']
                     new_id = format_sequence_id(best_barcode['process_id'], best_barcode['parameters'])
@@ -403,7 +441,7 @@ def write_best_sequences(best_sequences, output_fasta, output_barcode_fasta):
                 if best_barcode and best_barcode != best_full:
                     logging.info(f"  Selected barcode sequence {best_barcode['seq_id']} (full_rank: {best_barcode['full_rank']}, barcode_rank: {best_barcode['barcode_rank']})")
         
-        # Write the selected sequences to the output files
+        #Write selected sequences to output files
         if selected_full_records:
             SeqIO.write(selected_full_records, output_fasta, "fasta")
             logging.info(f"Wrote {len(selected_full_records)} sequences to {output_fasta}")
@@ -421,32 +459,35 @@ def write_best_sequences(best_sequences, output_fasta, output_barcode_fasta):
     except Exception as e:
         logging.error(f"Error writing sequences: {str(e)}")
         raise
+
+
+
 def main():
-    # Set up argument parser
-    parser = argparse.ArgumentParser(description='Analyze FASTA files and select best sequences based on quality criteria.')
+    #Arg parser
+    parser = argparse.ArgumentParser(description='analyse FASTA files and select best sequences based on quality criteria.')
     parser.add_argument('output_csv', help='Path to output CSV file')
     parser.add_argument('output_fasta', help='Path to output FASTA file for best sequences')
     parser.add_argument('output_barcode_fasta', help='Path to output FASTA file for barcode regions')
-    parser.add_argument('input_files', nargs='+', help='Input FASTA files to analyze')
+    parser.add_argument('input_files', nargs='+', help='Input FASTA files to analyse')
     parser.add_argument('--log-file', help='Path to log file (optional)')
     parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose output')
     
     args = parser.parse_args()
     
-    # Setup logging
+    #Setup logging
     setup_logging(args.log_file)
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
     
-    # Validate input and output files
+    #Validate input and output files
     if not validate_files(args.input_files, args.output_csv, args.output_fasta):
         sys.exit(1)
     
     try:
-        # Initialize results list
+        #Initialise results list
         all_results = []
         
-        # Analyze each FASTA file
+        #Analyse each FASTA file
         for file in args.input_files:
             logging.info(f"Processing file: {file}")
             results = analyse_fasta(file)
@@ -454,7 +495,7 @@ def main():
                 result['seq_id'] = seq_id
                 all_results.append(result)
         
-        # Select best sequences
+        #Select best sequences
         best_sequences = {}
         for result in all_results:
             process_id = result['process_id']
@@ -470,7 +511,7 @@ def main():
             elif criteria == best_sequences[process_id][0]:
                 best_sequences[process_id][1].append(result)
         
-        # Annotate best sequences
+        #Annotate best sequences
         for result in all_results:
             process_id = result['process_id']
             result['best_sequence'] = 'yes' if (
@@ -478,10 +519,10 @@ def main():
                 result in best_sequences[process_id][1]
             ) else 'no'
         
-        # Write best sequences to FASTA files and get selection records
+        #Write best sequences to FASTA files and get selection records
         selection_records = write_best_sequences(best_sequences, args.output_fasta, args.output_barcode_fasta)
 
-        # Update results with new columns
+        #Update results with new columns
         for result in all_results:
             process_id = result['process_id']
             seq_id = result['seq_id']
@@ -493,12 +534,12 @@ def main():
                 result['selected_full_fasta'] = 'no'
                 result['selected_barcode_fasta'] = 'no'
 
-        # Now remove sequence records after FASTA files are written
+        #Now remove sequence records after FASTA files are written
         for result in all_results:
             if 'sequence_record' in result:
                 result.pop('sequence_record', None)
 
-        # Write CSV with updated fieldnames
+        #Write CSV
         fieldnames = [
             'file', 'seq_id', 'process_id', 'parameters', 'length',
             'leading_gaps', 'trailing_gaps', 'internal_gaps',
