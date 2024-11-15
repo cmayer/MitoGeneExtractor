@@ -12,7 +12,7 @@ dependencies:
   - pigz=2.8
   - pandas=2.2.2
   - bbmap=39.01
-  - parallel-20240922
+  - parallel=20240922
   - pip=24.2
   - pip:
       - biopython==1.84
