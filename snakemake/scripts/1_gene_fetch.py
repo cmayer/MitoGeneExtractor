@@ -428,12 +428,16 @@ def fetch_protein_seq_by_taxid(taxid, gene_name, retmax=1000, existing_taxonomy=
             return None
 
     try:
-        # Construct search term
-        gene_search_term = (
-            '(cox1[Gene] OR COI[Gene] OR "cytochrome c oxidase subunit 1"[Protein Name] '
-            'OR "cytochrome oxidase subunit 1"[Protein Name] OR "cytochrome c oxidase subunit I"[Protein Name] '
-            'OR "COX1"[Protein Name] OR "COXI"[Protein Name])'
-        )
+        # Construct search term based on gene name
+        cox1_synonyms = ['cox1', 'COX1', 'COI', 'COXI']
+        if any(syn.lower() == gene_name.lower() for syn in cox1_synonyms):
+            gene_search_term = (
+                '(cox1[Gene] OR COI[Gene] OR "cytochrome c oxidase subunit 1"[Protein Name] '
+                'OR "cytochrome oxidase subunit 1"[Protein Name] OR "cytochrome c oxidase subunit I"[Protein Name] '
+                'OR "COX1"[Protein Name] OR "COXI"[Protein Name])'
+            )
+        else:
+            gene_search_term = f'{gene_name}[Gene] OR "{gene_name}"[Protein Name]'
         
         # Try initial search with input taxid
         initial_search_term = f"{gene_search_term} AND txid{taxid}[Organism] AND 500:1000[SLEN]"
