@@ -81,7 +81,33 @@ def validate_files(input_files, output_csv, output_fasta):
     return True
 
 
-
+def trim_n_characters(sequence):
+    """
+    Trim leading and trailing N characters from a sequence.
+    
+    Parameters:
+        sequence (str): The sequence to trim
+        
+    Returns:
+        str: Trimmed sequence
+    """
+    # First trim leading N's
+    start = 0
+    while start < len(sequence) and sequence[start] in ['N', 'n']:
+        start += 1
+    
+    # If sequence is all N's, return empty string
+    if start == len(sequence):
+        return ""
+    
+    # Then trim trailing N's
+    end = len(sequence) - 1
+    while end >= 0 and sequence[end] in ['N', 'n']:
+        end -= 1
+    
+    # Return trimmed sequence
+    return sequence[start:end + 1]
+    
 
 def analyse_fasta(file_path):
     """
@@ -228,16 +254,19 @@ def format_sequence(seq_record, trim_gaps=True, convert_internal_gaps=True):
     sequence = str(seq_record.seq)
     
     if trim_gaps:
-        #Trim leading and trailing gaps
+        # Trim leading and trailing gaps
         sequence = sequence.strip('-').strip('~')
     
     if convert_internal_gaps:
-        #First remove ~ characters and stitch sequence
+        # First remove ~ characters and stitch sequence
         sequence = sequence.replace('~', '')
-        #Then replace remaining gaps (-) with N
+        # Then replace remaining gaps (-) with N
         sequence = re.sub(r'-', 'N', sequence)
     
-    #Create new sequence record with formatted sequence
+    # Trim leading and trailing N's
+    sequence = trim_n_characters(sequence)
+    
+    # Create new sequence record with formatted sequence
     new_record = SeqRecord(
         Seq(sequence),
         id=seq_record.id,
@@ -260,13 +289,15 @@ def format_barcode_sequence(seq_record):
     Returns:
         SeqRecord: Formatted barcode sequence record
     """
-    #Extract barcode region (positions 40-700, 0-based indexing)
+    # Extract barcode region (positions 40-700, 0-based indexing)
     sequence = str(seq_record.seq)[39:700]
     
-    #Format gaps according to rules
+    # Format gaps according to rules
     formatted_sequence = format_barcode_gaps(sequence)
     
-    #Since we're keeping the longest fragment, no need to trim N's
+    # Trim leading and trailing N's
+    formatted_sequence = trim_n_characters(formatted_sequence)
+    
     new_record = SeqRecord(
         Seq(formatted_sequence),
         id=seq_record.id,
@@ -291,10 +322,10 @@ def format_barcode_gaps(sequence):
     Returns:
         str: Formatted sequence containing the longest fragment with ~ removed
     """
-    #First handle ~ characters by removing them and stitching sequence
+    # First handle ~ characters by removing them and stitching sequence
     sequence = sequence.replace('~', '')
     
-    #Now handle remaining gaps (-). Split sequence by gaps of length > 6
+    # Now handle remaining gaps (-). Split sequence by gaps of length > 6
     fragments = []
     current_fragment = []
     gap_count = 0
@@ -309,16 +340,16 @@ def format_barcode_gaps(sequence):
                 gap_count = 0
         else:
             if gap_count > 0 and gap_count <= 6:
-                #Fill small gaps with N
+                # Fill small gaps with N
                 current_fragment.extend(['N'] * gap_count)
             gap_count = 0
             current_fragment.append(char)
     
-    #Add last fragment if exists
+    # Add last fragment if exists
     if current_fragment:
         fragments.append(''.join(current_fragment))
     
-    #Find and get longest fragment
+    # Find and get longest fragment
     if not fragments:
         return ""
     longest_fragment = max(fragments, key=len)
