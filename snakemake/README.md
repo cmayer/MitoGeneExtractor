@@ -74,7 +74,7 @@ python 1_gene_fetch.py <gene_name> <output_directory> <samples.csv>
 - 1_gene_fetch.py = Fetches protein references for each sample using taxids from samples.csv to query NCBI DBs (via BioEntrez API). Fetches closest reference available to input taxid.
 - mge_stats.py = This script (incorporated into 'rule extract_stats_to_csv') will use alignment fasta files and MGE.out files to generate summary statistics for each sample.
 ```
-python script.py <log_file> <output_file> <out_file_dir>
+python ./scripts/mge_stats.py <log_file> <output_file> <out_file_dir>
   log_file: Path to a text file containing a list of FASTA file paths (one per line) # Produced by 'create_alignment_log' rule
   output_file: Name of the output CSV file (will also generate a -contaminants.csv variant)
   out_file_dir: Directory containing MGE .out files with barcode sequence statistics
