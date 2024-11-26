@@ -17,22 +17,14 @@
 
 
 
-**protein_references.csv example** 
-| ID | taxid | accession_number | sequence_length | matched_rank | ncbi_taxonomy | reference_name | reference_path |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| BSNHM002-24 | 177658 | AHF21732.1 | 510 | genus | Eukaryota, Metazoa, Ecdysozoa, Arthropoda, Hexapoda, Insecta, Pterygota, Neoptera, Endopterygota, Trichoptera, Integripalpia, Plenitentoria, Limnephiloidea, Apataniidae, Apataniinae, Apatania | BSNHM002-24 | abs/path/to/protein_references/BSNHM002-24.fasta | 
 
-
-| ID | matched_term | accession_number | length | reference_path | reference_name | tax_validated | ncbi_taxonomy |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| BSNHM002-24 | Genus: Apatania | AHF21732.1 | 510 | abs/path/to/protein_references/BSNHM002-24.fasta | BSNHM002-24 | true | Eukaryota, Metazoa, Ecdysozoa, Arthropoda, Hexapoda, Insecta, Pterygota, Neoptera, Endopterygota, Trichoptera, Integripalpia, Plenitentoria, Limnephiloidea, Apataniidae, Apataniinae, Apatania |
-| BSNHM038-24 | Genus: Ernodes | UPX88773.1 | 511 | abs/path/to/protein_references/BSNHM038-24.fasta | BSNHM038-24 | true | Eukaryota, Metazoa, Ecdysozoa, Arthropoda, Hexapoda, Insecta, Pterygota, Neoptera, Endopterygota, Trichoptera, Integripalpia, Brevitentoria, Sericostomatoidea, Beraeidae, Ernodes | 
-| BSNHM046-24 | Genus: Polycentropus | QLY89541.1 | 511 | abs/path/to/protein_references/BSNHM046-24.fasta | BSNHM046-24 | true | Eukaryota, Metazoa, Ecdysozoa, Arthropoda, Hexapoda, Insecta, Pterygota, Neoptera, Endopterygota, Trichoptera, Annulipalpia, Psychomyioidea, Polycentropodidae, Polycentropodinae, Polycentropus |
-  
-  
 
 ## Running: ##
 ### 1. Clone github repository ###
+conda install anaconda::git (if not already installed)
+git clone https://github.com/SchistoDan/MitoGeneExtractor.git path/to/installation/dir
+cd ath/to/installation/dir
+git status
 
 ### 2. Generate samples.csv ###
 - Can be created via [sample-processing](https://github.com/bge-barcoding/sample-processing) workflow, or manually.
@@ -47,7 +39,7 @@
 | BSNHM046-24 | abs/path/to/R1.fq.gz | abs/path/to/R2.fq.gz | 3084599 |
 
 ### 3. Fetch sample-specific protein references using 1_gene_fetch.py ###
-- [1_gene_fetch.py](https://github.com/SchistoDan/MitoGeneExtractor/blob/main/snakemake/1_gene_fetch.py) fetches sample-specific protein (pseudo)references using taxonomic ids and creates protein_references.csv required in config.yaml 
+- [1_gene_fetch.py](https://github.com/SchistoDan/MitoGeneExtractor/blob/main/snakemake/1_gene_fetch.py) fetches sample-specific protein (pseudo)references using taxonomic ids and creates protein_references.csv (example below) required in config.yaml 
 1_gene_fetch.py usage:
  - *python 1_gene_fetch.py <gene_name> <output_directory> <samples.csv>*
     - <gene_name>: Name of gene to search for in NCBI RefSeq database (e.g., cox1/COX1).
@@ -55,6 +47,12 @@
     - <samples.csv>: Path to input CSV file containing Process IDs (ID column) and TaxIDs (taxid column).
 - 'Checkpointing 'available: If the script fails during a run, it can be rerun using the same inputs and it will skip IDs with entries already in the protein_references.csv and with .fasta files already present in the output directory.
 - Manually review the protein_references.csv after running as homonyms may lead to incorrect protein references being fetched on occasion.
+
+**protein_references.csv example** 
+| ID | taxid | accession_number | sequence_length | matched_rank | ncbi_taxonomy | reference_name | reference_path |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| BSNHM002-24 | 177658 | AHF21732.1 | 510 | genus | Eukaryota, ..., Apataniinae, Apatania | BSNHM002-24 | abs/path/to/protein_references/BSNHM002-24.fasta | 
+
 
 ### 4. Edit config.yaml for run ###
 - Update config.yaml with neccessary paths and variables.
@@ -72,11 +70,13 @@
 
 
 ## Scripts ##
+- 1_gene_fetch.py = Fetches protein references for each sample using taxids from samples.csv to query NCBI DBs (via BioEntrez API). Fetches closest reference available to input taxid. 
 - add_contam_refs.py = If running Snakefile/Snakefile-fastp using multi-fasta protein reference files containing target and contaminant protein reference sequences, this script will add  contmainant reference sequences to target reference fasta files (see script usage).
-- mge_contam_stats.py = This script (incorporated into 'rule extract_stats_to_csv') will use alignment fasta files and MGE.out files to generate summary statistics.
+- mge_stats.py = This script (incorporated into 'rule extract_stats_to_csv') will use alignment fasta files and MGE.out files to generate summary statistics for each sample.
+- fasta_compare.py = 
 
 ## To do ##
-- Integrate BBsplit contam screen as an additional pre-processing mode.
+- Integrate BBsplit contam screen as an additional pre-processing mode for screening likely/known contaminant sequences.
 - Integrate 1_gene_fetch.py into snakefile.
 - Make Workflow Hub compatible.
 - Generate RO-crates.
