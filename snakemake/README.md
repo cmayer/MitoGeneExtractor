@@ -18,9 +18,14 @@
 
 
 **protein_references.csv example** 
+| ID | taxid | accession_number | sequence_length | matched_rank | ncbi_taxonomy | reference_name | reference_path |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| BSNHM002-24 | 177658 | AHF21732.1 | 510 | genus | Eukaryota, Metazoa, Ecdysozoa, Arthropoda, Hexapoda, Insecta, Pterygota, Neoptera, Endopterygota, Trichoptera, Integripalpia, Plenitentoria, Limnephiloidea, Apataniidae, Apataniinae, Apatania | BSNHM002-24 | abs/path/to/protein_references/BSNHM002-24.fasta | 
+
+
 | ID | matched_term | accession_number | length | reference_path | reference_name | tax_validated | ncbi_taxonomy |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| BSNHM002-24  | Genus: Apatania | AHF21732.1 | 510 | abs/path/to/protein_references/BSNHM002-24.fasta | BSNHM002-24 | true | Eukaryota, Metazoa, Ecdysozoa, Arthropoda, Hexapoda, Insecta, Pterygota, Neoptera, Endopterygota, Trichoptera, Integripalpia, Plenitentoria, Limnephiloidea, Apataniidae, Apataniinae, Apatania |
+| BSNHM002-24 | Genus: Apatania | AHF21732.1 | 510 | abs/path/to/protein_references/BSNHM002-24.fasta | BSNHM002-24 | true | Eukaryota, Metazoa, Ecdysozoa, Arthropoda, Hexapoda, Insecta, Pterygota, Neoptera, Endopterygota, Trichoptera, Integripalpia, Plenitentoria, Limnephiloidea, Apataniidae, Apataniinae, Apatania |
 | BSNHM038-24 | Genus: Ernodes | UPX88773.1 | 511 | abs/path/to/protein_references/BSNHM038-24.fasta | BSNHM038-24 | true | Eukaryota, Metazoa, Ecdysozoa, Arthropoda, Hexapoda, Insecta, Pterygota, Neoptera, Endopterygota, Trichoptera, Integripalpia, Brevitentoria, Sericostomatoidea, Beraeidae, Ernodes | 
 | BSNHM046-24 | Genus: Polycentropus | QLY89541.1 | 511 | abs/path/to/protein_references/BSNHM046-24.fasta | BSNHM046-24 | true | Eukaryota, Metazoa, Ecdysozoa, Arthropoda, Hexapoda, Insecta, Pterygota, Neoptera, Endopterygota, Trichoptera, Annulipalpia, Psychomyioidea, Polycentropodidae, Polycentropodinae, Polycentropus |
   
