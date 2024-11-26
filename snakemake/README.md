@@ -21,10 +21,12 @@
 
 ## Running: ##
 ### 1. Clone github repository ###
-conda install anaconda::git (if not already installed)
+```bash
+conda install anaconda::git # if not already installed
 git clone https://github.com/SchistoDan/MitoGeneExtractor.git path/to/installation/dir
-cd ath/to/installation/dir
+cd path/to/installation/dir
 git status
+```
 
 ### 2. Generate samples.csv ###
 - Can be created via [sample-processing](https://github.com/bge-barcoding/sample-processing) workflow, or manually.
