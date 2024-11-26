@@ -71,10 +71,26 @@ python 1_gene_fetch.py <gene_name> <output_directory> <samples.csv>
 
 
 ## Scripts ##
-- 1_gene_fetch.py = Fetches protein references for each sample using taxids from samples.csv to query NCBI DBs (via BioEntrez API). Fetches closest reference available to input taxid. 
-- add_contam_refs.py = If running Snakefile/Snakefile-fastp using multi-fasta protein reference files containing target and contaminant protein reference sequences, this script will add  contmainant reference sequences to target reference fasta files (see script usage).
+- 1_gene_fetch.py = Fetches protein references for each sample using taxids from samples.csv to query NCBI DBs (via BioEntrez API). Fetches closest reference available to input taxid.
 - mge_stats.py = This script (incorporated into 'rule extract_stats_to_csv') will use alignment fasta files and MGE.out files to generate summary statistics for each sample.
-- fasta_compare.py = 
+```
+python script.py <log_file> <output_file> <out_file_dir>
+  log_file: Path to a text file containing a list of FASTA file paths (one per line) # Produced by 'create_alignment_log' rule
+  output_file: Name of the output CSV file (will also generate a -contaminants.csv variant)
+  out_file_dir: Directory containing MGE .out files with barcode sequence statistics
+```
+- fasta_compare.py = Supplementary script that can be run after the MGE pipeline is finished. It will compare barcodes produced using different parameter combinations (from one run or multiple runs) for each sample, ranks each barcode 1-5 based on [BOLD BIN criteria](https://v3.boldsystems.org/index.php/resources/handbook?chapter=2_databases.html&section=bins), and select the 'best' (BOLD BIN compliant) barcode.
+```
+python ./scripts/fasta_compare_new.py OUTPUT_CSV OUTPUT_FASTA OUTPUT_BARCODE_FASTA INPUT_FILES --log-file LOG_FILE --verbose
+  OUTPUT_CSV: Path where the analysis results CSV file will be saved
+  OUTPUT_FASTA: Path where the best full sequences FASTA file will be saved
+  OUTPUT_BARCODE_FASTA: Path where the best barcode sequences FASTA file will be saved
+  INPUT_FILES: One or more input FASTA files to analyze (space-separated)
+  
+  Optional:
+  --log-file LOG_FILE: Specify a custom path for the log file (default: creates timestamped log in current directory)
+  --verbose, -v: Enable detailed debug logging
+```
 
 ## To do ##
 - Integrate BBsplit contam screen as an additional pre-processing mode for screening likely/known contaminant sequences.
