@@ -370,7 +370,7 @@ def format_sequence_id(process_id, parameters):
     Returns:
         str: Formatted sequence ID
     """
-    return f"{process_id}|{parameters}" if parameters else process_id
+    return f"{process_id}_{parameters}" if parameters else process_id
 
 
 
