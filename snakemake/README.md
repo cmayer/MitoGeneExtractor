@@ -43,7 +43,7 @@ git status
 ### 3. Fetch sample-specific protein references using 1_gene_fetch.py ###
 - [1_gene_fetch.py](https://github.com/SchistoDan/MitoGeneExtractor/blob/main/snakemake/1_gene_fetch.py) fetches sample-specific protein (pseudo)references using taxonomic ids and creates protein_references.csv (example below) required in config.yaml 
 1_gene_fetch.py usage:
- - *python 1_gene_fetch.py <gene_name> <output_directory> <samples.csv>*
+ - ``` python 1_gene_fetch.py <gene_name> <output_directory> <samples.csv> ```
     - <gene_name>: Name of gene to search for in NCBI RefSeq database (e.g., cox1/COX1).
     - <output_directory>: Path to directory to save output files (will save .fasta files and summary CSV in this directory). The directory will be created if it does not exist.
     - <samples.csv>: Path to input CSV file containing Process IDs (ID column) and TaxIDs (taxid column).
@@ -65,10 +65,7 @@ git status
 - Cluster: See snakemake.sh
   - Optional: '--rerun-incomplete' to resume a previously failed run.
 
-### Test run ###
-- Raw reads for 12 test samples can be downloaded [here](https://naturalhistorymuseum-my.sharepoint.com/personal/b_price_nhm_ac_uk/_layouts/15/onedrive.aspx?ct=1723035606962&or=Teams%2DHL&ga=1&LOF=1&id=%2Fpersonal%2Fb%5Fprice%5Fnhm%5Fac%5Fuk%2FDocuments%2F%5Ftemp%2F%5FBGEexamples4Felix%2F1%5Fraw%5Fdata). Each read pair must be in seperate subdirectories under a parent directory that can be called anything
-- samples sheet (BGE_test_samples.csv) provided (paths to reads and references need to be altered to where you stored the reads)
-- protein_references sheet (gene_fetch_BGE_test_data.csv) provided (in protein_references/).
+
 
 
 ## Scripts ##
@@ -83,3 +80,7 @@ git status
 - Make Workflow Hub compatible.
 - Generate RO-crates.
   
+### Test run ###
+- Raw reads for 12 test samples can be downloaded [here](https://naturalhistorymuseum-my.sharepoint.com/personal/b_price_nhm_ac_uk/_layouts/15/onedrive.aspx?ct=1723035606962&or=Teams%2DHL&ga=1&LOF=1&id=%2Fpersonal%2Fb%5Fprice%5Fnhm%5Fac%5Fuk%2FDocuments%2F%5Ftemp%2F%5FBGEexamples4Felix%2F1%5Fraw%5Fdata). Each read pair must be in seperate subdirectories under a parent directory that can be called anything
+- samples sheet (BGE_test_samples.csv) provided (paths to reads and references need to be altered to where you stored the reads)
+- protein_references sheet (gene_fetch_BGE_test_data.csv) provided (in protein_references/).
