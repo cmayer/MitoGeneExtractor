@@ -68,7 +68,7 @@ python 1_gene_fetch.py <gene_name> <output_directory> <samples.csv>
   - Optional: '--rerun-incomplete' to resume a previously failed run.
 
 ### 6. Results structure ###
-'''
+```
 results/
 ├── alignment/
 │   └── alignment_files.log
@@ -83,7 +83,7 @@ results/
 ├── cleanup_complete.txt
 ├── <run_name>.csv
 └── <run_name>-contaminants.csv
-'''
+```
 
 N.B. 'raw_data/' only produced when running pipeline in 'concat' (i.e. 'standard') mode. 'reports/' only generated when running pipeline in 'merge' (i.e. fastp-merge) mode.
 
