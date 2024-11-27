@@ -11,7 +11,7 @@ samples_file: "path/to/samples.csv"
 protein_reference_file: "path/to/protein_references.csv"
 
 #path to output directory. Will make final dir if it does not exist already.
-output_dir: "path/to/BSNHM190/results/mge_standard_r1_13_15_s50_100_nocontam"
+output_dir: "path/to/results/mge_standard_r1_13_15_s50_100_nocontam"
 
 #Gene(s) of interest
 genes:
