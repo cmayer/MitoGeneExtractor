@@ -4,6 +4,12 @@ import yaml
 from snakemake.io import expand
 import pandas as pd
 import glob
+import sys
+from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
+from threading import Lock
+            
+
 
 
 
@@ -49,6 +55,8 @@ r = config["r"]
 s = config["s"]
 
 run_name = config["run_name"]
+
+mge_path = config["mge_path"]
 
 preprocessing_mode = config.get("preprocessing_mode", "concat")  #Default to 'concat'/'standard' mode if not specified
 
@@ -207,6 +215,7 @@ else:  # concat mode
         output:
             temp(os.path.join(output_dir, "trimmed_data/{sample}_concat_trimmed.fq"))
         threads: 4
+        retries: 3 
         shell:
             """
             trim_galore --cores {threads} --dont_gzip --output_dir {output_dir}/trimmed_data/ {input}
@@ -239,7 +248,7 @@ rule MitoGeneExtractor:
         #echo input.AA list to log
         echo "Input AA files: {input.AA}" > {log.out}
 
-        /home/danip3/MitoGeneExtractor-BGE-main/MitoGeneExtractor-v1.9.5 \
+        {params.mge_executor} \
         -q {input.DNA} -p {input.AA} \
         -o {output_dir}/alignment/{wildcards.sample}_r_{wildcards.r}_s_{wildcards.s}_align_ \
         -c {output_dir}/consensus/{wildcards.sample}_r_{wildcards.r}_s_{wildcards.s}_con_ \
@@ -284,22 +293,86 @@ if preprocessing_mode == "merge":
             consensus_files=consensus_files
         output:
             renamed_consensus_files=renamed_files
+        threads: workflow.cores
         run:
-            for input_file, output_file in zip(input.consensus_files, output.renamed_consensus_files):
-                base_name = os.path.basename(input_file)
-                sample = base_name.split('_')[0]
-                r = base_name.split('_')[2]
-                s = base_name.split('_')[4]
-                con_suffix = base_name.split('con_')[-1].replace('.fas', '')
+            # Progress tracking variables
+            total_files = len(input.consensus_files)
+            processed_files = 0
+            progress_lock = Lock()
+            last_reported_progress = 0
+
+            def report_progress():
+                nonlocal processed_files, last_reported_progress
+                with progress_lock:
+                    processed_files += 1
+                    progress_percentage = (processed_files * 100) // total_files
+                    
+                    # Report every 10% progress
+                    if progress_percentage >= last_reported_progress + 10:
+                        print(f"Progress: {processed_files}/{total_files} files processed ({progress_percentage}%)")
+                        last_reported_progress = (progress_percentage // 10) * 10
+
+            def process_file(file_pair):
+                try:
+                    input_file, output_file = file_pair
+                    base_name = os.path.basename(input_file)
+                    
+                    parts = base_name.split('_')
+                    sample = parts[0]
+                    r = parts[2]
+                    s = parts[4]
+                    con_suffix = base_name.split('con_')[-1].replace('.fas', '')
+                    
+                    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+                    
+                    sequence_count = 0
+                    with open(input_file, 'r') as infile, open(output_file, 'w') as outfile:
+                        for line in infile:
+                            if line.startswith('>'):
+                                sequence_count += 1
+                                new_header = f">{sample}_r_{r}_s_{s}_{con_suffix}_fastp\n"
+                                outfile.write(new_header)
+                            else:
+                                outfile.write(line)
+                    
+                    report_progress()
+                    return True
+                    
+                except Exception as e:
+                    print(f"Error processing {input_file}: {str(e)}", file=sys.stderr)
+                    raise
+
+            # Log rule start
+            print(f"Starting rename_fasta_headers rule with {total_files} files")
+            print(f"Using {threads} threads")
+            
+            # Check input files exist
+            missing_files = [f for f in input.consensus_files if not os.path.exists(f)]
+            if missing_files:
+                error_msg = f"Missing input files: {', '.join(missing_files)}"
+                print(error_msg, file=sys.stderr)
+                raise FileNotFoundError(error_msg)
+
+            # Create pairs of input and output files
+            file_pairs = list(zip(input.consensus_files, output.renamed_consensus_files))
+            
+            # Process files in parallel with timing
+            start_time = datetime.now()
+            try:
+                with ThreadPoolExecutor(max_workers=threads) as executor:
+                    results = list(executor.map(process_file, file_pairs))
+                    
+                # Log completion statistics
+                end_time = datetime.now()
+                duration = end_time - start_time
+                successful = sum(results)
                 
-                os.makedirs(os.path.dirname(output_file), exist_ok=True)
+                print(f"Rename operation completed in {duration}")
+                print(f"Successfully processed {successful} out of {total_files} files")
                 
-                with open(input_file, 'r') as infile, open(output_file, 'w') as outfile:
-                    for line in infile:
-                        if line.startswith('>'):
-                            outfile.write(f">{sample}_r_{r}_s_{s}_{con_suffix}_fastp\n")
-                        else:
-                            outfile.write(line)
+            except Exception as e:
+                print(f"Failed to complete rename operation: {str(e)}", file=sys.stderr)
+                raise
 
 else:  # concat mode
     rule rename_fasta_headers:
@@ -307,22 +380,86 @@ else:  # concat mode
             consensus_files=consensus_files
         output:
             renamed_consensus_files=renamed_files
+        threads: workflow.cores
         run:
-            for input_file, output_file in zip(input.consensus_files, output.renamed_consensus_files):
-                base_name = os.path.basename(input_file)
-                sample = base_name.split('_')[0]
-                r = base_name.split('_')[2]
-                s = base_name.split('_')[4]
-                con_suffix = base_name.split('con_')[-1].replace('.fas', '')
+            # Progress tracking variables
+            total_files = len(input.consensus_files)
+            processed_files = 0
+            progress_lock = Lock()
+            last_reported_progress = 0
+
+            def report_progress():
+                nonlocal processed_files, last_reported_progress
+                with progress_lock:
+                    processed_files += 1
+                    progress_percentage = (processed_files * 100) // total_files
+                    
+                    # Report every 10% progress
+                    if progress_percentage >= last_reported_progress + 10:
+                        print(f"Progress: {processed_files}/{total_files} files processed ({progress_percentage}%)")
+                        last_reported_progress = (progress_percentage // 10) * 10
+
+            def process_file(file_pair):
+                try:
+                    input_file, output_file = file_pair
+                    base_name = os.path.basename(input_file)
+                    
+                    parts = base_name.split('_')
+                    sample = parts[0]
+                    r = parts[2]
+                    s = parts[4]
+                    con_suffix = base_name.split('con_')[-1].replace('.fas', '')
+                    
+                    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+                    
+                    sequence_count = 0
+                    with open(input_file, 'r') as infile, open(output_file, 'w') as outfile:
+                        for line in infile:
+                            if line.startswith('>'):
+                                sequence_count += 1
+                                new_header = f">{sample}_r_{r}_s_{s}_{con_suffix}\n"
+                                outfile.write(new_header)
+                            else:
+                                outfile.write(line)
+                    
+                    report_progress()
+                    return True
+                    
+                except Exception as e:
+                    print(f"Error processing {input_file}: {str(e)}", file=sys.stderr)
+                    raise
+
+            # Log rule start
+            print(f"Starting rename_fasta_headers rule with {total_files} files")
+            print(f"Using {threads} threads")
+            
+            # Check input files exist
+            missing_files = [f for f in input.consensus_files if not os.path.exists(f)]
+            if missing_files:
+                error_msg = f"Missing input files: {', '.join(missing_files)}"
+                print(error_msg, file=sys.stderr)
+                raise FileNotFoundError(error_msg)
+
+            # Create pairs of input and output files
+            file_pairs = list(zip(input.consensus_files, output.renamed_consensus_files))
+            
+            # Process files in parallel with timing
+            start_time = datetime.now()
+            try:
+                with ThreadPoolExecutor(max_workers=threads) as executor:
+                    results = list(executor.map(process_file, file_pairs))
+                    
+                # Log completion statistics
+                end_time = datetime.now()
+                duration = end_time - start_time
+                successful = sum(results)
                 
-                os.makedirs(os.path.dirname(output_file), exist_ok=True)
+                print(f"Rename operation completed in {duration}")
+                print(f"Successfully processed {successful} out of {total_files} files")
                 
-                with open(input_file, 'r') as infile, open(output_file, 'w') as outfile:
-                    for line in infile:
-                        if line.startswith('>'):
-                            outfile.write(f">{sample}_r_{r}_s_{s}_{con_suffix}\n")
-                        else:
-                            outfile.write(line)
+            except Exception as e:
+                print(f"Failed to complete rename operation: {str(e)}", file=sys.stderr)
+                raise
 
 
 
@@ -337,9 +474,10 @@ rule concatenate_fasta:
         ]
     output:
         os.path.join(output_dir, f"consensus/{run_name}.fasta")
+    threads: workflow.cores
     shell:
         """
-        cat {input.renamed_consensus} > {output}
+        parallel --jobs {threads} 'cat {{}}' ::: {input.renamed_consensus} > {output}
         """
 
 
@@ -377,7 +515,7 @@ rule extract_stats_to_csv:
     output:
         stats=os.path.join(output_dir, "{run_name}.csv")
     params:
-        script="/gpfs/nhmfsa/bulk/share/data/mbl/share/scratch/MGE/workflow/scripts/mge_contam_stats-list_and_out_file.py",
+        script="./scripts/mge_stats.py",
         out_dir=os.path.join(output_dir, "out/")
     shell:
         """
