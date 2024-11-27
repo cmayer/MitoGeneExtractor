@@ -67,7 +67,25 @@ python 1_gene_fetch.py <gene_name> <output_directory> <samples.csv>
 - Cluster: See snakemake.sh
   - Optional: '--rerun-incomplete' to resume a previously failed run.
 
+### 6. Results structure ###
+'''
+results/
+├── alignment/
+│   └── alignment_files.log
+├── consensus/
+│   └── <run_name>.fasta
+├── err/
+├── logs/
+├── out/
+├── trimmed_data/
+│   └── (reports/)
+├── (raw_data)/
+├── cleanup_complete.txt
+├── <run_name>.csv
+└── <run_name>-contaminants.csv
+'''
 
+N.B. 'raw_data/' only produced when running pipeline in 'concat' (i.e. 'standard') mode. 'reports/' only generated when running pipeline in 'merge' (i.e. fastp-merge) mode.
 
 
 ## Scripts ##
