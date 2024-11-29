@@ -1,4 +1,6 @@
 # MGE via snakemake with added functionality for BGE #
+![image](![image](https://github.com/user-attachments/assets/8c8e9f9b-bf70-433a-8809-76b2e1b2f5fd)
+
 ## Requirements: ##
 - Snakefile
 - config.yaml (containing:)
