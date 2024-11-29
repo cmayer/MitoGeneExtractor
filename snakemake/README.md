@@ -1,6 +1,5 @@
 # MGE via snakemake with added functionality for BGE #
-BBsplit pipeline coming soon...
-(![image](https://github.com/user-attachments/assets/8c8e9f9b-bf70-433a-8809-76b2e1b2f5fd)
+
 
 ## Requirements: ##
 - Snakefile
@@ -112,6 +111,9 @@ python ./scripts/fasta_compare_new.py OUTPUT_CSV OUTPUT_FASTA OUTPUT_BARCODE_FAS
   --log-file LOG_FILE: Specify a custom path for the log file (default: creates timestamped log in current directory)
   --verbose, -v: Enable detailed debug logging
 ```
+## Workflow ##
+BBsplit pipeline coming soon...
+(![image](https://github.com/user-attachments/assets/8c8e9f9b-bf70-433a-8809-76b2e1b2f5fd)
 
 ## To do ##
 - Integrate BBsplit contam screen as an additional pre-processing mode for screening likely/known contaminant sequences.
