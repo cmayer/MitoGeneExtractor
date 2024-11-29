@@ -1,4 +1,4 @@
-# MGE via snakemake with added functionality for BGE #
+# MGE (snakemake_ pipeline with added functionality for BGE #
 
 
 ## Requirements: ##
