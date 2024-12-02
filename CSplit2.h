@@ -55,7 +55,7 @@ class CSplit
 
   void set(std::vector<int> vec)
   {
-    int i=0, n=vec.size();
+    size_t i=0, n=vec.size();
 
     for (; i<n; ++i)
     {

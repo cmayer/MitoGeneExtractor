@@ -3,12 +3,12 @@
 
 #include <iostream>
 #include <vector>
-#include "CSequence_Mol2_1.h"
-#include "CSequences2.h"
-#include "CFile/CFile2_1.h"
+#include "CSequence_Mol3.h"
+#include "CSequences3.h"
+#include "CFile/CFile2_3.h"
 #include <list>
 #include "fastq.h"
-#include "faststring2.h"
+#include "faststring3.h"
 
 class fastq_sequences
 {
@@ -64,7 +64,7 @@ class fastq_sequences
     }
   }
 
-  void add_sequences_to_CSequences_object(CSequences2 *pseqs)
+  void add_sequences_to_CSequences_object(CSequences3 *pseqs)
   {
     std::list<fastq_record *>::iterator it, it_end;
     it     = list_of_sequences.begin();
@@ -73,13 +73,13 @@ class fastq_sequences
     while(it != it_end)
     {
       fastq_record *tmp = *it;
-      pseqs->add_seq_to_dataset(CSequence_Mol::dna, tmp->get_identifier(), tmp->get_seq(), 'N');
+      pseqs->add_seq_to_alignment(CSequence_Mol::dna, tmp->get_identifier(), tmp->get_seq(), 'N');
       ++it;
       //      ++count;
     }    
   }
 
-  unsigned size()
+  size_t size()
   {
     return list_of_sequences.size();
   }

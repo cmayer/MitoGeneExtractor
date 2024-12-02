@@ -12,7 +12,7 @@ string                      global_tmp_directory;
 unsigned                    global_verbosity;
 unsigned                    global_num_bp_beyond_exonerate_alignment_if_at_start_or_end;
 string                      global_exonerate_binary;
-string                      global_vulgar_file;
+string                      global_vulgar_file_folder;
 string                      global_alignment_output_file;
 float                       global_consensus_threshold;
 string                      global_consensus_sequence_output_filename;
@@ -52,6 +52,7 @@ void good_bye_and_exit(int error)
 }
 
 
+
 void init_param()
 {
   global_tmp_directory = ".";
@@ -68,6 +69,7 @@ void init_param()
   global_minimum_seq_coverage_uppercase = 1;
   global_minimum_seq_coverage_total = 1;
   global_report_gap_mode = 1;
+  global_exonerate_binary = "exonerate";
 
   global_keep_concatenated_input_file = false;
   
@@ -171,7 +173,9 @@ void read_and_init_parameters(int argc, char** argv)
 
     ValueArg<unsigned> min_exonerate_score_threshold_Arg("s", "minExonerateScoreThreshold",
 							 "The score threshold passed to Exonerate to decide whether to include "
-							 "or not include the hit in the output.",
+							 "or not include the hit in the output. Note that the minimum score implies "
+                             "a minimum sequence length that will be reported by exonerate. "
+                             "Default: Use exonerate default. For the version 2.4 this is 100.",
 						       false, UINT_MAX, "int");
     cmd.add(min_exonerate_score_threshold_Arg);
     
@@ -205,6 +209,33 @@ void read_and_init_parameters(int argc, char** argv)
 			 false);
     cmd.add(include_F_Arg);
     */
+
+    SwitchArg include_gaps_in_Reference_Arg("", "reportSequencesWithGapInAAReference_removingNucleotidesInAlignment",
+                                            "Include sequences in alignment and consensus sequence for which a gap is suggested in the reference. "
+                                            "Note that this removes the nucleotides in sequences that have no "
+                                            "corresponding AAs in the reference. Default: false",
+                                            false);
+    cmd.add(include_gaps_in_Reference_Arg);
+
+    SwitchArg include_gaps_in_NucSeqe_Arg("", "reportSequencesWithGapInNucleotideSequence",
+                                          "Include sequences in alignment and conensus sequence that have a gap in the nucleotide sequence. "
+                                          "This is recommended. Default: true.",
+                                          true);
+    cmd.add(include_gaps_in_NucSeqe_Arg);
+
+    SwitchArg only_gaps_in_Reference_Arg("", "reportOnlySequencesWithGapInAAReference_removingNucleotidesInAlignment",
+                                         "Include only sequences in alignment and consensus sequence for which a gap is suggested in the reference. "
+                                         "Note that this removes the nucleotides in sequences that have no "
+                                         "corresponding AAs in the reference. Default: false",
+                                         false);
+     cmd.add(only_gaps_in_Reference_Arg);
+
+     SwitchArg only_gaps_in_NucSeqe_Arg("", "reportOnlySequencesWithGapInNucleotideSequence",
+                                           "Include only sequences in alignment and consensus that have a gap in the nucleotide sequence. "
+                                           "This is recommended. Default: true.",
+                                           true);
+     cmd.add(only_gaps_in_NucSeqe_Arg);
+
 
     SwitchArg include_g_only_Arg("g", "onlyGap",
 			 "Include only reads which aligned with a gap.",
@@ -251,15 +282,15 @@ void read_and_init_parameters(int argc, char** argv)
 				        false, global_exonerate_binary, "string");
     cmd.add(exonerate_path_Arg);
 
-    ValueArg<string> vulgar_file_Arg("V", "vulgar_file",
-				     "Specifies the name of Exonerate vulgar file. If the specified file exists, it will be used "
-				     "for the analysis. If it does not exist " PROGNAME " will run Exonerate in "
-				     "order to create the file with this name. The created file will then be used to proceed. "
-				     "If no file is specified with this option, a temporary file called tmp-vulgar.txt "
-				     "will be created and removed after the program run. In this case a warning "
-				     "will be printed to the console.",
-				     false, global_vulgar_file, "string");
-    cmd.add(vulgar_file_Arg);
+    ValueArg<string> vulgar_file_folder_Arg("V", "vulgar_file",
+				     "Specifies the name of the folder in which vulgar files, generated as exonerate output, are stored. "
+                     "For each input file a vular file with the same base name as the input file, but with the extension "
+                     ".vulgar is read as input or generated if it does not exist. "
+				     "If the vulgar file does not exist MitoGeneExtractor will run Exonerate in "
+				     "order to create the file. The created file will then be used to proceed. "
+				     "If no folder is specified with this option, the current working directory is used to store the vulgar files. ",
+				     false, global_vulgar_file_folder, "string");
+    cmd.add(vulgar_file_folder_Arg);
 
     ValueArg<string> alignment_output_file_name_Arg("o", "",
        "Specifies the base name of alignment output file(s). Aligned input sequences "
@@ -306,7 +337,7 @@ void read_and_init_parameters(int argc, char** argv)
     global_verbosity                                   = verbosity_Arg.getValue();
     global_num_bp_beyond_exonerate_alignment_if_at_start_or_end = bp_beyond_Arg.getValue();
     global_exonerate_binary                            = exonerate_path_Arg.getValue();
-    global_vulgar_file                                 = vulgar_file_Arg.getValue();
+    global_vulgar_file_folder                          = vulgar_file_folder_Arg.getValue();
     global_alignment_output_file                       = alignment_output_file_name_Arg.getValue();
     global_consensus_sequence_output_filename          = consensus_output_file_Arg.getValue();
     global_consensus_threshold                         = consensus_threshold_Arg.getValue();
@@ -368,14 +399,12 @@ void read_and_init_parameters(int argc, char** argv)
   else if (global_include_only_gap_alignments)
     global_gap_frameshift_mode = 2;
 
-  if (global_vulgar_file.empty())
+  if (global_vulgar_file_folder.empty())
   {
-    cerr << "WARNING: You did not specify a vulgar file, so a temporary vulgar "
-            "file will be created for this run that will be removed at the end "
-            "of this program run. Therefor the vulgar file cannot be reused in "
-            "other runs.\n"; 
-    global_vulgar_file = "tmp-vulgar.txt";
+    global_vulgar_file_folder = "./";
   }
+  else if (global_vulgar_file_folder.back() != '/')
+    global_vulgar_file_folder.push_back('/');
 
   if (global_consensus_threshold > 1 || global_consensus_threshold < 0)
   {
@@ -437,18 +466,17 @@ void print_parameters(std::ostream &os, const char *s)
        << std::endl;
   }
 
-  os << s <<   "Protein reference input file name:                      " << global_input_prot_reference_sequence
+  os << s << "Protein reference input file name:                      " << global_input_prot_reference_sequence
      << std::endl;
 
-  os << s <<   "Directory for temporary files:                          " << global_tmp_directory
+  os << s << "Directory for temporary files:                          " << global_tmp_directory
      << std::endl;
 
-  os << s <<   "Base name for alignment output file:                    " << global_alignment_output_file
+  os << s << "Alignment output file:                                  " << global_alignment_output_file
      << std::endl;
 
-  if (!global_vulgar_file.empty())
-    os << s << "Vulgar file name:                                       " << global_vulgar_file
-       << std::endl;
+  os << s << "Vulgar folder:                                          " << global_vulgar_file_folder
+     << std::endl;
 
   if (!global_exonerate_binary.empty()) 
     os << s << "Exonerate binary:                                       " << global_exonerate_binary

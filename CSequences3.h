@@ -14,23 +14,21 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-// Next general goal: Use size_t instead of unsigned int for array sizes.
+// Next general goal: Use faststring::size_type instead of unsigned int for array sizes.
 
-
-#ifndef  CSEQUENCES2_H
-#define  CSEQUENCES2_H
+#ifndef  CSEQUENCES3_H
+#define  CSEQUENCES3_H
 #include <vector>
 #include <map>
-#include "faststring2.h"
+#include "faststring3.h"
 #include "fast-realloc-vector.h"
 #include "CSplit2.h"
-#include "CSequence_Mol2_1.h"
+#include "CSequence_Mol3.h"
 #include <cassert>
 #include <cmath>
 #include <utility>
 #include "basic-DNA-RNA-AA-routines.h"
 #include <climits>
-#include <set>
 
 #include <algorithm>
 
@@ -56,100 +54,6 @@
 // Criteria for reference taxa:
 // - Original reference taxa have 2 pipes (3 sections), other sequences have 3 pipes (4 sections) in sequence names.
 // - Hamstered reference taxa are those for which section 2 and 3 are identical in the first 4 characters.
-
-
-/* inline bool is_1kite_hamstered_core_seq_id(faststring seq_id) */
-/* { */
-/* #ifdef DEBUG */
-/*   std::cerr << "Called: CSequences2.h:is_1kite_hamstered_core_seq_id with parameter " << seq_id << '\n'; */
-/* #endif */
-
-/*   //  std::cerr << "Calling outdated function: is_1kite_hamstered_core_seq_id\n"; */
-/*   //  exit(-1); */
-
-/*   std::vector<faststring> l; */
-
-/*   split(l, seq_id, "|"); */
-
-/*   unsigned num_sections = l.size(); */
-
-/*   if (num_sections > 4 || num_sections < 3) */
-/*   { */
-/*     std::cerr << "Error: Non standard 1kite seq_id encountered: " << seq_id << '\n'; */
-/*     exit(0); */
-/*   } */
-
-/* #ifdef DEBUG */
-/*   std::cerr << "num_sections: " << num_sections << '\n'; */
-/* #endif */
-
-/*   if (num_sections == 3) */
-/*     return true; */
-/*   else */
-/*     return false; */
-/* } */
-
-
-
-inline bool is_1kite_original_reference_taxon_seq_id(faststring seq_id)
-{
-#ifdef DEBUG
-  std::cerr << "Called: CSequences2.h:is_1kite_original_reference_taxon_seq_id with parameter " << seq_id << '\n';
-#endif
-  
-  std::vector<faststring> l;
-  
-  split(l, seq_id, "|");
-  
-  std::vector<faststring>::size_type num_sections = l.size();
-  
-  if (num_sections > 4 || num_sections < 3)
-  {
-    std::cerr << "Error: Non standard 1kite seq_id encountered: " << seq_id << '\n';
-    exit(0);
-  }
-  
-#ifdef DEBUG
-  std::cerr << "num_sections: " << num_sections << '\n';
-#endif
-  
-  if (num_sections == 3)
-    return true;
-  else
-    return false;
-}
-
-
-inline bool is_1kite_hamstered_reference_seq_id(faststring seq_id)
-{
-  std::vector<faststring> l;
-  
-  split(l, seq_id, "|");
-  
-#ifdef DEBUG
-  std::cerr << "Called: CPfamScanParser.h:is_1kite_hamstered_reference_seq_id with parameter " << seq_id << '\n';
-#endif
-  
-  if (l.size() != 4)
-  {
-    std::cerr << "Error: Non standard 1kite seq_id encountered: " << seq_id << '\n';
-    exit(0);
-  }
-  faststring part2 = l[1];
-  
-  part2.shorten_to_first_occurrence_of('_');
-  faststring part3 = l[2];
-  
-  part2.shorten(4);
-  part3.shorten(4);
-  
-#ifdef DEBUG
-  std::cerr << "num_sections: " << l.size() << " " << part2 << " " << part3 << '\n';
-#endif
-  
-  return (part2 == part3);
-}
-
 
 
 
@@ -185,7 +89,7 @@ inline unsigned add_or_count_return(std::map<faststring, unsigned> &m, const fas
 }
 
 
-inline void vector_of_faststring_shorten_all(std::vector<faststring> &v, unsigned len)
+inline void vector_of_faststring_shorten_all(std::vector<faststring> &v, faststring::size_type len)
 {
   size_t N = v.size();
   for (size_t i=0; i< N; ++i)
@@ -195,10 +99,10 @@ inline void vector_of_faststring_shorten_all(std::vector<faststring> &v, unsigne
 }
 
 // Shortens strings if they are longer then len, appends copies of fill if they are to short.
-inline void vector_of_faststring_resize_all(std::vector<faststring> &v, unsigned len, char fill)
+inline void vector_of_faststring_resize_all(std::vector<faststring> &v, faststring::size_type len, char fill)
 {
-  unsigned N = v.size();
-  for (unsigned i=0; i< N; ++i)
+  size_t N = v.size();
+  for (size_t i=0; i< N; ++i)
   {
     v[i].resize(len, fill);
   }
@@ -207,28 +111,26 @@ inline void vector_of_faststring_resize_all(std::vector<faststring> &v, unsigned
 inline void vector_of_faststring_replace_characters(std::vector<faststring> &v, faststring &string_of_replacement_symbols, char skip_char)
 {
   unsigned char all_symbols_lookup[256];
-  faststring::size_t  i;
-  unsigned            j;
   
-  for (j=0; j<256; ++j)
+  for (unsigned j=0; j<256; ++j)
   {
     all_symbols_lookup[j] = (unsigned char)j;
   }
   
-  faststring::size_t n = string_of_replacement_symbols.size();
-  for (i=0; i<n; i+=2)
+  faststring::size_type n = string_of_replacement_symbols.size();
+  for (faststring::size_type i=0; i<n; i+=2)
   {
     all_symbols_lookup[(unsigned char)string_of_replacement_symbols[i]] = string_of_replacement_symbols[i+1];
   }
   
-  for (i=0; i < v.size(); ++i)
+  for (size_t i=0; i < v.size(); ++i)
   {
     char       *pos     = v[i].begin();
     char       *pos_end = v[i].end();
     char       *pos_write;
     char       c;
     unsigned   removed  = 0;
-    faststring::size_t   N = v[i].length();
+    size_t     N = v[i].length();
     
     pos_write = pos;
     
@@ -251,27 +153,27 @@ inline void vector_of_faststring_replace_characters(std::vector<faststring> &v, 
 }
 
 
-inline void vector_of_faststring_unique(std::vector<faststring> &v, faststring::size_t len)
+inline void vector_of_faststring_unique(std::vector<faststring> &v, faststring::size_type len)
 {
-  faststring::size_t digits = (unsigned)log10(v.size()) + 1;
-  faststring::size_t mlen;
+  unsigned digits = (unsigned)log10(v.size()) + 1;
+  unsigned mlen;
   
   if (digits+1 >= len)
     mlen = 0;
   else
-    mlen = len-digits-1;
+    mlen = (unsigned)(len-digits-1);
   
   std::map<faststring, unsigned>  m_names, m_names_short;
   std::map<faststring, unsigned>::iterator  f_it, f_it2;
   
   faststring   tmp;
   
-  for (unsigned i=0; i < v.size(); ++i)
+  for (size_t i=0; i < v.size(); ++i)
   {
     add_or_count(m_names, v[i]);
   }
   
-  for (unsigned i=0; i < v.size(); ++i)
+  for (size_t i=0; i < v.size(); ++i)
   {
     if (m_names[v[i]] > 1)
     {
@@ -299,7 +201,7 @@ inline void vector_of_faststring_unique(std::vector<faststring> &v, faststring::
 
 inline void vector_of_faststring_trimSpaces_front_back(std::vector<faststring> &v)
 {
-  unsigned N = v.size();
+  unsigned N = (unsigned)v.size();
   for (unsigned i=0; i< N; ++i)
   {
     v[i].removeSpacesFront();
@@ -319,27 +221,27 @@ inline void vector_of_faststring_trimSpaces_front_back(std::vector<faststring> &
 
 // Class for aligned sequences
 
-class CSequences2
+class CSequences3
 {
 public:
   typedef char chartype;
   
 private:
-  CSequence_Mol::DataTypesEnum	datatype;            // DNA, Protein, or other
-  unsigned                  taxaNum;
-  char                      ambig_char;
-  bool                      originalPosNumbers_supplied;
-  unsigned	            posNum;  // Stores 0 if sequences have unequal lengths.
+  CSequence_Mol::DataTypesEnum	     datatype;            // DNA, Protein, or other
+  unsigned                           taxaNum;
+  char                               ambig_char;
+  bool                               originalPosNumbers_supplied;
+  faststring::size_type	             posNum;  // Stores 0 if sequences have unequal lengths.
   // Checked for fasta. Phylip input guarantees
   // equal lengths.
-  std::vector<unsigned>     originalPosNumbers;  // In case we excluded positions from the alignment, we want to remember the original positions.
-  std::vector<CSequence_Mol*>   seqData;             // The vector of pointers to sequences
-
+  std::vector<faststring::size_type> originalPosNumbers;  // In case we excluded positions from the alignment, we want to remember the original positions.
+  std::vector<CSequence_Mol*>        seqData;             // The vector of pointers to sequences
+  
   // Map of short names. Only makes sense if the short names are unique!
   std::map<faststring, CSequence_Mol*> sn_map;       // Obtain pointer to the sequence by sequence name. Is map of short names.
   // Short names are normal names
   bool                      short_names_unique;  // The short_name is the name before the first space or the full name if the name has no spaces.
-
+  
   void add_seq(CSequence_Mol* seq)
   {
     //    std::cerr << "Adding: " << seq->getName() << '\n';
@@ -348,7 +250,6 @@ private:
     
     seqData.push_back(seq);
     sn_map[seq->getName()] = seq;
-    ++taxaNum;
   }
   
   
@@ -358,8 +259,8 @@ private:
     // Creates/recreates the map of short names.
     if (sn_map.size() == 0)
     {
-      int i, N=seqData.size();
-      for(i=0; i<N; ++i)
+      std::vector<CSequence_Mol*>::size_type N=seqData.size();
+      for(std::vector<CSequence_Mol*>::size_type i=0; i<N; ++i)
       {
         if (sn_map.find(seqData[i]->getName()) != sn_map.end() )
           short_names_unique = false;
@@ -376,22 +277,18 @@ private:
   
 public:
   // Minimal constructor: Empty sequences object
-  CSequences2(CSequence_Mol::DataTypesEnum Dt, char set_ambig_char='?'):
+  CSequences3(CSequence_Mol::DataTypesEnum Dt, char set_ambig_char='?'):
   datatype(Dt), taxaNum(0), ambig_char(set_ambig_char), originalPosNumbers_supplied(false),posNum(0), short_names_unique(true)
-  
   {}
   
   // Constructor for a set of empty sequences with names and length.
-  CSequences2(CSequence_Mol::DataTypesEnum Dt, std::vector<faststring> names, unsigned len):
-  datatype(Dt), taxaNum(0), ambig_char('?'), originalPosNumbers_supplied(false),posNum(0), short_names_unique(true)
-  
+  CSequences3(CSequence_Mol::DataTypesEnum Dt, std::vector<faststring> names, faststring::size_type len):
+  datatype(Dt), taxaNum((unsigned)names.size()), ambig_char('?'), originalPosNumbers_supplied(false),posNum(0), short_names_unique(true)
   {
-    unsigned N = names.size(); 
-    seqData.reserve(N);
-    unsigned        i;
+    seqData.reserve(taxaNum);
     CSequence_Mol   *seq;
     
-    for (i=0; i<N; ++i)
+    for (unsigned i=0; i<taxaNum; ++i)
     {
       seq = new CSequence_Mol (CSequence_Mol::dna, names[i], len, ambig_char);
       add_seq(seq);
@@ -399,11 +296,11 @@ public:
   }
   
   
-  ~CSequences2()
+  ~CSequences3()
   {
-    int i, n=taxaNum;
+    int n=taxaNum;
     
-    for (i=0; i<n; ++i)
+    for (int i=0; i<n; ++i)
     {
       delete seqData[i];
     }
@@ -419,20 +316,20 @@ public:
   //    pos2 must be the index after the last column. Is 0 based index.
   //    pos2-pos1 must be the number of bases that are copied to this sequence.
   
-  CSequences2(const CSequences2 &s, faststring::size_t pos1 = 0, faststring::size_t pos2 = faststring::npos):
-  datatype(s.datatype), taxaNum(0), ambig_char(s.ambig_char),
+  CSequences3(const CSequences3 &s, faststring::size_type pos1 = 0, faststring::size_type pos2 = faststring::npos):
+  datatype(s.datatype), taxaNum(s.taxaNum), ambig_char(s.ambig_char),
   originalPosNumbers_supplied(false), posNum(0), short_names_unique(true)
   {
-    unsigned        i, N=s.taxaNum;
+    unsigned        n=taxaNum;
     CSequence_Mol   *seq;
     
-    if (N>0)
+    if (n > 0)
     {
       // This is taken out of the loop to silence the warning that seq is used uninitialised below.
       seq = new CSequence_Mol ( *(s.seqData[0]), pos1, pos2);
       add_seq(seq);
 
-      for (i=1; i<N; ++i)
+      for (unsigned i=1; i<n; ++i)
       {
         seq = new CSequence_Mol ( *(s.seqData[i]), pos1, pos2);
         add_seq(seq);
@@ -440,32 +337,28 @@ public:
       // The following code does not check anything - remove later.
       //    if (i != n)
       //    {
-      //      std::cerr << "Critical error in CSequences2 constructor: taxaNum and number of sequences found disagree.\n";
+      //      std::cerr << "Critical error in CSequences3 constructor: taxaNum and number of sequences found disagree.\n";
       //    }
-      
+
       posNum = seq->length();
     }
   }
-
-  // Add more constructors: (a) from range, (b) from range_list
-
   
   bool are_short_names_unique()
   {
     return short_names_unique;
   }
-
+  
   bool equal_length_of_all_sequences()
   {
-    size_t len;
-    unsigned i;
+    faststring::size_type len;
     
     if (taxaNum==0)
       return true;
     
     len = seqData[0]->length();
     
-    for (i=1; i<taxaNum; ++i)
+    for (unsigned i=1; i<taxaNum; ++i)
     {
       if (len != seqData[i]->length())
         return false;
@@ -474,7 +367,7 @@ public:
   }
   
   
-  void trim_seq_names(unsigned max_len)
+  void trim_seq_names(faststring::size_type max_len)
   {
     for (unsigned i=0; i<taxaNum; ++i)
     {
@@ -547,11 +440,13 @@ public:
     }
   }
   
-  // Depreciated:
-  CSequence_Mol* get_seq(unsigned id)
-  {
-    return get_seq_by_index(id);
-  }
+  // Depreciated: Use get_seq_by_index instead
+  /*
+   CSequence_Mol* get_seq(unsigned id)
+   {
+   return get_seq_by_index(id);
+   }
+   */
   
   const char* get_Seq_Data(unsigned id)
   {
@@ -589,16 +484,15 @@ public:
     }
   }
   
-  unsigned         GetTaxaNum() { return taxaNum;}
-  unsigned         GetPosNum()  { return posNum;}
+  unsigned              GetTaxaNum() { return taxaNum;}
+  faststring::size_type GetPosNum()  { return posNum;}
   
   CSequence_Mol::DataTypesEnum    get_datatype()
   {
     return datatype;
   }
   
-  chartype         GetChar(unsigned TaxaIndex,
-                           unsigned PosIndex) const
+  chartype GetChar(unsigned TaxaIndex, faststring::size_type PosIndex) const
   {
     assert(TaxaIndex < taxaNum);
     assert(PosIndex  < posNum);
@@ -609,7 +503,7 @@ public:
   {
     if (flag & 1) // scalars:
     {
-      os << "Debug output CSequences2 object, flag==0\n";
+      os << "Debug output CSequences3 object, flag==0\n";
       os << "Data type:  " << (int)datatype<< '\n';
       os << "taxaNum:    " << taxaNum      << '\n';
       os << "posNum:     " << posNum       << '\n';
@@ -623,10 +517,10 @@ public:
     
     if (flag & 2)
     {
-      size_t n=seqData.size();
+      faststring::size_type n=seqData.size();
       
       os << "Data types of sequences:\n";
-      for (size_t i=0; i<n; ++i)
+      for (unsigned i=0; i<n; ++i)
       {
         os << i << ": " << seqData[i]->get_datatype() << " " << seqData[i]->type_as_string() << '\n';
       }
@@ -642,14 +536,14 @@ public:
   /*      seqData[TaxaIndex]->set_pos(PosIndex, mychar); */
   /*    } */
   
-  void SetOriginalPosNumber(unsigned index, unsigned theOriginalPosNumber)
+  void SetOriginalPosNumber(faststring::size_type index, faststring::size_type theOriginalPosNumber)
   {
     originalPosNumbers_supplied = true;
     assert(index < posNum);
     originalPosNumbers[index] = theOriginalPosNumber;
   }
   
-  unsigned GetOriginalPosNumber(unsigned index) const
+  faststring::size_type GetOriginalPosNumber(faststring::size_type index) const
   {
     assert(index < posNum);
     if (originalPosNumbers_supplied)
@@ -675,8 +569,7 @@ public:
   // Return true if taxon_name has been found, false otherwise
   bool reorder_move_seq_to_top(faststring &taxon_name)
   {
-    unsigned i;
-    for (i=0; i< taxaNum; ++i)
+    for (unsigned i=0; i< taxaNum; ++i)
     {
       faststring iname = seqData[i]->getFullName();
       if (seqData[i]->getFullName() == taxon_name)
@@ -694,16 +587,24 @@ public:
   // TODO: Not very efficient! - Very simple and thus secure implementation.
   bool reorder_sort_by(std::vector<faststring> &names)
   {
-    size_t  n=names.size();
+    std::vector<faststring*>::size_type  n=names.size();
     bool success = true;
     
-    for (int i=n-1; i>=0; --i)
+    for (int i=(int)n-1; i>=0; --i)
     {
       success = success & reorder_move_seq_to_top(names[i]);
     }
     return success;
   }
-  
+
+  // Reorder the sequences according to the
+  // in the order given by the vector.
+  // TODO: Not very efficient! - Very simple and thus secure implementation.
+  void reorder_sort_by_first_number_in_seqquence_names()
+  {
+    sort(seqData.begin(), seqData.end(), less_than_sequence_name_first_unsigned_in_fullname_pointer);
+  }
+
   bool get_Originalposnumbers_Supplied()
   {
     return originalPosNumbers_supplied;
@@ -721,15 +622,29 @@ public:
       seqData[i]->trim_seq_name(symbol_list);
     }
   }
-  
-  void get_sequence_names(std::vector<faststring> &snames)
+
+   // Returns the sequence names upto the first space
+   void get_short_sequence_names(std::vector<faststring> &snames)
+   {
+      snames.clear();
+      snames.reserve(taxaNum);
+      //     unsigned  max=0;
+
+      for (unsigned i=0; i < taxaNum; ++i)
+      {
+         snames.push_back(seqData[i]->getName_faststring());
+      }
+      //     return max;
+   }
+
+  // Returns the maximum sequence, length
+  void get_full_sequence_names(std::vector<faststring> &snames)
   {
     snames.clear();
     snames.reserve(taxaNum);
-    unsigned  i;
     //     unsigned  max=0;
     
-    for (i=0; i < taxaNum; ++i)
+    for (unsigned i=0; i < taxaNum; ++i)
     {
       snames.push_back(seqData[i]->getFullName());
       /*        if (snames[i].size() > max) */
@@ -739,246 +654,29 @@ public:
     }
     //     return max;
   }
-
-  void get_short_sequence_names(std::vector<faststring> &snames)
-  {
-    snames.clear();
-    snames.reserve(taxaNum);
-    unsigned  i;
-    //     unsigned  max=0;
-    
-    for (i=0; i < taxaNum; ++i)
-    {
-      snames.push_back(seqData[i]->getName_faststring());
-    }
-  }
   
-  // Not yet implemented
-  /*    void unique_full_names(std::vector<faststring> &snames) */
-  /*    { */
-  
-  /*    } */
-  
-  // Not yet implemented
-  /*    void unique_short_names(std::vector<faststring> &snames) */
-  /*    { */
-  
-  /*    } */
-  
-  
-  /*
-   void unique_maxlen_names(std::vector<faststring> &snames, int ulen=10)
-   {
-   snames.clear();
-   std::map<faststring, unsigned>  m_snames;
-   std::map<faststring, unsigned>  m_shortend_names;
-   std::map<faststring, unsigned>::iterator  f_it, f_it2;
-   
-   unsigned                             digits = (unsigned)log10(taxaNum) + 1;
-   unsigned                             i;
-   faststring                           tmp;
-   faststring                           tmp_short;
-   
-   if (ulen - 1 < digits)
-   {
-   std::cerr << "Internal library error: Attempt to shorten sequence names to negative length. Usage of the function: unique_maxlen_names should be revised.\n";
-   exit(-1);
-   }
-   
-   for (i=0; i < taxaNum; ++i)
-   {
-   tmp = seqData[i]->getPhylipName(ulen);
-   f_it = m_snames.find(tmp);
-   // If we find it it is not unique
-   if (f_it != m_snames.end() ) // This name is not unique
-   {
-   ++f_it->second; // We count this occurrence
-   }
-   }
-   
-   for (i=0; i < taxaNum; ++i)
-   {
-   tmp = seqData[i]->getPhylipName(ulen);
-   //       snames.push_back(seqData[i]->getPhylipName());
-   f_it = m_snames.find(tmp);
-   if (f_it->second > 0 ) // This name is not unique
-   {
-   tmp_short = tmp;
-   tmp_short.resize(ulen-digits-1, ' ');
-   // We know that we will have multiple entries in the end.
-   f_it2 = m_shortend_names.find(tmp_short);
-   // It could be that this will the first entry
-   if (f_it2 != m_shortend_names.end() )
-   {}
-   }
-   else // Otherwise we will have only one entry.
-   {
-   snames.push_back(tmp);
-   }
-   
-   
-   
-   
-   }
-   
-   ///
-   
-   
-   
-   for (i=0; i < taxaNum; ++i)
-   {
-   // push_back first sequence phylip sequence name. This is already trimmed to 10 characters.
-   snames.push_back(seqData[i]->getPhylipName(ulen));
-   // Search for this name in m_snames map.
-   f_it = m_snames.find(snames[i]);
-   
-   // If we find it it is not unique
-   if (f_it != m_snames.end() ) // This name is not unique
-   {
-   ++f_it->second; // We count this occurrence
-   }
-   else // If we do not find it, we insert it and set the counter to 1
-   {
-   m_snames.insert(std::make_pair(snames[i], 1));
-   }
-   }
-   // We have build the map that count the number of occurrences - now we need to create unique names:
-   
-   // We will shorten the names to add a number.
-   // When shortening names, previously unique names might become non-unique so we have to take care of this first:
-   
-   f_it = m_snames.begin();
-   while (f_it != m_snames.end() )
-   {
-   //       std::cout << f_it->first << " " << f_it->second << '\n';
-   
-   if (f_it->second > 1) // If the 10 character sequence name occurs more than one, we have to number them:
-   {
-   faststring temp = f_it->first;
-   temp.shorten(9-digits);
-   
-   f_it2 =  m_shortend_names.find(temp);
-   if (f_it2 == m_shortend_names.end() ) // We already have this name in the map:
-   {
-   m_shortend_names[temp] += f_it->second;
-   }
-   else // Create this entry:
-   {
-   m_shortend_names[temp] = f_it->second;
-   }
-   }
-   ++f_it;
-   }
-   
-   // Now we have two maps:
-   // The first has entries for all names
-   // The second has entries for all names that need to be shortened.
-   
-   // For all names that need to be shortened:
-   f_it = m_shortend_names.begin();
-   while (f_it != m_shortend_names.end() )
-   {
-   unsigned internal_counter = 1;
-   unsigned j;
-   faststring temp;
-   for (j=0; j<taxaNum; ++j)
-   {
-   temp = snames[j];
-   if ( m_snames[temp] != 1 )
-   {
-   temp.shorten(10-digits);
-   }
-   if (temp == f_it->first)
-   {
-   faststring nn = faststring(internal_counter, '0', digits);
-   //	   nn.replace_char(' ', '0');
-   
-   snames[j]  = temp;
-   snames[j].append('_');
-   
-   snames[j].append(nn);
-   ++internal_counter;
-   }
-   }
-   ++f_it;
-   }
-   }
-   */
-  
-  unsigned PairwiseSequenceSymbolMatches(unsigned taxon1, unsigned taxon2,
-                                         char     numDistCharacters,
-                                         const signed char* pos_vec,
-                                         signed char* match_vec) const
-  {
-    unsigned  count    = 0;
-    unsigned  pos;
-    
-    for (pos = 0; pos < posNum; ++pos)
-    {
-      if (pos_vec[pos]  &&
-          seqData[taxon1]->get_pos(pos) == seqData[taxon2]->get_pos(pos) &&
-          seqData[taxon1]->get_pos(pos) < numDistCharacters)
-      {
-        ++count;
-        match_vec[pos] = 1;
-      }
-      else
-        match_vec[pos] = 0;
-    }
-    return count;
-  }
-  
-  
-  unsigned PairwiseSequenceSymbolMatches(
-                                         unsigned taxon1,
-                                         const faststring & ref_seq,
-                                         char               numDistCharacters,
-                                         const signed char* pos_vec,
-                                         signed char* match_vec) const
-  
-  // Ist hier alles OK?????????????????????????????????????????
-  {
-    unsigned  count    = 0;
-    unsigned  pos;
-    
-    for (pos = 0; pos < posNum; ++pos)
-    {
-      if (pos_vec[pos]  &&  seqData[taxon1]->get_pos(pos) == ref_seq[pos]
-          &&  ref_seq[pos] < numDistCharacters)
-      {
-        ++count;
-        match_vec[pos] = 1;
-      }
-      else
-        match_vec[pos] = 0;
-    }
-    return count;
-  }
   
   // Only works for recoded sequences!!!!
   void     ConsensusSequence(faststring&           conSeq,
                              const CSplit&         setOfTaxa,
-                             char                  numDistCharacters,
-                             unsigned              numSymbols,
+                             unsigned char         numDistCharacters, // Distinguishable characters. Recoded characters have indices 0, ..., numDistCharacters-1
+                             unsigned char         numSymbols,
                              double                consensusThreshold )
   {
-    unsigned          pos;
-    unsigned          taxon, maxindex, equalindex;
-    unsigned          taxaCount = 0;
-    unsigned          consensusSymMinimum;
-    char              i;
+    unsigned char           maxindex, equalindex;
+    unsigned                taxaCount = 0;
+    unsigned                consensusSymMinimum;
     
     std::vector<unsigned>  counterSymbolsVec(numSymbols,0);
     
-    for (pos=0; pos < posNum; ++pos)
+    for (faststring::size_type pos=0; pos < posNum; ++pos)
     {
       // Initialise variable
-      taxaCount = 0;
-      for (i=0; i < numDistCharacters; ++i)
+      for (unsigned char i=0; i < numDistCharacters; ++i)
         counterSymbolsVec[i] = 0;
       
       // Count number of occuring symbols for this position over all taxa
-      for (taxon = 0; taxon < taxaNum; ++taxon)
+      for (unsigned taxon = 0; taxon < taxaNum; ++taxon)
       {
         if (setOfTaxa.test(taxon))
         {
@@ -991,7 +689,7 @@ public:
       
       maxindex = 0;
       equalindex = numDistCharacters;
-      for (i = 1; i < numDistCharacters; ++i)
+      for (unsigned char i = 1; i < numDistCharacters; ++i)
       {
         if (counterSymbolsVec[i] >= counterSymbolsVec[maxindex])
         {
@@ -1014,13 +712,10 @@ public:
                              double                consensusThreshold,
                              char                  default_char = '\0')
   {
-    unsigned          pos;
-    unsigned          taxon, maxindex, equalindex;
+    unsigned          maxindex, equalindex;
     unsigned          taxaCount = 0;
     unsigned          consensusSymMinimum;
-    unsigned char     i;
     
-    //
     const char        **seq_strs;
     seq_strs = new const char* [taxaNum];
     for (unsigned seq_index=0; seq_index<taxaNum; ++seq_index)
@@ -1046,7 +741,7 @@ public:
     
     unsigned  *counterSymbolsVec = new unsigned[256];
     
-    for (pos=0; pos < posNum; ++pos)
+    for (faststring::size_type pos=0; pos < posNum; ++pos)
     {
       //       std::cout << "--- \n";
       
@@ -1057,7 +752,7 @@ public:
       unsigned char c;
       
       // Count number of occuring symbols for this position over all taxa
-      for (taxon = 0; taxon < taxaNum; ++taxon)
+      for (unsigned taxon = 0; taxon < taxaNum; ++taxon)
       {
         //	char c = toupper_lookup[(unsigned char)seqData[taxon]->get_pos(pos)];
         c = (unsigned char)seq_strs[taxon][pos];
@@ -1078,7 +773,7 @@ public:
         maxindex = 0;
         equalindex = UINT_MAX;
         
-        for (i = 0; i < 254; ++i)
+        for (unsigned char i = 0; i < 254; ++i)
         {
           if (counterSymbolsVec[i] >= counterSymbolsVec[maxindex] && i != '-')
           {
@@ -1098,6 +793,7 @@ public:
     delete [] counterSymbolsVec;
   }
   
+  
   void     ConsensusSequence_DNA(faststring&           conSeq,
                                  double                consensusThreshold,
                                  unsigned              minimum_uppercase_coverage,
@@ -1116,12 +812,9 @@ public:
                                  std::vector<unsigned> *Pointer_coverage_vec,
                                  char                  default_char = '\0')
   {
-    unsigned          pos;
-    unsigned          taxon;
     unsigned          taxaCount = 0;
     unsigned          consensusSymMinimum;
     
-    //
     const char        **seq_strs;
     seq_strs = new const char* [taxaNum];
     for (unsigned seq_index=0; seq_index<taxaNum; ++seq_index)
@@ -1143,7 +836,7 @@ public:
     unsigned  *counterSymbolsVec = new unsigned[256];
     std::memset(counterSymbolsVec, 0, 256*sizeof(unsigned));
     
-    for (pos=0; pos < posNum; ++pos)
+    for (faststring::size_type pos=0; pos < posNum; ++pos)
     {
       //       std::cout << "--- \n";
       
@@ -1153,7 +846,7 @@ public:
       unsigned char c;
       
       // Count number of occuring symbols for this position over all taxa
-      for (taxon = 0; taxon < taxaNum; ++taxon)
+      for (unsigned taxon = 0; taxon < taxaNum; ++taxon)
       {
         //	char c = toupper_lookup[(unsigned char)seqData[taxon]->get_pos(pos)];
         c = (unsigned char)seq_strs[taxon][pos];
@@ -1270,32 +963,32 @@ public:
                                          unsigned char         fraction_ends_weight,
                                          char                  default_char = '\0')
   {
-    //    size_t            pos;
-    //    size_t            taxon;
-    size_t            taxaCount = 0;
-    float             weightCount = 0;
-    float             consensusWeightMinimum;
+    //    size_type            pos;
+    //    size_type            taxon;
+    unsigned  taxaCount = 0;
+    float                  weightCount = 0;
+    float                  consensusWeightMinimum;
     
-    char              *weights;
-    const char        **seq_strs;
-    int               count_ends_nuc;
+    char                   *weights;
+    const char             **seq_strs;
+    int                    count_ends_nuc;
     
-    float             one_over_fractiion_ends_weight = 1.0/fraction_ends_weight;
+    float                  one_over_fractiion_ends_weight = 1.0/fraction_ends_weight;
     
-    size_t            tNum = taxaNum;
-    size_t            pNum = posNum;
-    size_t            weights_size = tNum*pNum;
+    unsigned  tNum = taxaNum;
+    faststring::size_type  pNum = posNum;
+    faststring::size_type  weights_size = tNum*pNum;
     
     weights = new char [weights_size];
     std::memset(weights, 1, weights_size);
     
     seq_strs = new const char* [tNum];
-    for (size_t seq_index=0; seq_index<tNum; ++seq_index)
+    for (unsigned seq_index=0; seq_index<tNum; ++seq_index)
     {
       seq_strs[seq_index] =  get_Seq_Data(seq_index);
       
       count_ends_nuc=0;
-      for (size_t pos=0; pos < pNum; ++pos)
+      for (faststring::size_type pos=0; pos < pNum; ++pos)
       {
         weights[seq_index * pNum + pos] = fraction_ends_weight;
         if (seq_strs[seq_index][pos] != '-')
@@ -1305,7 +998,7 @@ public:
       }
       
       count_ends_nuc=0;
-      for (size_t pos=pNum-1; pos > 0; --pos) // pos > 0 is correct. We will break before pos == 0.
+      for (faststring::size_type pos=pNum-1; pos > 0; --pos) // pos > 0 is correct. We will break before pos == 0.
       {
         weights[seq_index * pNum + pos] = fraction_ends_weight;
         if (seq_strs[seq_index][pos] != '-')
@@ -1318,9 +1011,9 @@ public:
     if (0)
     {
       std::cerr << "DEBUG OUTPUT: Weight matrix:\n";
-      for (size_t seq_index=0; seq_index<tNum; ++seq_index)
+      for (unsigned seq_index=0; seq_index<tNum; ++seq_index)
       {
-        for (size_t pos=0; pos < pNum; ++pos)
+        for (faststring::size_type pos=0; pos < pNum; ++pos)
         {
           std::cerr << ((int)weights[seq_index*pNum+pos])%2;
         }
@@ -1345,7 +1038,7 @@ public:
     std::memset(counterSymbolsVec,   0, 256*sizeof(unsigned));
     std::memset(weightedCoverageVec, 0, 256*sizeof(float));
     
-    for (size_t pos=0; pos < pNum; ++pos)
+    for (faststring::size_type pos=0; pos < pNum; ++pos)
     {
       //       std::cout << "--- \n";
       
@@ -1356,7 +1049,7 @@ public:
       unsigned char c;
       
       // Count number of occuring symbols for this position over all taxa
-      for (size_t taxon = 0; taxon < tNum; ++taxon)
+      for (unsigned taxon = 0; taxon < tNum; ++taxon)
       {
         //	char c = (unsigned char)seqData[taxon]->get_pos(pos);
         c = (unsigned char)seq_strs[taxon][pos];
@@ -1512,17 +1205,15 @@ public:
   // For unknown reasons, this version is slower. The differences were introduced with the intention to speed up
   // the loop. In the original (faster) version, we used memset to clear the counterSymbolsVec.
   // Since we loop over the array anyway and compare all values once anyway, it could have been faster
-  // to reset only the values that are !=0, but this does not seem to be the case.
+  // to reset only the small number of values that are !=0, but this does not seem to be the case.
   // This version works for any kind of sequence, not only for recoded sequences.
   void     ConsensusSequence_slow(faststring&           conSeq,
                                   double                consensusThreshold,
                                   char                  default_char = '\0')
   {
-    //    unsigned          pos;
-    unsigned          taxon, maxindex, equalindex, maxvalue=0;
+    unsigned          maxindex, equalindex, maxvalue;
     unsigned          taxaCount = 0;
     unsigned          consensusSymMinimum;
-    unsigned char              i;
     
     conSeq.clear();
     
@@ -1543,7 +1234,7 @@ public:
     unsigned  *counterSymbolsVec = new unsigned[256];
     std::memset(counterSymbolsVec, 0, 256*sizeof(unsigned));
     
-    for (size_t pos=0; pos < posNum; ++pos)
+    for (faststring::size_type pos=0; pos < posNum; ++pos)
     {
       //       std::cout << "--- \n";
       
@@ -1551,7 +1242,7 @@ public:
       taxaCount = 0;
       
       // Count number of occuring symbols for this position over all taxa
-      for (taxon = 0; taxon < taxaNum; ++taxon)
+      for (unsigned taxon = 0; taxon < taxaNum; ++taxon)
       {
         char c = toupper_lookup[(unsigned char)seqData[taxon]->get_pos(pos)];
         ++counterSymbolsVec[(unsigned char)c];
@@ -1569,10 +1260,11 @@ public:
         consensusSymMinimum = (unsigned) std::ceil(consensusThreshold * taxaCount);
         
         maxindex = 0;
+        maxvalue = 0;
         
         equalindex = UINT_MAX;
         
-        for (i = 0; i < 255; ++i)
+        for (unsigned char i = 0; i < 255; ++i)
         {
           if (counterSymbolsVec[i] != 0)
           {
@@ -1602,15 +1294,12 @@ public:
                                       unsigned numSymbols,
                                       std::vector<unsigned>& frequencies)
   {
-    unsigned i;
-    //  chartype sym;
-    
     //  assert(frequencies.size() <= numDistCharacters);
     
-    for (i=0; i<numSymbols; ++i)
+    for (unsigned i=0; i<numSymbols; ++i)
       frequencies[i]=0;
     
-    for (i=0; i<taxaNum; ++i)
+    for (unsigned i=0; i<taxaNum; ++i)
     {
       if (taxaSet.test(i))
       {
@@ -1651,10 +1340,8 @@ public:
         {
           PrintMessage_cerr("\n\n");
           faststring errormsg;
-          errormsg   =  "An error occurred while reading the input file. The "
-	                "data type of the sequence is DNA, but the sequence "
-	                "that is read contains non-DNA symbols.\n"
-                        "File position: line ";
+          errormsg   =  "An error occurred while reading the input file. The data type of the sequence is DNA, but the sequence that is read contains non-DNA symbols.\n";
+          errormsg  +=  "File position: line ";
           errormsg  +=  faststring(infile.line());
           ErrorMessage(errormsg.c_str());
           PrintMessage_cerr("\n");
@@ -1715,16 +1402,15 @@ public:
       ++count_seqs_stored;
     } // End while
     
+    // Check equal data type and ambig character:
+    taxaNum = count_seqs_stored;
+    
     // Check that all sequences have the same length. We require that
     // they have the same length for what remains to be done in this function.
     // posNum == 0 if we return now.0
     if (!equal_length_of_all_sequences() )
-    {
-      posNum = 0;
       return 1;
-    }
-      
-    // If we get here, sequences have equal lengths:
+    
     if (taxaNum > 0)
     {
       posNum  = seqData[0]->length();
@@ -1752,10 +1438,9 @@ public:
     //     unsigned        count_seq;
     //     unsigned        global_sequence_from=0, global_sequence_to=UINT_MAX;
     //     bool            global_gaps_to_Ns=false;
-    unsigned        all_lines_N;
-    unsigned        curr_taxon;
-    unsigned        expected_taxaNum, expected_posNum;
-
+    std::vector<faststring*>::size_type    all_lines_N;
+    unsigned                               curr_taxon;
+    
     char read_mode;
     
     // The allowed symbols from the phylip manual:
@@ -1780,11 +1465,11 @@ public:
       
       if (fsvec.size()==2 && fsvec[0].isAnUnsigned() && fsvec[1].isAnUnsigned() )
       {
-        expected_taxaNum = fsvec[0].ToUnsigned();
-        expected_posNum  = fsvec[1].ToUnsigned();
+        taxaNum = fsvec[0].ToUnsigned();
+        posNum  = fsvec[1].ToUnsigned();
         
-        /* 	 std::cout << "Number of taxa     " << expected_taxaNum << '\n'; */
-        /* 	 std::cout << "Number of residues " << expected_posNum << '\n'; */
+        /* 	 std::cout << "Number of taxa     " << taxaNum << '\n'; */
+        /* 	 std::cout << "Number of residues " << posNum  << '\n'; */
       }
     }
     
@@ -1841,8 +1526,7 @@ public:
     all_lines_N = all_lines.size();
     
     //     std::cerr << all_lines[all_lines_N-1]->length() << '\n';
-
-    // Remove trailling blank lines:
+    
     while (all_lines[all_lines_N-1]->length() == 0)
     {
       --all_lines_N;
@@ -1851,8 +1535,7 @@ public:
       --it;
       all_lines.erase(it);
     }
-
-    // Count non trailling blank lines:
+    
     unsigned number_blank_lines=0;
     
     for (i=0; i<all_lines_N; ++i)
@@ -1890,7 +1573,7 @@ public:
       faststring  *currLine;
       
       
-      if (expected_taxaNum == 0 || expected_posNum == 0)
+      if (taxaNum == 0 || posNum == 0)
       {
         // delete all faststrings in all_lines
         for (unsigned ind=0; ind < all_lines.size(); ++ind)
@@ -1901,12 +1584,12 @@ public:
       
       // For all taxa
       //
-      for (curr_taxon = 0; curr_taxon < expected_taxaNum; ++curr_taxon)
+      for (curr_taxon = 0; curr_taxon < taxaNum; ++curr_taxon)
       {
         if (curr_line_num >= all_lines_N)
         {
           std::cerr << "Parse error while reading the input file:\nUnexpected end of file in line: " << curr_line_num <<  '\n';
-          std::cerr << "Trying to read " << expected_taxaNum << " taxa but found only " << curr_taxon << "!\n";
+          std::cerr << "Trying to read " << taxaNum << " taxa but found only " << curr_taxon << "!\n";
           
           exit(-45);
         }
@@ -1971,7 +1654,7 @@ public:
         // TODO: More error checking could be done here:
         // We could check that only allowed symbols are added.
         // By this we also might be able to detect an error earlier
-        while (seq_in_one_line.length() < expected_posNum)
+        while (seq_in_one_line.length() < posNum)
         {
           ++curr_line_num;
           if (curr_line_num >= all_lines_N)
@@ -2025,8 +1708,7 @@ public:
         "(i) The number of taxa found in the first block does not match the number specified in the file header.\n"
         "(ii) Since only one data block was found, this file is interpreted as sequential format. If this should be a file\n"
         "in interleaved format, blank line must be added between blocks of data.\n"
-        "(iii) It could also be that the number of residues in the sequences is "
-	"larger than specified in the header, so that additional\n"
+        "(iii) It could also be that the number of residues in the sequences is larger than specified in the header, so that additional\n"
         "lines of data are interpreted as additional taxa in the sequential format.\n";
         exit(-67);
       }
@@ -2135,21 +1817,16 @@ public:
       } // End while loop over all non blank lines in first block (interleaved)
       
       // All remaining blocks still need to be read.
-
-      // TODO: Test this function and final taxaNum!!
-      //      if (taxaNum == 0 && posNum == 0)
-      //        taxaNum = curr_taxon;
+      
+      if (taxaNum == 0 && posNum == 0)
+        taxaNum = curr_taxon;
       
       // Check that the number of taxa that might had been specified agrees with the
       // number of taxa we found now.
-      if (expected_taxaNum != 0 && expected_taxaNum != curr_taxon) // do we have a problem?
+      if (taxaNum != 0 && taxaNum != curr_taxon) // do we have a problem?
       {
-        std::cerr << "Parse error while reading the input file:\nThe number "
-	             "of taxa in the first block of the input file ("
-		  << curr_taxon
-		  << ") does not match the number of taxa specified in the "
-	             "header of the phylip file ("
-		  << expected_taxaNum  << ")\n";
+        std::cerr << "Parse error while reading the input file:\nThe number of taxa in the first block of the input file ("
+        << curr_taxon  << ") does not match the number of taxa specified in the header of the phylip file (" << taxaNum << ")\n";
         exit(-55);
       }
       
@@ -2163,7 +1840,7 @@ public:
       while (true)  // (curr_line_num < all_lines_N)
       {
         // Read the next block:
-        for (curr_taxon=0; curr_taxon < expected_taxaNum; ++curr_taxon)
+        for (curr_taxon=0; curr_taxon < taxaNum; ++curr_taxon)
         {
           // The current line should be the first line of this block
           if (curr_line_num >= all_lines_N)
@@ -2218,12 +1895,12 @@ public:
         // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
       } // End while loop read all blocks
       
-      //      if (taxaNum > 0 && posNum == 0)
-      //        posNum = sequences[0]->length();
+      if (taxaNum > 0 && posNum == 0)
+        posNum = sequences[0]->length();
       
       // Now we should have read the sequences
       // and we can delete the data we reserved.
-      for (curr_taxon=0; curr_taxon < expected_taxaNum; ++curr_taxon)
+      for (curr_taxon=0; curr_taxon < taxaNum; ++curr_taxon)
       {
         seq = new CSequence_Mol (datatype);
         seq->set_taxon_and_sequence(*taxonnames[curr_taxon], *sequences[curr_taxon], datatype);
@@ -2236,32 +1913,45 @@ public:
     
     // Do some final error checking
     
-    if (expected_taxaNum == 0)
+    if (taxaNum == 0)
     {
       // delete all faststrings in all_lines
       for (unsigned ind=0; ind < all_lines.size(); ++ind)
         delete all_lines[ind];
       return 0;
     }
-
-    if (equal_length_of_all_sequences())
-      posNum = seqData[0]->length();
-    else
-      posNum = 0;
-
-    if (expected_posNum != posNum)
+    
+    std::vector<CSequence_Mol*>::size_type len1 = seqData[0]->length();
+    
+    if (len1 != posNum)
     {
       std::cerr << "Parse error while reading the input file:\n"
       << "The file was interpreted in the " << (read_mode == 's'? "sequential":"interleaved") << " format.\n"
       "The number of positions specified in the file header is not identical to the number of positons\n"
-      "of the sequences or the sequences have different lengths.\n"
+      "in the first sequence.\n"
       "This can have multiple reasons:\n"
       "In the interleaved format, make sure, taxon names only occur in the first block of sequences.\n"
       "In the interleaved format a blank line must be found between all blocks of data.\n";
+      std::cerr << "The number of positions in the first sequence is: " << len1
+      << ", while the number specified in the header is " << posNum << ".\n";
       
       //       std::cerr << seqData[0]->getSeqStr() << '\n';
       
       exit(-66);
+    }
+    
+    // Check that the number of positions is correct and equal for all sequences:
+    for (curr_taxon=1; curr_taxon < taxaNum; ++curr_taxon)
+    {
+      seq                        = seqData[curr_taxon];
+      faststring::size_type len2 = seq->length();
+      
+      if (len1 != len2)
+      {
+        std::cerr << "Parse error while reading the input file:\nThe number of residues in sequence " << curr_taxon+1 << " differs from the number of residues in sequence 1. The sequence lengths for sequence 1 and sequence " << curr_taxon+1
+        <<  " are respectively " << len1 << " and " << len2 << ".\n";
+        exit(-67);
+      }
     }
     
     // Check that the data type is equal for all sequences and that
@@ -2332,14 +2022,11 @@ public:
     /*      seqData.push_back(seq); */
     /*    } // End while */
     
-    unsigned j;
-    
-    for (j=0; j<all_lines.size(); ++j)
+    for (unsigned j=0; j<all_lines.size(); ++j)
       delete all_lines[j];
     
     return 0;
   }  // End read_from_Phylip_File
-
 
   // This function does not fill in gaps and starts that might have been removed before.
   void ExportSequences(FILE *ofp, char format, unsigned interleaved_len)
@@ -2360,6 +2047,7 @@ public:
       exit(-111);
     }
   }
+
   
   // Backwards compatible and convenience function ExportSequences with fewer parameters.
   void ExportSequences(std::ostream &os, char format, unsigned interleaved_len)
@@ -2369,19 +2057,12 @@ public:
   }
   
   // Normal export to different formats:
-  //  void ExportSequences(std::ostream &os, char format, unsigned interleaved_len,
-  //       faststring &replace_symbols_in_sequence_names, unsigned trim_seq_names_length, const char *trim_at_symobls, bool unique_names)
-
-  
-  void ExportSequences(std::ostream &os, char format, unsigned interleaved_len,
-		       faststring replace_symbols_in_sequence_names,
-		       unsigned trim_seq_names_length, bool unique_names)
+  //  void ExportSequences(std::ostream &os, char format, unsigned interleaved_len, faststring &replace_symbols_in_sequence_names, unsigned trim_seq_names_length, const char *trim_at_symobls, bool unique_names)
+  void ExportSequences(std::ostream &os, char format, unsigned interleaved_len, faststring replace_symbols_in_sequence_names, unsigned trim_seq_names_length, bool unique_names)
   {
     if (taxaNum == 0)
       return;
     
-    // vector of sequences with gaps and stars.
-    // Why do we need a vector here?? 9.9.2012
     std::vector<faststring> vofs;
     
     unsigned i;
@@ -2390,8 +2071,8 @@ public:
     
     for (i=0; i< taxaNum; ++i)
     {
-      vofs.push_back(faststring('\0', (size_t)100));
-      seqData[i]->getSequence_fill_in_gaps_and_stars(vofs[i]);
+      vofs.push_back(faststring((faststring::size_type)100, (char)'\0'));
+      vofs[i] = seqData[i]->getSeq_faststring();
       sequence_names.push_back(seqData[i]->getFullName());
     }
     
@@ -2402,12 +2083,11 @@ public:
       trim_seq_names_length = 10;
     }
     
-    if (format == 'r') // relaxed phylip
+    if (format == 'r')
     {
       bool space_in_query = false;;
-      faststring::size_t j;
       
-      for (j=0; j<replace_symbols_in_sequence_names.size(); j+=2)
+      for (faststring::size_type j=0; j<replace_symbols_in_sequence_names.size(); j+=2)
       {
         if (replace_symbols_in_sequence_names[j] == ' ')
           space_in_query = true;
@@ -2610,7 +2290,7 @@ public:
   
   /*      for (i=0; i< taxaNum; ++i) */
   /*      { */
-  /*        vofs.push_back(faststring('\0', (size_t)10000)); */
+  /*        vofs.push_back(faststring('\0', (faststring::size_type)10000)); */
   /*        seqData[i]->getSequence_fill_in_gaps_and_stars(vofs[i]); */
   /*      } */
   
@@ -2698,7 +2378,7 @@ public:
       return;
     
     unsigned i;
-    unsigned len;
+    faststring::size_type len;
     
     os << "\t" << taxaNum << "\t" << end_exp-begin_exp << '\n';
     
@@ -3034,22 +2714,19 @@ public:
   }
   
   // Determines unfiltered SNP sites:
-  // The map that is passed to this function has keys: 0 based index in alignment.
-  // The pair object contains the 1 based index in the reference taxon as well as the SNP pattern.
-  // If the position is a gap in the reference, the index is -(1-based index in reference of last index in reference)
-  void determine_SNP_site(std::map<unsigned, std::pair<int, faststring> > &m, bool remove_gap_ambig_sites=true, unsigned ref_seq=0)
+  void determine_SNP_site(std::map<unsigned, std::pair<int, faststring> > &m, bool remove_gap_ambig_sites=true, int ref_seq=0)
   {
     m.clear();
     unsigned i, j;
     int      pos_in_ref;
     
-    //    unsigned gap_ambig_site_count = 0;
-    //    unsigned non_gap_ambig_site_count = 0;
+//    unsigned gap_ambig_site_count = 0;
+//    unsigned non_gap_ambig_site_count = 0;
     
     // Here we will store pointers to all sequences for fast access:
     const char **tax = new const char* [taxaNum];
     
-    if (ref_seq >= taxaNum || posNum == 0)
+    if (taxaNum == 0 || posNum == 0)
       return;
     
     // Store pointers to all sequences in the tax array - this will be faster
@@ -3065,7 +2742,7 @@ public:
     bool is_ref_gap_site;
     
     // For all positions in alignment
-    for (i=0, pos_in_ref=1; i<posNum; ++i) // pos_in_ref starts with value of 1.
+    for (i=0, pos_in_ref=1; i<posNum; ++i)
     {
       //      pattern.clear();
       contains_gap_ambig = false;
@@ -3075,40 +2752,35 @@ public:
       // Faster version:
       if (datatype == CSequence_Mol::dna)
       {
-        c0 = tax[ref_seq][i];
-        if (c0 != '-')
-          ++pos_in_ref;              // If we have no gap in ref, we increment pos_in_ref.
-	                             // If the first pos is a gap, the value remains equal to 1!
+        c0 = tax[0][i];
+        if (tax[ref_seq][i] != '-')
+          ++pos_in_ref;
         else
           is_ref_gap_site = true;
-
+        
         if (is_DNA_ambig(c0) || c0 == '-')
         {
           contains_gap_ambig = true;
         }
-
-        for (j=0; j < taxaNum; ++j)
+        
+        for (j=1; j < taxaNum; ++j)
         {
-	  if (j != ref_seq)
-	  {
-	    c = tax[j][i];
-	    if (is_DNA_ambig(c) || c == '-')
-	    {
-	      contains_gap_ambig = true;
-	    }
-	    if (c0 != c)
-	    {
+          c = tax[j][i];
+          if (is_DNA_ambig(c) || c == '-')
+          {
+            contains_gap_ambig = true;
+          }
+          if (c0 != c)
+          {
             is_SNP_site = true;
-	    }
-	  }
-	}
+          }
+        }
       }
       else if (datatype == CSequence_Mol::protein)
       {
-        c0 = tax[ref_seq][i];
-        if (c0 != '-')
-          ++pos_in_ref;              // If we have no gap in ref, we increment pos_in_ref.
-	                             // If the first pos is a gap, the value remains equal to 1.
+        c0 = tax[0][i];
+        if (tax[ref_seq][i] != '-')
+          ++pos_in_ref;
         else
           is_ref_gap_site = true;
         
@@ -3117,20 +2789,17 @@ public:
           contains_gap_ambig = true;
         }
         
-        for (j=0; j < taxaNum; ++j)
+        for (j=1; j < taxaNum; ++j)
         {
-	  if (j != ref_seq)
-	  {
-	    c = tax[j][i];
-	    if (is_aa_ambig(c) || c == '-')
-	    {
-	      contains_gap_ambig = true;
-	    }
-	    if (c0 != c)
-	    {
-	      is_SNP_site = true;
-	    }
-	  }
+          c = tax[j][i];
+          if (is_aa_ambig(c) || c == '-')
+          {
+            contains_gap_ambig = true;
+          }
+          if (c0 != c)
+          {
+            is_SNP_site = true;
+          }
         }
       }
       else
@@ -3156,83 +2825,14 @@ public:
         // If position has gap in reference:
         // (0-based index in alignment, (negative 1-based index in reference, pattern))
         // 1-based index <=0 indicate gap in reference. 0 for first SNPs at beginning with gap in ref.
-
-	// If we have gaps at the beginning, pos_in_ref is 1.
-	
+        
         if (is_ref_gap_site)
-          index_pattern_pair = std::make_pair(-(pos_in_ref-1), pattern); // pos_in_ref is by 1 larger than 1 based index
-	                                                                 // At the beginning, -(pos_in_ref-1) == 0.
-	                                                                 // <=0 indicates a gap in ref.
+          index_pattern_pair = std::make_pair(-(pos_in_ref-1), pattern);
         else
-          index_pattern_pair = std::make_pair(pos_in_ref-1, pattern);    // pos_in_ref is by 1 larger than 1 based index
+          index_pattern_pair = std::make_pair(pos_in_ref-1, pattern);
         m.insert(m.end(), std::make_pair(i, index_pattern_pair));
       }
     } // END: for all positions in alignment
-  }
-
-
-  // In a sequence with gaps we are sometimes interested in a coorinate transformation from this sequence to the whole alingment.
-  void determine_coordinate_transformation_of_refseq_to_whole_alignment(std::vector<unsigned> &coord_transform_ref2al,
-									unsigned ref_seq)
-  {
-    coord_transform_ref2al.clear();
-
-    unsigned pos_in_al;
-    int      pos_in_ref;
-
-    //    unsigned gap_ambig_site_count = 0;
-    //    unsigned non_gap_ambig_site_count = 0;
-
-    const char **tax = new const char* [taxaNum];
-    
-    if (ref_seq >= taxaNum || posNum == 0)
-      return;
-
-    // Store pointers to all sequences in the tax array - this will be faster
-    for (unsigned j=0; j < taxaNum; ++j)
-    {
-      tax[j] = seqData[j]->getSeqStr();
-    }
-    
-    char c0;
-    
-    // For all positions in alignment
-    for (pos_in_al=0, pos_in_ref=-1; pos_in_al<posNum; ++pos_in_al)
-    {
-      c0 = tax[ref_seq][pos_in_al];
-      if (c0 != '-')
-      {
-	++pos_in_ref;              // If we have no gap in ref, we increment pos_in_ref.
-                                   // If the first pos is a gap, the value remains equal to 1.
-	coord_transform_ref2al.push_back(pos_in_al);
-      }
-    } // END: for all positions in alignment
-  }
-
-  void get_subsequences_for_set_of_indices(std::set<unsigned> set_of_indices, std::vector<faststring> &subsequences)
-  {
-    subsequences.clear();
-    
-    if (taxaNum == 0)
-    {
-      return;
-    }
-
-    subsequences = std::vector<faststring>(taxaNum);
-    
-    std::set<unsigned>::iterator it_set, it_end_set;
-    it_set     = set_of_indices.begin();
-    it_end_set = set_of_indices.end();
-
-    while (it_set != it_end_set)
-    {
-      unsigned pos = *it_set;
-      for (unsigned i=0; i< taxaNum; ++i)
-      {
-	subsequences[i].push_back(GetChar(i, pos));
-      }
-      ++it_set;
-    }
   }
   
   void get_partial_pattern(unsigned pos, unsigned n, faststring &pat)
@@ -3276,9 +2876,9 @@ public:
     originalPosNumbers.clear();
     originalPosNumbers_supplied = false;
     
-    size_t n=seqData.size();
+    int i, n= (int)seqData.size();
     
-    for (size_t i=0; i<n; ++i)
+    for (i=0; i<n; ++i)
       delete seqData[i];
     
     seqData.clear();
@@ -3287,11 +2887,11 @@ public:
   
   void remove_gap_only_sequences()
   {
-    size_t n=seqData.size();
+    int i, n= (int)seqData.size();
     
     // We do this in reversed order, since this avoids adapting i and n after
     // an element has been removed.
-    for (int i=n-1; i>=0; --i)
+    for (i=n-1; i>=0; --i)
     {
       if (seqData[i]->has_only_gaps() )
       {
@@ -3302,11 +2902,11 @@ public:
   
   void remove_ambig_only_sequences()
   {
-    size_t n = seqData.size();
+    int i, n = (int)seqData.size();
     
     // We do this in reversed order, since this avoids adapting i and n after
     // an element has been removed.
-    for (int i=n-1; i>=0; --i)
+    for (i=n-1; i>=0; --i)
     {
       if (seqData[i]->has_only_ambigs() )
       {
@@ -3317,11 +2917,11 @@ public:
   
   void remove_gap_or_ambig_only_sequences()
   {
-    size_t n = seqData.size();
+    int i, n = (int)seqData.size();
     
     // We do this in reversed order, since this avoids adapting i and n after
     // an element has been removed.
-    for (int i=n-1; i>=0; --i)
+    for (i=n-1; i>=0; --i)
     {
       //              std::cout << "Checking sequence: " << i+1 << '\n';
       if (seqData[i]->has_only_ambigs_or_gap() )
@@ -3338,8 +2938,17 @@ public:
       seqData[i]->recode_with_replacement_string(replace);
     }
   }
+
+  void degap_all_sequences()
+  {
+    for (unsigned i=0; i < seqData.size(); ++i)
+    {
+      seqData[i]->degap();
+    }
+  }
+
   
-  void steal_sequence(CSequences2 &seqs, unsigned i)
+  void steal_sequence(CSequences3 &seqs, unsigned i)
   {
     if (i < seqs.taxaNum)
     {
@@ -3374,7 +2983,7 @@ public:
       sn_map.erase(find_it);
     return p;
   }
-
+  
   void add_seq_to_alignment(CSequence_Mol::DataTypesEnum     datatype_param,
                             const faststring                  &fullname_param,
                             const faststring                  &seq_data_param,
@@ -3397,63 +3006,24 @@ public:
     //     std::cout << "Datatype after constructor: " << seq->get_datatype() << '\n';
     seq->set_taxon_and_sequence(fullname_param, seq_data_param, datatype_param);
     //     std::cout << "Datatype after constructor+set_taxon_and_sequence: " << seq->get_datatype() << '\n';
-
-    if (taxaNum == 0)
-    {
-      posNum = seq->length();
-    }
-    else
-    {
-      if (posNum != seq->length())
-      {
-	std::cerr << "Error: Sequence added to alignment has different length than existing "
-	             "sequences in void add_seq_to_alignment(...).\n";
-	delete seq;
-	return;
-      }
-    }
-
-    add_seq(seq);
     
-    // Further auto detect stuff???????
-  }
-
-  // Does not check for equal lengths of sequences.
-  // Also consider to use add_seq_to_alignment. 
-  void add_seq_to_dataset(CSequence_Mol::DataTypesEnum     datatype_param,
-			  const faststring                  &fullname_param,
-			  const faststring                  &seq_data_param,
-			  char                              ambig_param='\0' // default auto
-  )
-  {
-    if (datatype != datatype_param)
-    {
-      std::cerr << "Warning: Not all sequences seem to have the same data type.\n";
-      datatype = CSequence_Mol::mixed;
-    }
     
-    //     std::cout << "datatype_param: " << datatype_param  << '\n';
     
-    // Handle general ambig TODO XXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    //     if (general_ambig == CSequence_Mol::unknown)
     
-    CSequence_Mol   *seq;
-    seq = new CSequence_Mol (datatype_param, ambig_param);
-    //     std::cout << "Datatype after constructor: " << seq->get_datatype() << '\n';
-    seq->set_taxon_and_sequence(fullname_param, seq_data_param, datatype_param);
-    //     std::cout << "Datatype after constructor+set_taxon_and_sequence: " << seq->get_datatype() << '\n';
-
-    if (taxaNum == 0)
+    ++taxaNum;
+    if (posNum == 0)
       posNum = seq->length();
     else if (posNum != seq->length())
     {
-      posNum = 0;
+      std::cerr << "Error: Sequence added has different length than existing sequences in void add_seq_to_alignmen(...).\n";
+      delete seq;
+      return;
     }
+    
     add_seq(seq);
     
     // Further auto detect stuff???????
   }
-  
   
   void get_vectors_of_site_coverages_and_site_entropies_DNA(std::vector<float> &coverage, std::vector<float> &entropies)
   {
@@ -3516,8 +3086,8 @@ public:
     delete [] seq_strs;
   }
   
-
-  void get_vectors_of_site_coverages_values_DNA(std::vector<unsigned> &coverage, bool count_ambig, unsigned start=0, unsigned end=faststring::npos)
+  
+  void get_vectors_of_site_coverages_values_DNA(std::vector<unsigned> &coverage, bool count_ambig, unsigned start=0, faststring::size_type end=faststring::npos)
   {
     unsigned symbols[256];
     
@@ -3622,13 +3192,13 @@ public:
   
   
   // Gets the data from *this object and stores the new sequences in seqs.
-  void alignment_without_gap_ambig_only_positions(CSequences2 &seqs)
+  void alignment_without_gap_ambig_only_positions(CSequences3 &seqs)
   {
     seqs.clear(datatype, seqs.ambig_char);
     
     std::vector<bool> gap_ambig_positions(posNum, true);
     
-    size_t i, j;
+    faststring::size_type i, j;
     const char *the_seq;
     char c;
     
@@ -3693,7 +3263,7 @@ public:
   {
     gap_ambig_positions.assign(posNum, true);
     
-    size_t i, j;
+    faststring::size_type i, j;
     const char *the_seq;
     char c;
     
@@ -3738,13 +3308,13 @@ public:
   }
   
   // Gets the data from *this object and stores the new sequences in seqs.
-  void alignment_without_gap_ambig_lowerCase_only_positions(CSequences2 &seqs)
+  void alignment_without_gap_ambig_lowerCase_only_positions(CSequences3 &seqs)
   {
     seqs.clear(datatype, seqs.ambig_char);
     
     std::vector<bool> gap_ambig_LowerCase_positions(posNum, true);
     
-    size_t i, j;
+    faststring::size_type i, j;
     const char *the_seq;
     char c;
     
@@ -3812,7 +3382,7 @@ public:
   {
     gap_ambig_lowercase_positions.assign(posNum, true);
     
-    size_t i, j;
+    faststring::size_type i, j;
     const char *the_seq;
     char c;
     
@@ -3860,7 +3430,7 @@ public:
   }
   
   // Gets the data from *this object and stores the new sequences in seqs.
-  void alignment_without_gap_only_positions(CSequences2 &seqs)
+  void alignment_without_gap_only_positions(CSequences3 &seqs)
   {
     //     std::cout << "Entering alignment_without_gap_only_positions" << '\n';
     
@@ -3870,7 +3440,7 @@ public:
     // Gap only positions are those that have taxaNum gaps.
     std::vector<bool> gap_positions(posNum, true);
     
-    size_t i, j;
+    faststring::size_type i, j;
     const char *the_seq;
     char c;
     
@@ -3917,10 +3487,10 @@ public:
     char c;
     
     // TODO: Swap loops and use break to make this more efficient.
-    for (size_t i=0; i< taxaNum; ++i)
+    for (faststring::size_type i=0; i< taxaNum; ++i)
     {
       the_seq = seqData[i]->getSeqStr();
-      for(size_t j=0; j<posNum; ++j)
+      for(faststring::size_type j=0; j<posNum; ++j)
       {
         c = the_seq[j];
         if (c != '-')
@@ -3933,19 +3503,19 @@ public:
   
   
   // Copy data from this to seqs, but without the positions specified in the vector
-  void alignment_without_specified_positions(CSequences2 &seqs, std::vector<bool> without)
+  void alignment_without_specified_positions(CSequences3 &seqs, std::vector<bool> without)
   {
     const char *the_seq;
     seqs.clear(datatype, seqs.ambig_char);
     
     
     faststring new_seq;
-    for (size_t i=0; i< taxaNum; ++i)
+    for (faststring::size_type i=0; i< taxaNum; ++i)
     {
       new_seq.clear();
       the_seq = seqData[i]->getSeqStr();
       
-      for(size_t j=0; j<posNum; ++j)
+      for(faststring::size_type j=0; j<posNum; ++j)
       {
         //	 std::cout << "Position: " << j <<  " " << gap_ambig_LowerCase_positions[j] << '\n';
         if (!without[j])
@@ -3959,14 +3529,14 @@ public:
   // Copy data from this to seqs, but without the positions specified in the vector
   // assumeing the specified positions come from an amino acid alignment. Positions are removed
   // in a nucleotid alignment.
-  void alignment_without_specified_positions_prot2nuc(CSequences2 &seqs, std::vector<bool> without)
+  void alignment_without_specified_positions_prot2nuc(CSequences3 &seqs, std::vector<bool> without)
   {
-    size_t j, k, h;
+    faststring::size_type j, k, h;
     const char *the_seq;
     seqs.clear(datatype, seqs.ambig_char);
     
     faststring new_seq;
-    for (size_t i=0; i< taxaNum; ++i)
+    for (faststring::size_type i=0; i< taxaNum; ++i)
     {
       new_seq.clear();
       the_seq = seqData[i]->getSeqStr();
@@ -3990,12 +3560,12 @@ public:
   }
   
   
-  void replace_sequence_interval(const CSequences2 &s, faststring::size_t pos1=0, faststring::size_t pos2=faststring::npos)
+  void replace_sequence_interval(const CSequences3 &s, faststring::size_type pos1=0, faststring::size_type pos2=faststring::npos)
   {
     determine_map_of_sequence_names();
     
     faststring name;
-    unsigned i, N = s.seqData.size();
+    faststring::size_type i, N = s.seqData.size();
     std::map<faststring, CSequence_Mol*>::iterator find_it;
     
     if (taxaNum != s.taxaNum)
@@ -4020,12 +3590,12 @@ public:
       posNum = seqData[0]->length();
   }
   
-  void append_to_sequences(const CSequences2 &s)
+  void append_to_sequences(const CSequences3 &s)
   {
     determine_map_of_sequence_names();
     
     faststring name;
-    unsigned i,N=s.seqData.size();
+    faststring::size_type i,N=s.seqData.size();
     std::map<faststring, CSequence_Mol*>::iterator find_it;
     
     if (taxaNum != s.taxaNum)
@@ -4046,11 +3616,8 @@ public:
       }
       find_it->second->append_sequence(*(s.seqData[i]));
     }
-
-    if (equal_length_of_all_sequences())
+    if (seqData.size() > 0)
       posNum = seqData[0]->length();
-    else
-      posNum = 0;
   }
   
   // Append a column to an alignment.
@@ -4166,6 +3733,7 @@ public:
   /*      } */
   /*    } */
   // Computes relative amount of residues that are non gap and non ambig in this range:
+  /*
   double get_non_ambig_non_gap_coverage_in_range(unsigned pos, unsigned pos_end, int flag=0)
   {
     const char **tax = new const char* [taxaNum];
@@ -4188,7 +3756,7 @@ public:
     else if (flag == 13) // Special 1kite flag: Filter hamstered reference taxa:
     {
 #ifdef DEBUG
-      std::cerr << "Called: CSequences2.h:get_non_ambig_non_gap_coverage_in_range with flag==1\n";
+      std::cerr << "Called: CSequences3.h:get_non_ambig_non_gap_coverage_in_range with flag==1\n";
 #endif
       
       unsigned jj=0;
@@ -4248,7 +3816,7 @@ public:
     
     return res;
   }
-  
+  */
   
   
   
@@ -4258,49 +3826,13 @@ public:
   {
     return  seqData[seq_index]->get_gap_proportion();
   }
+
   
   
-  void get_1kite_original_reference_taxa_vec(std::vector<faststring> &vec) const
-  {
-#ifdef DEBUG
-    std::cerr << "Called: CSequences2.h:get_1kite_original_reference_taxa_vec\n";
-#endif
-    unsigned i;
-    
-    for (i=0; i < taxaNum; ++i)
-    {
-      if ( is_1kite_hamstered_reference_seq_id( seqData[i]->getFullName() ) )
-      {
-        vec.push_back(seqData[i]->getFullName() );
-      }
-    }
-  }
-  
-  // Determines all 1kite original reference taxa, sorts them and moves them to the top of the alignment.
-  int move_1kite_original_reference_taxa_sorted_to_top()
-  {
-#ifdef DEBUG
-    std::cerr << "Called: CSequences2.h:move_1kite_original_reference_taxa_sorted_to_top\n";
-#endif
-    
-    std::vector<faststring> vec;
-    get_1kite_original_reference_taxa_vec(vec);
-    std::sort(vec.begin(), vec.end());
-    
-    int i;
-    
-    for (i=vec.size()-1; i>= 0; --i)
-    {
-      reorder_move_seq_to_top(vec[i]);
-    }
-    return vec.size();
-  }
-  
-  
-  /*    int move_1kite_core_of_other_seqs_to_top(const CSequences2 &other_seqs) */
+  /*    int move_1kite_core_of_other_seqs_to_top(const CSequences3 &other_seqs) */
   /*    { */
   /* #ifdef DEBUG */
-  /*      std::cerr << "Called: CSequences2.h:move_1kite_core_of_other_seqs_to_top" << '\n'; */
+  /*      std::cerr << "Called: CSequences3.h:move_1kite_core_of_other_seqs_to_top" << '\n'; */
   /* #endif */
   
   /*      std::vector<faststring> vec; */
@@ -4418,7 +3950,7 @@ public:
     }
     else
     {
-      std::cerr << "Flag value undefined in CSequences2:sequence_distance(..);\n";
+      std::cerr << "Flag value undefined in CSequences3:sequence_distance(..);\n";
       exit(-127);
     }
   }
@@ -4443,9 +3975,9 @@ public:
     // Out of range problems are corrected silently.
     // It is not clear this is always the best method to deal with this.
     if ((end_range > seq1->length()))
-      end_range = seq1->length();
+      end_range = (unsigned) seq1->length();
     if ((end_range > seq2->length()))
-      end_range = seq2->length();
+      end_range = (unsigned) seq2->length();
     if (begin_range > end_range)
       begin_range = end_range;
     
@@ -4590,16 +4122,15 @@ public:
   //  Allowed flag values:
   // 0: normal mode.
   // 1: Gap regions always get a distance of -3.
-  void get_sequences_distances(unsigned begin_range, unsigned end_range, void (*call_back_distance)(short, short, double), unsigned flag=0)
+  void get_sequences_distances(faststring::size_type begin_range, faststring::size_type end_range, void (*call_back_distance)(short, short, double), unsigned flag=0)
   {
     // Compute all pairwise distances:
-    short N = taxaNum;
-    short i, j;
+    unsigned N = taxaNum;
     double dist;
     
-    for (i=0; i<N; ++i)
+    for (unsigned i=0; i<N; ++i)
     {
-      for (j=i+1; j<N; ++j)
+      for (unsigned j=i+1; j<N; ++j)
       {
         dist = sequence_distance(i, j, begin_range, end_range, flag);
         call_back_distance(i,j,dist);
@@ -4610,11 +4141,10 @@ public:
   // Same as above, but for some distances, those that have a false value in vector
   // we assign an invalidly large value to the distance.
   // Here a value of 100 is assigned to those distances
-  void get_sequences_distances(unsigned begin_range, unsigned end_range, void (*call_back_distance)(short, short, double), const std::vector<bool> &sequences_valid, unsigned flag=0)
+  void get_sequences_distances(faststring::size_type begin_range, faststring::size_type end_range, void (*call_back_distance)(short, short, double), const std::vector<bool> &sequences_valid, unsigned flag=0)
   {
     // Compute all pairwise distances:
     unsigned N = taxaNum;
-    unsigned i, j;
     double dist;
     
     if (sequences_valid.size() != N)
@@ -4623,9 +4153,9 @@ public:
       exit(-3);
     }
     
-    for (i=0; i<N; ++i)
+    for (unsigned i=0; i<N; ++i)
     {
-      for (j=i+1; j<N; ++j)
+      for (unsigned j=i+1; j<N; ++j)
       {
         if (!sequences_valid[i] || !sequences_valid[j])
         {
@@ -4643,9 +4173,7 @@ public:
   
   CSequence_Mol* get_sequence_with_sequence_name_match(faststring &partial_name)
   {
-    unsigned i;
-    
-    for (i=0; i < taxaNum; ++i)
+    for (unsigned i=0; i < taxaNum; ++i)
     {
       if ( seqData[i]->getFullName_faststring().find(partial_name) != faststring::npos )
       {
@@ -4659,9 +4187,8 @@ public:
   {
     v.clear();
     v.reserve(taxaNum+1);
-    
-    unsigned i;
-    for (i=0; i<taxaNum; ++i)
+
+    for (unsigned i=0; i<taxaNum; ++i)
     {
       v.push_back(seqData[i]->getSeq_faststring());
       v[i].c_str();  // Make buffer 0-terminated.
@@ -4689,7 +4216,7 @@ public:
 /* 			  const std::vector<unsigned>& taxa_vec, */
 /* 			  const std::vector<unsigned>& pos_vec, */
 /* 			  const CTaxa       *ptaxa, */
-/* 			  const CSequences2 *pseq, */
+/* 			  const CSequences3 *pseq, */
 /* 			  const char*      symbolsList, */
 /* 			  bool       printTaxonLabels, */
 /* 			  unsigned   taxonLabelPrintWidth, */
@@ -4737,7 +4264,7 @@ public:
 /* inline  */
 /* void PrintSpecial_PosNumbers(ostream& os, */
 /* 			     std::vector<unsigned> pos_vec, // we get a real copy */
-/* 			     const CSequences2 *pseq, */
+/* 			     const CSequences3 *pseq, */
 /* 			     unsigned         taxonLabelPrintWidth, */
 /* 			     bool             UseNexusComments) */
 /* { */

@@ -1,12 +1,15 @@
+#ifndef GLOBAL_TYPES_AND_PARAMETERS_MITOGENEEXTRACTOR_H
+#define GLOBAL_TYPES_AND_PARAMETERS_MITOGENEEXTRACTOR_H
+
 #include <iostream>
 #include <string>
 #include <vector>
-//#include "faststring2.h"
+//#include "faststring3.h"
 
 #define DEBUG
 
 #define PROGNAME "MitoGeneExtractor"
-#define VERSION  "1.9.5"
+#define VERSION  "1.9.6"
 
 #define macromax(x,y) ((x)<(y) ? (y) : (x))
 #define macromin(x,y) ((x)<(y) ? (x) : (y))
@@ -21,6 +24,7 @@
 #define DEBUGOUT2(x,y)
 #define DEBUGOUT3(x,y,z)
 #define DEBUGOUT4(x,y,z,w)
+
 #endif
 
 
@@ -36,7 +40,7 @@ extern std::string                 global_tmp_directory;
 extern unsigned                    global_verbosity;
 extern unsigned                    global_num_bp_beyond_exonerate_alignment_if_at_start_or_end;
 extern std::string                 global_exonerate_binary;
-extern std::string                 global_vulgar_file;
+extern std::string                 global_vulgar_file_folder;
 extern std::string                 global_alignment_output_file;
 extern float                       global_consensus_threshold;
 extern std::string                 global_consensus_sequence_output_filename;
@@ -59,3 +63,6 @@ extern unsigned                    global_ends_width;
 extern unsigned                    global_weight_fraction_in_ends;
 extern bool                        global_treat_references_as_individual;
 //extern bool                        global_report_internal_gaps_as_tilde;
+
+
+#endif

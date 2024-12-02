@@ -2,8 +2,8 @@
 #define FASTQ_H
 
 #include <iostream>
-#include "faststring2.h"
-#include "CFile/CFile2_1.h"
+#include "faststring3.h"
+#include "CFile/CFile2_3.h"
 
 class fastq_record
 {

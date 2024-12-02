@@ -3,7 +3,7 @@
 
 #include <fstream>
 #include <string>
-#include "../faststring2.h"
+#include "../faststring3.h"
 
 // Should not exceed 1 000 000 without making sure that the stack is large enough.
 #ifndef BUFFERSIZE

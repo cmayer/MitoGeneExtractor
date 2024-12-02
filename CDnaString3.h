@@ -2,7 +2,7 @@
 #define DNASTRING_H
 
 #include "primefactors.h"
-#include "faststring2.h"
+#include "faststring3.h"
 #include <cctype>
 #include "basic-DNA-RNA-AA-routines.h"
 
@@ -150,6 +150,27 @@ class CDnaString : public faststring
         case 'H':  faststring::push_back('D'); break;
 
         case 'N':  faststring::push_back('N'); break;
+        case '-':  faststring::push_back('-'); break;
+
+        case 'a':  faststring::push_back('t'); break;
+        case 't':  faststring::push_back('a'); break;
+        case 'g':  faststring::push_back('c'); break;
+        case 'c':  faststring::push_back('g'); break;
+
+        case 'r':  faststring::push_back('y'); break;
+        case 'y':  faststring::push_back('r'); break;
+
+        case 'm':  faststring::push_back('k'); break;
+        case 'k':  faststring::push_back('m'); break;
+
+        case 'b':  faststring::push_back('v'); break;
+        case 'v':  faststring::push_back('b'); break;
+
+        case 'd':  faststring::push_back('h'); break;
+        case 'h':  faststring::push_back('d'); break;
+
+        case 'n':  faststring::push_back('n'); break;
+
         default:
 	  ++error;
 	  push_back('?');
@@ -192,6 +213,7 @@ class CDnaString : public faststring
         case 'H':  faststring::push_back('D'); break;
 
         case 'N':  faststring::push_back('N'); break;
+        case '-':  faststring::push_back('-'); break;
         default:
 	  ++error;
 	  push_back('?');
@@ -205,7 +227,7 @@ class CDnaString : public faststring
 
   void setToReverseOf(const CDnaString &a)
   {
-    unsigned   len      = a.size();
+    size_type   len      = a.size();
     const char *pos     = a.rbegin();
     const char *pos_end = a.rend();
 
@@ -219,44 +241,11 @@ class CDnaString : public faststring
     }
   }
 
-
-  // Returns true if a subpattern has been found,
-  // false if no subpattern has been found. 
-  void correct_unit_with_subpattern(unsigned &ulen)
-  {
-    unsigned       len   = size();
-    char           *tmp  = new char [2*len+1];
-    const char     *orig = c_str();
-
-    char           *pos  = tmp;
-    char           *pos_end = pos + len;
-    int             strncmp_result;
-
-    strcpy(tmp,     orig);
-    strcpy(tmp+len, orig);
-
-    //    std::cerr << "Correcting unit: " << *this << std::endl;
-    ++pos;
-    for (; pos != pos_end; ++pos)
-    {
-      strncmp_result = strncmp(tmp, pos, len);
-      if ( strncmp_result == 0 ) // Subpattern has been found
-      {
-	ulen = pos-tmp;
-	shorten(ulen);
-	//	std::cerr << "New unit: " << ulen << " " << *this << std::endl;
-	break;
-      }
-    }
-    delete [] tmp;
-  }
-
-
   // Returns true if a subpattern has been found,
   // false if no subpattern has been found. 
   bool setToMinAlphaRepModCyclicPermOf(const CDnaString &s)
   {
-    unsigned       len   = s.size();
+    size_type      len   = s.size();
     char           *tmp  = new char [2*len+1];
     const char     *orig = const_cast<CDnaString&>(s).c_str();
 
@@ -280,7 +269,6 @@ class CDnaString : public faststring
 	min_str = pos;
       else if ( strncmp_result == 0 )
       {
-	// New pattern is from 
 	found_subpattern = true;
       }
     }
@@ -305,27 +293,6 @@ class CDnaString : public faststring
     if ( strcmp(c_str(), tmp.c_str() ) > 0 )
     {
       assign( tmp.c_str() );
-    }
-    return found_subpattern;
-  }
-
-  // Returns true if a subpattern has been found,
-  // false if no subpattern has been found. 
-  bool setToMinAlphaRepModRevCompAndCyclicPermOf(const CDnaString &s, signed char &direction)
-  {
-    CDnaString tmp;
-    bool       found_subpattern;
-
-    tmp.setToReverseComplementOf(s);
-    found_subpattern = setToMinAlphaRepModCyclicPermOf(tmp);   // *this contains minimum representation of rev comp of s
-
-    tmp.setToMinAlphaRepModCyclicPermOf(s); // tmp contains minimum representation of s itself
-    direction = 1;
-
-    if ( strcmp(c_str(), tmp.c_str() ) > 0 )
-    {
-      assign( tmp.c_str() );
-      direction = -1;
     }
     return found_subpattern;
   }
