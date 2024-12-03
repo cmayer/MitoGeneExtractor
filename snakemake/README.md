@@ -112,8 +112,9 @@ python ./scripts/fasta_compare_new.py OUTPUT_CSV OUTPUT_FASTA OUTPUT_BARCODE_FAS
   --verbose, -v: Enable detailed debug logging
 ```
 ## Workflow ##
-BBsplit pipeline coming soon...
-(![image](https://github.com/user-attachments/assets/8c8e9f9b-bf70-433a-8809-76b2e1b2f5fd)
+- BBsplit pipeline coming soon...
+- [Barcode_validtor](https://github.com/naturalis/barcode_validator/tree/main)
+![image](https://github.com/user-attachments/assets/8c8e9f9b-bf70-433a-8809-76b2e1b2f5fd)
 
 ## To do ##
 - Integrate BBsplit contam screen as an additional pre-processing mode for screening likely/known contaminant sequences.
