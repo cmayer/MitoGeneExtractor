@@ -127,20 +127,33 @@ preprocessing_mode: "concat"
 results/
 ├── alignment/
 │   └── alignment_files.log
+│   └── sample1_alignment.fasta
+│   └── sample2_alignment.fasta
+│   └── ...
 ├── consensus/
+│   └── sample1_consensuys.fasta
+│   └── sample2_consensus.fasta
+│   └── ...
 │   └── <run_name>.fasta
 ├── err/
+│   └── sample1.err
+│   └── sample2.err
+│   └── ...
 ├── logs/
+│   └── sample1.log
+│   └── sample2.log
+│   └── ...
 ├── out/
+│   └── sample1.out
+│   └── sample2.out
+│   └── ...
 ├── trimmed_data/
+│   └── ...
 │   └── (reports/)
-├── (raw_data)/
 ├── cleanup_complete.txt
 ├── <run_name>.csv
 └── <run_name>-contaminants.csv
 ```
-N.B. 'raw_data/' only produced when running pipeline in 'concat' (i.e. 'standard') mode. 'reports/' only generated when running pipeline in 'merge' (i.e. fastp-merge) mode.
-
 
 ## Scripts ##
 - **1_gene_fetch.py** = Fetches protein references for each sample using taxids from samples.csv to query NCBI DBs (via BioEntrez API). Fetches closest reference available to input taxid.
