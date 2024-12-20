@@ -42,8 +42,6 @@ A Python tool for retrieving protein and/or gene sequences from NCBI databases. 
 - Robust error handling, logging, and NCBI API rate limiting to comply with guidelines (10 requests/second. Requires valid NCBI API key and email for optimal performance).
 - Handles complex sequence features (e.g., complement strands, joined sequences) in addition to 'simple' cds extaction (if --type nucleotide/both).
 ### Usage
-- [1_gene_fetch.py](https://github.com/SchistoDan/MitoGeneExtractor/blob/main/snakemake/1_gene_fetch.py) fetches sample-specific protein (pseudo)references using taxonomic ids and creates protein_references.csv (example below) required in config.yaml 
-- 1_gene_fetch.py usage:
 ```bash
 python 1_gene_fetch.py <gene_name> <output_directory> <samples.csv> --type <sequence_type>
   <gene_name>: Name of gene to search for in NCBI RefSeq database (e.g., cox1/16s/rbcl).
