@@ -3,6 +3,7 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
+  - git=2.45.2
   - exonerate=2.4.0
   - mamba=1.5.8
   - snakemake=8.18.1
