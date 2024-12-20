@@ -31,9 +31,9 @@ git status
 ```
 
 ### 2. Generate samples.csv ###
-- Can be created via [sample-processing](https://github.com/bge-barcoding/sample-processing) workflow, or manually.
+- Can be created manually, or via [sample-processing](https://github.com/bge-barcoding/sample-processing) workflow.
 - Column 1 can be named 'ID', 'process_id', 'Process ID', 'process id', 'Process id', 'PROCESS ID', 'sample', 'SAMPLE', or 'Sample'.
-- Reads must be PE, and can be gzipped or gunzipped.
+- Reads must be PE, and can be compressed or uncompressed.
   
 **samples.csv example**
 | ID | forward | reverse | taxid |
@@ -43,18 +43,65 @@ git status
 | BSNHM046-24 | abs/path/to/R1.fq.gz | abs/path/to/R2.fq.gz | 3084599 |
 
 ### 3. Fetch sample-specific protein references using 1_gene_fetch.py ###
+# Gene Fetch
+A Python tool for retrieving protein and/or gene sequences from NCBI databases. The script can fetch both protein and nucleotide sequences for a given gene across multiple taxa, with support for traversing taxonomic hierarchies when sequences aren't available at the given taxonomic level (dictated by input taxid).
+- Fetch protein and/or nucleotide sequences from NCBI databases using taxonomic ID (taxid). Handles both direct nucleotide sequences and protein-linked nucleotide references.
+- Support for both protein-coding and rRNA genes.
+- Automatic taxonomy traversal using NCBI lineage for given taxid when sequences aren't found at input taxonomic level. BY traversing up the fetched NCBI lineage, potential homonyms are avoided.
+- Configurable sequence length thresholds, with minimum length requirements (can be altered).
+- Robust error handling, logging, and NCBI API rate limiting to comply with guidelines (10 requests/second. Requires valid NCBI API key and email for optimal performance).
+- Handles complex sequence features (e.g., complement strands, joined sequences) in addition to 'simple' cds extaction (if --type nucleotide/both).
+## Prerequisites
+```
+biopython
+ratelimit
+requests
+```
+```bash
+pip install biopython ratelimit requests
+```
+## Usage
 - [1_gene_fetch.py](https://github.com/SchistoDan/MitoGeneExtractor/blob/main/snakemake/1_gene_fetch.py) fetches sample-specific protein (pseudo)references using taxonomic ids and creates protein_references.csv (example below) required in config.yaml 
 - 1_gene_fetch.py usage:
-```
-python 1_gene_fetch.py <gene_name> <output_directory> <samples.csv> 
-  <gene_name>: Name of gene to search for in NCBI RefSeq database (e.g., cox1/COX1).
-  <output_directory>: Path to directory to save output files (will save .fasta files and summary CSV in this directory). The directory will be created if it does not exist.
+```bash
+python 1_gene_fetch.py <gene_name> <output_directory> <samples.csv> --type <sequence_type>
+  <gene_name>: Name of gene to search for in NCBI RefSeq database (e.g., cox1/16s/rbcl).
+  <output_directory>: Path to directory to save output files. The directory will be created if it does not exist.
   <samples.csv>: Path to input CSV file containing Process IDs (ID column) and TaxIDs (taxid column).
+  --type: Sequence type to fetch ('protein', 'nucleotide', or 'both')
+  --protein_size: Minimum protein sequence length (default: 500). Optional.
+  --nucleotide_size: Minimum nucleotide sequence length (default: 1500). Optional.
 ```
 - 'Checkpointing 'available: If the script fails during a run, it can be rerun using the same inputs and it will skip IDs with entries already in the protein_references.csv and with .fasta files already present in the output directory.
 - Manually review the protein_references.csv after running as homonyms may lead to incorrect protein references being fetched on occasion.
+## Output Structure
+```
+output_dir/
+├── nucleotide/
+│   ├── SAMPLE1_dna.fasta
+│   ├── SAMPLE2_dna.fasta
+│   └── ...
+├── SAMPLE1.fasta           # Protein sequences
+├── SAMPLE2.fasta
+├── sequence_references.csv # Sequence metadata (for input into MGE snakemake pipeline)
+├── failed_searches.csv     # Failed search attempts
+└── gene_fetch.log         # Operation log
+```
+## Supported targets
+- Script functions with other gene/protein targets than those listed below, but has hard-coded synonymns to catch name variations of the below targets. More can be added into script (see 'class config')
+- cox1/COI
+- cox2/COII
+- cox3/COIII
+- cytb
+- nd1
+- rbcl
+- matk
+- 16s
+- 18s
+- 28s
+- 12s
 
-**protein_references.csv example** 
+**sequence_references.csv example** 
 | ID | taxid | accession_number | sequence_length | matched_rank | ncbi_taxonomy | reference_name | reference_path |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | BSNHM002-24 | 177658 | AHF21732.1 | 510 | genus | Eukaryota, ..., Apataniinae, Apatania | BSNHM002-24 | abs/path/to/protein_references/BSNHM002-24.fasta | 
@@ -126,3 +173,8 @@ python ./scripts/fasta_compare_new.py OUTPUT_CSV OUTPUT_FASTA OUTPUT_BARCODE_FAS
 - Raw reads for 12 test samples can be downloaded [here](https://naturalhistorymuseum-my.sharepoint.com/personal/b_price_nhm_ac_uk/_layouts/15/onedrive.aspx?ct=1723035606962&or=Teams%2DHL&ga=1&LOF=1&id=%2Fpersonal%2Fb%5Fprice%5Fnhm%5Fac%5Fuk%2FDocuments%2F%5Ftemp%2F%5FBGEexamples4Felix%2F1%5Fraw%5Fdata). Each read pair must be in seperate subdirectories under a parent directory that can be called anything
 - samples sheet (BGE_test_samples.csv) provided (paths to reads and references need to be altered to where you stored the reads)
 - protein_references sheet (gene_fetch_BGE_test_data.csv) provided (in protein_references/).
+
+
+### Contributing
+
+Feel free to submit issues, fork the repository, and create pull requests for any improvements.
