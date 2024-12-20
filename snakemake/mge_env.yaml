@@ -17,4 +17,5 @@ dependencies:
   - pip:
       - biopython==1.84
       - ratelimit==2.2.1
+      - requests==2.32.0
 
