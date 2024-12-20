@@ -3,17 +3,7 @@ Pipeline for extraction of barcoding regions built around MitoGeneExtractor adap
 
 # Requirements: #
 - Snakefile
-- config.yaml (containing:)
-  - Name of MitoGeneExtractor run (will be used for naming summary stats output and concatenated consensus fasta file).
-  - Path to 'MitoGeneExtractor-vx.y.z' file (see installation guidance on main readme)
-  - Path to 'samples.csv' (example below)
-  - Path to 'protein_references.csv' (example below)
-  - Path to output directory (new directories will be created)
-  - Gene of interest (e.g. cox1)
-  - Parameters: r (Exonerate relative score threshold) and s (Exonerate minimum score threshold)
-  - Read pre-processing mode. Options: 'merge' or 'conat'.
-    - merge = adapter- and poly g-trimming, deduplication and PE read merging (fastp)-> 'cleaning' of sequence headers -> MGE
-    - concat = gunzip and 'cleaning' of sequence headers -> adapter- and poly g-trimming, and deduplication (fastp) -> concatenation of PE reads -> read trimming (cutadapt) -> MGE
+- config.yaml (see below)
 - Activated conda env - See mge_env.yaml
 - Can be run on a cluster using 'snakemake.sh'
 
@@ -100,8 +90,9 @@ output_dir/
 
 ## 4. Edit config.yaml for run ##
 - Update config.yaml with neccessary paths and variables.
+- 'merge' preprocessing = adapter- and poly g-trimming, deduplication and PE read merging (fastp)-> 'cleaning' of sequence headers -> MGE
+- 'concat' preprocessing = gunzip and 'cleaning' of sequence headers -> adapter- and poly g-trimming, and deduplication (fastp) -> concatenation of PE reads -> read trimming (cutadapt) -> MGE
 ```
-
 # MGE run name identifier
 run_name: "mge_concat_r1_13_15_s50_100"
 # Path to MGE installation
