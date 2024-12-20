@@ -51,20 +51,19 @@ python 1_gene_fetch.py <gene_name> <output_directory> <samples.csv> --type <sequ
   --protein_size: Minimum protein sequence length (default: 500). Optional.
   --nucleotide_size: Minimum nucleotide sequence length (default: 1500). Optional.
 ```
-- 'Checkpointing 'available: If the script fails during a run, it can be rerun using the same inputs and it will skip IDs with entries already in the protein_references.csv and with .fasta files already present in the output directory.
-- Manually review the protein_references.csv after running as homonyms may lead to incorrect protein references being fetched on occasion.
+- 'Checkpointing 'available: If the script fails during a run, it can be rerun using the same inputs and it will skip IDs with entries already in the sequence_references.csv and with .fasta files already present in the output directory.
 ### Output Structure
 ```
 output_dir/
-├── nucleotide/
-│   ├── SAMPLE1_dna.fasta
+├── nucleotide/             # Only populated if '--type nucleotide/both' utilised.
+│   ├── SAMPLE1_dna.fasta   
 │   ├── SAMPLE2_dna.fasta
 │   └── ...
 ├── SAMPLE1.fasta           # Protein sequences
 ├── SAMPLE2.fasta
 ├── sequence_references.csv # Sequence metadata (for input into MGE snakemake pipeline)
 ├── failed_searches.csv     # Failed search attempts
-└── gene_fetch.log         # Operation log
+└── gene_fetch.log          # Operation log
 ```
 ### Supported targets
 - Script functions with other gene/protein targets than those listed below, but has hard-coded synonymns to catch name variations of the below targets. More can be added into script (see 'class config')
@@ -81,9 +80,9 @@ output_dir/
 - 12s
 
 **sequence_references.csv example** 
-| ID | taxid | accession_number | sequence_length | matched_rank | ncbi_taxonomy | reference_name | reference_path |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| BSNHM002-24 | 177658 | AHF21732.1 | 510 | genus | Eukaryota, ..., Apataniinae, Apatania | BSNHM002-24 | abs/path/to/protein_references/BSNHM002-24.fasta | 
+| ID | taxid | protein_accession | protein_length | nucleotide_accession | nucleotide_length | matched_rank | ncbi_taxonomy | reference_name | protein_reference_path | nucleotide_reference_path |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| BSNHM002-24 | 177658 | AHF21732.1 | 510 | n/a | n/a | genus: Apatania | Eukaryota, ..., Apataniinae, Apatania | BSNHM002-24 | abs/path/to/protein_references/BSNHM002-24.fasta | n/a |
 
 
 ## 4. Edit config.yaml for run ##
