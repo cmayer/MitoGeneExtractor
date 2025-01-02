@@ -16,7 +16,7 @@ Pipeline for extraction of barcoding regions built around MitoGeneExtractor adap
 - Install conda.
 ```bash
 conda env create -f mge_env.yaml
-git clone https://github.com/SchistoDan/MitoGeneExtractor.git path/to/installation/dir
+git clone https://github.com/bge-barcoding/MitoGeneExtractor-BGE.git path/to/installation/dir
 cd path/to/installation/dir
 git status
 ```
