@@ -4,17 +4,20 @@ FASTA Sequence Quality Analyser
 ===============================
 
 This script analyses FASTA files containing DNA sequences, evaluates sequence quality based on 
-various metrics, and selects the best sequences according to specific quality criteria.
+various metrics, and selects the best sequences according to specific (BOLD BIN) quality criteria.
 
-The script processes both full sequences and barcode regions (positions 40-700), outputting filtered 
-sequences to separate FASTA files and providing detailed analysis in a CSV file.
+The script processes both full sequences and barcode regions of different genetic markers (cox1/rbcl/matk),
+outputting filtered sequences to separate FASTA files and providing detailed analysis in a CSV file.
 
 Features:
 ---------
 - Multi-file processing: analyse multiple FASTA files in a single run
 - Quality assessment: Evaluate sequences based on gaps, ambiguous bases, and continuous stretches
-- Sequence selection: Select the best sequences based on configurable ranking criteria
-- Barcode region extraction: Process the specific barcode region (positions 40-700)
+- Sequence selection: Select the 'best' sequences based on configurable ranking criteria
+- Target-specific barcode region extraction:
+  - cox1/COI: Positions 40-700
+  - rbcl: Positions 1-700
+  - matk: Positions 1-900
 - Detailed reporting: Generate comprehensive CSV report of all sequences and their metrics
 - Gap handling: Specialised handling of different types of gaps (-, ~)
 - N-trimming: Automatic trimming of leading and trailing N characters
@@ -40,6 +43,7 @@ Input Parameters:
 --output-fasta/-of: Path where the best full sequences FASTA file will be saved
 --output-barcode/-ob: Path where the best barcode sequences FASTA file will be saved
 --input/-i: One or more input FASTA files to analyse (space-separated)
+--target/-t: Target genetic marker (cox1/COI, rbcl, or matk)
 
 Optional:
 --log-file LOG_FILE: Specify a custom path for the log file (default: creates timestamped log in current directory)
@@ -47,14 +51,8 @@ Optional:
 
 Examples:
 --------
-Basic usage:
-    python fasta_compare.py --output-csv results.csv --output-fasta best.fasta --output-barcode barcode.fasta --input sample1.fasta sample2.fasta
-
-With custom log file:
-    python fasta_compare.py --output-csv results.csv --output-fasta best.fasta --output-barcode barcode.fasta --input sample.fasta --log-file analysis.log
-
-With verbose logging:
-    python fasta_compare.py --output-csv results.csv --output-fasta best.fasta --output-barcode barcode.fasta --input sample.fasta -v
+Basic usage with cox1 target:
+    python fasta_compare.py --output-csv results.csv --output-fasta best.fasta --output-barcode barcode.fasta --input sample1.fasta sample2.fasta --target cox1
 
 Dependencies:
 ------------
@@ -73,8 +71,6 @@ Author:
 Created by Ben Price & Dan Parsons @ NHMUK
 """
 
-
-
 import sys
 import csv
 from Bio import SeqIO
@@ -87,6 +83,39 @@ from pathlib import Path
 import logging
 from datetime import datetime
 
+
+# Define marker-specific barcode regions
+BARCODE_REGIONS = {
+    'cox1': (39, 700),  # 0-based indexing, so 40-700 becomes 39-700
+    'rbcl': (0, 700),   # 1-700 becomes 0-700
+    'matk': (0, 900)    # 1-900 becomes 0-900
+}
+
+# Define marker aliases
+MARKER_ALIASES = {
+    'cox1': ['cox1', 'coi', 'co1'],
+    'rbcl': ['rbcl'],
+    'matk': ['matk']
+}
+
+
+def normalise_marker(marker):
+    """
+    normalise marker name to handle case insensitivity and aliases.
+    
+    Parameters:
+        marker (str): The marker name provided by the user
+        
+    Returns:
+        str: normalised marker name or None if no match found
+    """
+    marker = marker.lower()
+    
+    for normalised, aliases in MARKER_ALIASES.items():
+        if marker in aliases:
+            return normalised
+    
+    return None
 
 
 def setup_logging(log_file=None):
@@ -105,9 +134,6 @@ def setup_logging(log_file=None):
             logging.FileHandler(log_file if log_file else f"fasta_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
         ]
     )
-
-
-
 
 
 def validate_files(input_files, output_csv, output_fasta):
@@ -175,47 +201,51 @@ def trim_n_characters(sequence):
     return sequence[start:end + 1]
     
 
-def analyse_fasta(file_path):
+def analyse_fasta(file_path, target_marker):
     """
     Analyse a FASTA file and extract various metrics from each sequence.
 
     Parameters:
         file_path (str): The path to the FASTA file to be analysed.
+        target_marker (str): The target genetic marker (cox1, rbcl, matk)
 
     Returns:
         dict: A dictionary containing analysis results for each sequence in the FASTA file.
     """
     try:
-        #Initialise dictionaries
+        # Get barcode region bounds based on target marker
+        barcode_start, barcode_end = BARCODE_REGIONS[target_marker]
+        
+        # Initialize dictionaries
         results = {}
         sequences = {}
         
-        #Count total sequences for progress reporting
+        # Count total sequences for progress reporting
         total_sequences = sum(1 for _ in SeqIO.parse(file_path, "fasta"))
         processed = 0
 
-        #Parse the FASTA file
+        # Parse the FASTA file
         for record in SeqIO.parse(file_path, "fasta"):
             try:
                 processed += 1
-                if processed % 100 == 0:  #Log progress every 100 sequences
+                if processed % 100 == 0:  # Log progress every 100 sequences
                     logging.info(f"Processing {file_path}: {processed}/{total_sequences} sequences")
 
-                #Get the sequence ID (header) and the sequence itself
+                # Get the sequence ID (header) and the sequence itself
                 seq_id = record.id
                 seq = str(record.seq)
                 
-                #Store the complete record
+                # Store the complete record
                 sequences[seq_id] = record
 
-                #Clean and split seq_id into process_id and parameters
+                # Clean and split seq_id into process_id and parameters
                 seq_id_clean = seq_id.replace("Consensus_", "") if seq_id.startswith("Consensus_") else seq_id
 
-                #Initialise process_id and parameters
+                # Initialize process_id and parameters
                 process_id = seq_id_clean
                 parameters = ""
 
-                #Extract process_id and parameters
+                # Extract process_id and parameters
                 if '_r_' in seq_id_clean:
                     param_start_idx = seq_id_clean.index('_r_')
                     process_id = seq_id_clean[:param_start_idx]
@@ -223,27 +253,27 @@ def analyse_fasta(file_path):
 
                 logging.debug(f"Detected process_id: {process_id}, parameters: {parameters}")
 
-                #Calculate sequence metrics
+                # Calculate sequence metrics
                 length = len(seq)
                 leading_gaps = len(seq) - len(seq.lstrip('-'))
                 trailing_gaps = len(seq) - len(seq.rstrip('-'))
                 internal_gaps = seq.count('-') + seq.count('~') - leading_gaps - trailing_gaps
                 ambiguous_bases = seq.count('N')
 
-                #Calculate longest stretch without gaps
+                # Calculate longest stretch without gaps
                 longest_stretch = max(len(s) for s in re.split('-|~', seq))
 
-                #Analyse barcode region (positions 40-700)
-                subseq = seq[39:700]
+                # Analyse barcode region based on target marker
+                subseq = seq[barcode_start:barcode_end]
                 barcode_length = len(subseq)
                 barcode_ambiguous_bases = subseq.count('N')
                 barcode_longest_stretch = max(len(s) for s in re.split('-|~', subseq))
 
-                #Determine ranks
+                # Determine ranks
                 barcode_rank = calculate_barcode_rank(barcode_ambiguous_bases, barcode_longest_stretch)
                 full_rank = calculate_full_rank(ambiguous_bases)
 
-                #Store results
+                # Store results
                 results[seq_id] = {
                     'file': file_path,
                     'length': length,
@@ -273,9 +303,6 @@ def analyse_fasta(file_path):
         return {}
 
 
-
-
-
 def calculate_barcode_rank(barcode_ambiguous_bases, barcode_longest_stretch):
     """Calculate barcode rank based on criteria."""
     if barcode_ambiguous_bases == 0:
@@ -290,9 +317,6 @@ def calculate_barcode_rank(barcode_ambiguous_bases, barcode_longest_stretch):
     return 5 if barcode_ambiguous_bases >= 1 else 6
 
 
-
-
-
 def calculate_full_rank(ambiguous_bases):
     """Calculate full rank based on criteria."""
     if ambiguous_bases == 0:
@@ -300,9 +324,6 @@ def calculate_full_rank(ambiguous_bases):
     elif ambiguous_bases >= 1:
         return 2
     return 3
-
-
-
 
 
 def format_sequence(seq_record, trim_gaps=True, convert_internal_gaps=True):
@@ -342,21 +363,22 @@ def format_sequence(seq_record, trim_gaps=True, convert_internal_gaps=True):
     return new_record
 
 
-
-
-
-def format_barcode_sequence(seq_record):
+def format_barcode_sequence(seq_record, target_marker):
     """
-    Extract and format the barcode region (positions 40-700).
+    Extract and format the barcode region based on the target marker.
     
     Parameters:
         seq_record (SeqRecord): The sequence record to process
+        target_marker (str): The target genetic marker (cox1, rbcl, matk)
         
     Returns:
         SeqRecord: Formatted barcode sequence record
     """
-    # Extract barcode region (positions 40-700, 0-based indexing)
-    sequence = str(seq_record.seq)[39:700]
+    # Get barcode region bounds based on target marker
+    barcode_start, barcode_end = BARCODE_REGIONS[target_marker]
+    
+    # Extract barcode region
+    sequence = str(seq_record.seq)[barcode_start:barcode_end]
     
     # Format gaps according to rules
     formatted_sequence = format_barcode_gaps(sequence)
@@ -371,8 +393,6 @@ def format_barcode_sequence(seq_record):
     )
     
     return new_record
-
-
 
 
 def format_barcode_gaps(sequence):
@@ -422,9 +442,6 @@ def format_barcode_gaps(sequence):
     return longest_fragment
 
 
-
-
-
 def format_sequence_id(process_id, parameters):
     """
     Format sequence ID according to specified format.
@@ -437,9 +454,6 @@ def format_sequence_id(process_id, parameters):
         str: Formatted sequence ID
     """
     return f"{process_id}_{parameters}" if parameters else process_id
-
-
-
 
 
 def select_sequences_for_process(results):
@@ -487,9 +501,7 @@ def select_sequences_for_process(results):
     return None, None
 
 
-
-
-def write_best_sequences(best_sequences, output_fasta, output_barcode_fasta):
+def write_best_sequences(best_sequences, output_fasta, output_barcode_fasta, target_marker):
     """
     Write the best sequences that meet specific criteria to new FASTA files.
     Sequences are written without line breaks.
@@ -498,6 +510,7 @@ def write_best_sequences(best_sequences, output_fasta, output_barcode_fasta):
         best_sequences (dict): Dictionary containing the best sequences for each process_id
         output_fasta (str): Path to output FASTA file for full sequences
         output_barcode_fasta (str): Path to output FASTA file for barcode regions
+        target_marker (str): The target genetic marker (cox1, rbcl, matk)
     """
     try:
         selected_full_records = []
@@ -534,7 +547,7 @@ def write_best_sequences(best_sequences, output_fasta, output_barcode_fasta):
                     seq_record = best_barcode['sequence_record']
                     new_id = format_sequence_id(best_barcode['process_id'], best_barcode['parameters'])
                     
-                    barcode_seq_record = format_barcode_sequence(seq_record)
+                    barcode_seq_record = format_barcode_sequence(seq_record, target_marker)
                     barcode_seq_record.id = new_id
                     barcode_seq_record.description = ""
                     selected_barcode_records.append(barcode_seq_record)
@@ -577,14 +590,15 @@ def write_best_sequences(best_sequences, output_fasta, output_barcode_fasta):
 
 
 def main():
-    #Arg parser
-    parser = argparse.ArgumentParser(description='analyse FASTA files and select best sequences based on quality criteria.')
+    # Arg parser
+    parser = argparse.ArgumentParser(description='Analyse FASTA files and select best sequences based on quality criteria.')
     
     # Required arguments with flags
     parser.add_argument('--output-csv', '-o', required=True, help='Path to output CSV file')
     parser.add_argument('--output-fasta', '-of', required=True, help='Path to output FASTA file for best sequences')
     parser.add_argument('--output-barcode', '-ob', required=True, help='Path to output FASTA file for barcode regions')
     parser.add_argument('--input', '-i', required=True, nargs='+', help='Input FASTA files to analyse')
+    parser.add_argument('--target', '-t', required=True, help='Target genetic marker (cox1/COI/CO1, rbcl/RBCL, or matk/MATK)')
     
     # Optional arguments
     parser.add_argument('--log-file', help='Path to log file (optional)')
@@ -592,6 +606,22 @@ def main():
     
     args = parser.parse_args()
     
+    # Setup logging FIRST
+    setup_logging(args.log_file)
+    
+    # Set verbosity level
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+    
+    # Normalise target marker
+    target_marker = normalise_marker(args.target)
+    if not target_marker:
+        logging.error(f"Invalid target marker: {args.target}. Must be one of: cox1/COI/CO1, rbcl/RBCL, or matk/MATK")
+        sys.exit(1)
+    
+    # Now log info after logging is set up
+    logging.info(f"Using target marker: {target_marker} (barcode region: {BARCODE_REGIONS[target_marker][0]+1}-{BARCODE_REGIONS[target_marker][1]})")
+        
     #Setup logging
     setup_logging(args.log_file)
     if args.verbose:
@@ -608,7 +638,7 @@ def main():
         #Analyse each FASTA file
         for file in args.input:
             logging.info(f"Processing file: {file}")
-            results = analyse_fasta(file)
+            results = analyse_fasta(file, target_marker)
             for seq_id, result in results.items():
                 result['seq_id'] = seq_id
                 all_results.append(result)
@@ -642,7 +672,7 @@ def main():
             ) else 'no'
         
         #Write best sequences to FASTA files and get selection records
-        selection_records = write_best_sequences(best_sequences, args.output_fasta, args.output_barcode)
+        selection_records = write_best_sequences(best_sequences, args.output_fasta, args.output_barcode, target_marker)
 
         #Update results with new columns
         for result in all_results:
