@@ -1,3 +1,80 @@
+#!/usr/bin/env python3
+"""
+FASTA Sequence Quality Analyser
+===============================
+
+This script analyses FASTA files containing DNA sequences, evaluates sequence quality based on 
+various metrics, and selects the best sequences according to specific quality criteria.
+
+The script processes both full sequences and barcode regions (positions 40-700), outputting filtered 
+sequences to separate FASTA files and providing detailed analysis in a CSV file.
+
+Features:
+---------
+- Multi-file processing: analyse multiple FASTA files in a single run
+- Quality assessment: Evaluate sequences based on gaps, ambiguous bases, and continuous stretches
+- Sequence selection: Select the best sequences based on configurable ranking criteria
+- Barcode region extraction: Process the specific barcode region (positions 40-700)
+- Detailed reporting: Generate comprehensive CSV report of all sequences and their metrics
+- Gap handling: Specialised handling of different types of gaps (-, ~)
+- N-trimming: Automatic trimming of leading and trailing N characters
+
+Ranking Criteria:
+----------------
+Barcode Rank (1-6, lower is better):
+1: No ambiguous bases, longest stretch ≥ 650
+2: No ambiguous bases, longest stretch ≥ 500
+3: No ambiguous bases, 300 ≤ longest stretch ≤ 499
+4: No ambiguous bases, 1 ≤ longest stretch ≤ 299
+5: Has ambiguous bases
+6: Other cases
+
+Full Sequence Rank (1-3, lower is better):
+1: No ambiguous bases
+2: Has ambiguous bases
+3: Other cases
+
+Input Parameters:
+----------------
+--output-csv/-o: Path where the analysis results CSV file will be saved
+--output-fasta/-of: Path where the best full sequences FASTA file will be saved
+--output-barcode/-ob: Path where the best barcode sequences FASTA file will be saved
+--input/-i: One or more input FASTA files to analyse (space-separated)
+
+Optional:
+--log-file LOG_FILE: Specify a custom path for the log file (default: creates timestamped log in current directory)
+--verbose, -v: Enable detailed debug logging
+
+Examples:
+--------
+Basic usage:
+    python fasta_compare.py --output-csv results.csv --output-fasta best.fasta --output-barcode barcode.fasta --input sample1.fasta sample2.fasta
+
+With custom log file:
+    python fasta_compare.py --output-csv results.csv --output-fasta best.fasta --output-barcode barcode.fasta --input sample.fasta --log-file analysis.log
+
+With verbose logging:
+    python fasta_compare.py --output-csv results.csv --output-fasta best.fasta --output-barcode barcode.fasta --input sample.fasta -v
+
+Dependencies:
+------------
+- BioPython: For parsing and manipulating FASTA files
+- Standard library: csv, re, os, argparse, logging, etc.
+
+Output Files:
+------------
+1. CSV report: Contains detailed metrics for all sequences across all input files
+2. Best sequences FASTA: Contains the highest quality full sequences (one per process_id)
+3. Best barcode FASTA: Contains the highest quality barcode regions (one per process_id)
+4. Log file: Records the analysis process, warnings, and errors
+
+Author: 
+-------
+Created by Ben Price & Dan Parsons @ NHMUK
+"""
+
+
+
 import sys
 import csv
 from Bio import SeqIO
@@ -11,17 +88,6 @@ import logging
 from datetime import datetime
 
 
-###This script analyzes FASTA files containing DNA sequences, evaluates sequence quality based on various metrics, 
-###and selects the best sequences based on specific quality criteria. It processes both full sequences and barcode regions (positions 40-700), 
-###outputting filtered sequences to separate FASTA files and providing detailed analysis in a CSV file.
-
-##OUTPUT_CSV: Path where the analysis results CSV file will be saved
-##OUTPUT_FASTA: Path where the best full sequences FASTA file will be saved
-##OUTPUT_BARCODE_FASTA: Path where the best barcode sequences FASTA file will be saved
-##INPUT_FILES: One or more input FASTA files to analyze (space-separated)
-##Optional:
-#--log-file LOG_FILE: Specify a custom path for the log file (default: creates timestamped log in current directory)
-#--verbose, -v: Enable detailed debug logging
 
 def setup_logging(log_file=None):
     """
@@ -203,7 +269,7 @@ def analyse_fasta(file_path):
         return results
 
     except Exception as e:
-        logging.error(f"Error analyzing file {file_path}: {str(e)}")
+        logging.error(f"Error analysing file {file_path}: {str(e)}")
         return {}
 
 
@@ -513,10 +579,14 @@ def write_best_sequences(best_sequences, output_fasta, output_barcode_fasta):
 def main():
     #Arg parser
     parser = argparse.ArgumentParser(description='analyse FASTA files and select best sequences based on quality criteria.')
-    parser.add_argument('output_csv', help='Path to output CSV file')
-    parser.add_argument('output_fasta', help='Path to output FASTA file for best sequences')
-    parser.add_argument('output_barcode_fasta', help='Path to output FASTA file for barcode regions')
-    parser.add_argument('input_files', nargs='+', help='Input FASTA files to analyse')
+    
+    # Required arguments with flags
+    parser.add_argument('--output-csv', '-o', required=True, help='Path to output CSV file')
+    parser.add_argument('--output-fasta', '-of', required=True, help='Path to output FASTA file for best sequences')
+    parser.add_argument('--output-barcode', '-ob', required=True, help='Path to output FASTA file for barcode regions')
+    parser.add_argument('--input', '-i', required=True, nargs='+', help='Input FASTA files to analyse')
+    
+    # Optional arguments
     parser.add_argument('--log-file', help='Path to log file (optional)')
     parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose output')
     
@@ -528,7 +598,7 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
     
     #Validate input and output files
-    if not validate_files(args.input_files, args.output_csv, args.output_fasta):
+    if not validate_files(args.input, args.output_csv, args.output_fasta):
         sys.exit(1)
     
     try:
@@ -536,7 +606,7 @@ def main():
         all_results = []
         
         #Analyse each FASTA file
-        for file in args.input_files:
+        for file in args.input:
             logging.info(f"Processing file: {file}")
             results = analyse_fasta(file)
             for seq_id, result in results.items():
@@ -572,7 +642,7 @@ def main():
             ) else 'no'
         
         #Write best sequences to FASTA files and get selection records
-        selection_records = write_best_sequences(best_sequences, args.output_fasta, args.output_barcode_fasta)
+        selection_records = write_best_sequences(best_sequences, args.output_fasta, args.output_barcode)
 
         #Update results with new columns
         for result in all_results:
