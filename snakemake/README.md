@@ -1,5 +1,5 @@
 # MGE snakemake pipeline #
-Pipeline for extraction of barcoding regions built around MitoGeneExtractor adapted for genome skims from museum speicmens. 
+Snakemake workflow for extraction of barcoding regions built around MitoGeneExtractor and adapted for genome skims of museum speicmens. 
 
 # Requirements: #
 - Snakefile
@@ -16,15 +16,16 @@ Pipeline for extraction of barcoding regions built around MitoGeneExtractor adap
 - Install conda.
 ```bash
 conda env create -f mge_env.yaml
-git clone https://github.com/bge-barcoding/MitoGeneExtractor-BGE.git path/to/installation/dir
-cd path/to/installation/dir
+git clone https://github.com/bge-barcoding/MitoGeneExtractor-BGE.git [path/to/installation/dir]
+cd [path/to/installation/dir]
 git status
 ```
 
 ## 2. Generate samples.csv ###
 - Can be created manually, or via [sample-processing](https://github.com/bge-barcoding/sample-processing) workflow.
 - Column 1 can be named 'ID', 'process_id', 'Process ID', 'process id', 'Process id', 'PROCESS ID', 'sample', 'SAMPLE', or 'Sample'.
-- Reads must be PE, and can be compressed or uncompressed.
+- Due to regex matching to aggregate statistics, the sample ID will be considered as the string before the first '_'. It is therefore recommended that sample names do not use '_' characters. E.g. BSNHM002-24 instead of BSNHM002_24, or P3-1-A10-2-G1 instead of P3_1_A10_2_G1.
+- Reads must be PE, either be compressed or uncompressed.
   
 **samples.csv example**
 | ID | forward | reverse | taxid |
