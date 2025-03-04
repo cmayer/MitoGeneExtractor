@@ -12,11 +12,11 @@ FASTA Sequence Analysis and Summary Tool
 --------------------------------------
 
 This script analyses a log file containing a list of alignment FASTA files, .out files
-containing 'raw' summary stats from MGE, and cleaning log files from fasta_cleaner.
+containing 'raw' summary stats from MGE, and cleaning statistics from a CSV file.
 It generates comprehensive summary statistics in CSV format. 
 
 Usage:
-    python mge_stats.py -a/--alignment_log <log_file> -o/--output <output_csv> -od/--out_file_dir <out_file_dir> -c/--cleaning_logs <cleaning_logs>
+    python mge_stats.py -a/--alignment_log <log_file> -o/--output <output_csv> -od/--out_file_dir <out_file_dir> -c/--cleaning_csv <cleaning_csv>
 
 Arguments:
     -a, --alignment_log : str
@@ -25,8 +25,8 @@ Arguments:
         Name of the output CSV file
     -od, --out_file_dir : str
         Directory containing .out files with additional sequence statistics
-    -c, --cleaning_logs : list[str], optional
-        One or more cleaning log files (can use wildcards)
+    -c, --cleaning_csv : str
+        Path to CSV file containing cleaning statistics
 
 Outputs:
     - <output_file>.csv: Main summary file containing all statistics
@@ -43,11 +43,16 @@ The script generates the following metrics for each sample:
     - cov_max: Maximum coverage depth across alignment
     - cov_avg: Average coverage depth across alignment
     - cov_med: Median coverage depth across alignment
-    - cleaning_input_seqs: Number of input sequences for cleaning
-    - cleaning_kept_seqs: Number of sequences kept after cleaning
+    - cleaning_input_reads: Number of input sequences for cleaning
+    - cleaning_kept_reads: Number of sequences kept after cleaning
     - cleaning_removed_human: Number of sequences removed due to human similarity
     - cleaning_removed_at: Number of sequences removed due to AT content
     - cleaning_removed_outlier: Number of sequences removed as statistical outliers
+    - cleaning_ambig_bases: Number of ambiguous bases after cleaning
+    - cleaning_cov_percent: Coverage percentage after cleaning
+    - cleaning_cov_avg: Average coverage after cleaning
+    - cleaning_cov_max: Maximum coverage after cleaning
+    - cleaning_cov_min: Minimum coverage after cleaning
 """
 
 # Set up logging
@@ -124,33 +129,37 @@ def parse_out_file(out_file_path):
  
     return process_id_data
 
-def parse_cleaning_log(file_path):
-    """Parse the fasta_cleaner log file for filtering statistics."""
+def parse_cleaning_csv(file_path):
+    """Parse the cleaning CSV file for filtering statistics."""
+    cleaning_data = {}
     try:
-        with open(file_path, 'r') as file:
-            content = file.read()
+        with open(file_path, 'r', newline='') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                # Extract sample name which should match with full_id
+                sample_name = row.get('sample_name', '')
+                if sample_name:
+                    # Map the CSV columns to our output structure
+                    cleaning_stats = {
+                        'input_reads': int(row.get('input_reads', 0)),
+                        'removed_human': int(row.get('removed_human', 0)),
+                        'removed_at': int(row.get('removed_at_distance', 0)),
+                        'removed_outlier': int(row.get('removed_outliers', 0)),
+                        'kept_reads': int(row.get('cleaned_reads', 0)),
+                        'ambig_bases': int(row.get('final_ambig_bases', 0)),
+                        'cov_percent': float(row.get('cov_percent', 0)),
+                        'cov_avg': float(row.get('cov_mean', 0)),
+                        'cov_max': float(row.get('cov_max', 0)),
+                        'cov_min': float(row.get('cov_min', 0))
+                    }
+                    cleaning_data[sample_name] = cleaning_stats
             
-            # Extract key statistics using regex
-            input_match = re.search(r'Input sequences: (\d+)', content)
-            kept_match = re.search(r'Kept sequences: (\d+)', content)
-            human_match = re.search(r'Removed \(human_similar\): (\d+)', content)
-            at_match = re.search(r'Removed \(at_difference\): (\d+)', content)
-            # Add parsing for outlier statistics
-            outlier_match = re.search(r'Removed \(statistical_outlier\): (\d+)', content)
-            
-            cleaning_stats = {
-                'input_seqs': int(input_match.group(1)) if input_match else 0,
-                'kept_seqs': int(kept_match.group(1)) if kept_match else 0,
-                'removed_human': int(human_match.group(1)) if human_match else 0,
-                'removed_at': int(at_match.group(1)) if at_match else 0,
-                'removed_outlier': int(outlier_match.group(1)) if outlier_match else 0
-            }
-            
-            return cleaning_stats
+        logger.info(f"Parsed cleaning data for {len(cleaning_data)} samples from CSV")
+        return cleaning_data
             
     except Exception as e:
-        logger.error(f"Error reading cleaning log file {file_path}: {e}")
-        return None
+        logger.error(f"Error reading cleaning CSV file {file_path}: {e}")
+        return {}
 
 def process_fasta_file(file_path):
     """Process a FASTA file and extract sequence statistics."""
@@ -209,8 +218,8 @@ def process_fasta_file(file_path):
         'cov_med': median_coverage,
     }
 
-def summarise_fasta(log_file, output_file, out_file_dir, cleaning_log_patterns=None):
-    """Summarise FASTA files based on log file with cleaning statistics."""
+def summarise_fasta(log_file, output_file, out_file_dir, cleaning_csv=None):
+    """Summarise FASTA files based on log file with cleaning statistics from CSV."""
     try:
         with open(log_file, 'r') as f:
             file_paths = [line.strip() for line in f if line.strip().endswith(('.fasta', '.fas'))]
@@ -244,45 +253,20 @@ def summarise_fasta(log_file, output_file, out_file_dir, cleaning_log_patterns=N
             if out_data:
                 out_file_data[full_id] = out_data
     
-    # Get cleaning stats from log files
+    # Get cleaning stats from CSV file
     cleaning_data = {}
-    
-    # Function to process cleaning log files
-    def process_cleaning_logs(log_files):
-        logger.info(f"{len(log_files)} cleaning logs being processed")
-        for file in log_files:
-            _, full_id, _ = extract_sample_info(os.path.basename(file))
-            if full_id:
-                cleaning_stats = parse_cleaning_log(file)
-                if cleaning_stats:
-                    cleaning_data[full_id] = cleaning_stats
-    
-    # Process cleaning logs from patterns if provided
-    if cleaning_log_patterns:
-        all_cleaning_logs = []
-        for pattern in cleaning_log_patterns:
-            matching_files = glob.glob(pattern)
-            if matching_files:
-                all_cleaning_logs.extend(matching_files)
-            else:
-                logger.warning(f"No files found matching pattern {pattern}")
-        
-        if all_cleaning_logs:
-            process_cleaning_logs(all_cleaning_logs)
+    if cleaning_csv and os.path.exists(cleaning_csv):
+        cleaning_data = parse_cleaning_csv(cleaning_csv)
     else:
-        # Look in default location
-        cleaning_logs_dir = os.path.join(os.path.dirname(out_file_dir), "fasta_cleaner/logs")
-        if os.path.exists(cleaning_logs_dir):
-            log_files = [f for f in os.listdir(cleaning_logs_dir) if f.endswith('_log.txt')]
-            process_cleaning_logs([os.path.join(cleaning_logs_dir, f) for f in log_files])
-        else:
-            logger.warning(f"Cleaning logs directory not found at {cleaning_logs_dir}")
+        logger.warning(f"Cleaning CSV file not provided or does not exist")
 
     # Define fieldnames with updated column headings
     fieldnames = [
         'Filename', 'ID', 'mge_params', 'n_reads_in', 'n_reads_aligned', 'n_reads_skipped', 'ref_length', 
         'cov_min', 'cov_max', 'cov_avg', 'cov_med',
-        'cleaning_input_seqs', 'cleaning_kept_seqs', 'cleaning_removed_human', 'cleaning_removed_at', 'cleaning_removed_outlier'
+        'cleaning_input_reads', 'cleaning_kept_reads', 'cleaning_removed_human', 'cleaning_removed_at', 
+        'cleaning_removed_outlier', 'cleaning_ambig_bases', 'cleaning_cov_percent', 'cleaning_cov_avg', 
+        'cleaning_cov_max', 'cleaning_cov_min'
     ]
 
     with open(output_file, 'w', newline='') as csvfile:
@@ -314,13 +298,29 @@ def summarise_fasta(log_file, output_file, out_file_dir, cleaning_log_patterns=N
                 else:
                     result['n_reads_skipped'] = ''
 
-                # Add cleaning stats - use full_id for matching
-                cleaning_stats = cleaning_data.get(full_id, {})
-                result['cleaning_input_seqs'] = cleaning_stats.get('input_seqs', '')
-                result['cleaning_kept_seqs'] = cleaning_stats.get('kept_seqs', '')
+                # Look for the sample in the cleaning data - try different format variants
+                # Use full_id for matching with exact sample_name
+                sample_key = full_id
+                # Also try matching with the format used in the provided CSV examples
+                alt_key = f"{full_id}_{base_id}"
+                
+                # First try exact match with full_id
+                cleaning_stats = cleaning_data.get(sample_key, None)
+                # If not found, try the alternative key
+                if cleaning_stats is None:
+                    cleaning_stats = cleaning_data.get(alt_key, {})
+                
+                # Add cleaning stats with renamed columns
+                result['cleaning_input_reads'] = cleaning_stats.get('input_reads', '')
+                result['cleaning_kept_reads'] = cleaning_stats.get('kept_reads', '')
                 result['cleaning_removed_human'] = cleaning_stats.get('removed_human', '')
                 result['cleaning_removed_at'] = cleaning_stats.get('removed_at', '')
                 result['cleaning_removed_outlier'] = cleaning_stats.get('removed_outlier', '')
+                result['cleaning_ambig_bases'] = cleaning_stats.get('ambig_bases', '')
+                result['cleaning_cov_percent'] = cleaning_stats.get('cov_percent', '')
+                result['cleaning_cov_avg'] = cleaning_stats.get('cov_avg', '')
+                result['cleaning_cov_max'] = cleaning_stats.get('cov_max', '')
+                result['cleaning_cov_min'] = cleaning_stats.get('cov_min', '')
 
                 # Write all results to the CSV file
                 writer.writerow(result)
@@ -334,7 +334,7 @@ if __name__ == "__main__":
     parser.add_argument('-a', '--alignment_log', required=True, type=str, help='The log file containing the paths to FASTA files.')
     parser.add_argument('-o', '--output', required=True, type=str, help='The output CSV file name.')
     parser.add_argument('-od', '--out_file_dir', required=True, type=str, help='The directory containing .out files with additional statistics.')
-    parser.add_argument('-c', '--cleaning_logs', type=str, nargs='+', help='Optional: path patterns to cleaning log files')
+    parser.add_argument('-c', '--cleaning_csv', type=str, help='Path to CSV file containing cleaning statistics')
 
     args = parser.parse_args()
 
@@ -342,5 +342,7 @@ if __name__ == "__main__":
         parser.error(f"The log file '{args.alignment_log}' does not exist.")
     if not os.path.isdir(args.out_file_dir):
         parser.error(f"The directory '{args.out_file_dir}' does not exist or is not a directory.")
+    if args.cleaning_csv and not os.path.isfile(args.cleaning_csv):
+        parser.error(f"The cleaning CSV file '{args.cleaning_csv}' does not exist.")
 
-    summarise_fasta(args.alignment_log, args.output, args.out_file_dir, args.cleaning_logs)
+    summarise_fasta(args.alignment_log, args.output, args.out_file_dir, args.cleaning_csv)
