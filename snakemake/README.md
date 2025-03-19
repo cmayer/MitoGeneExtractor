@@ -43,7 +43,7 @@ A Python tool for retrieving protein and/or gene sequences from NCBI databases. 
 - Update config.yaml with neccessary paths and variables.
 - 'merge' preprocessing = adapter- and poly g-trimming, deduplication and PE read merging (fastp) -> 'cleaning' of sequence headers -> MGE
 - 'concat' preprocessing = gunzip and 'cleaning' of sequence headers -> adapter- and poly g-trimming, and deduplication (fastp) -> concatenation of PE reads -> read trimming (Trim Galore (cutadapt)) -> MGE
-- ![image](https://github.com/user-attachments/assets/b9c291e0-6146-4b5d-ab24-b4abefff2c0f)
+![image](https://github.com/user-attachments/assets/c0ed7f0f-ae50-430a-a03d-49c7c9263233)
 
 ```
 ## Run parameters
