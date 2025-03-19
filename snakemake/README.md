@@ -36,14 +36,15 @@ git status
 | BSNHM038-24 | abs/path/to/R1.fq.gz | abs/path/to/R2.fq.gz | 177627 |
 | BSNHM046-24 | abs/path/to/R1.fq.gz | abs/path/to/R2.fq.gz | 3084599 |
 
-## 3. Fetch sample-specific protein references using 1_gene_fetch.py ##
-### Gene Fetch
-A Python tool for retrieving protein and/or gene sequences from NCBI databases. The script can fetch both protein and nucleotide sequences for a given gene across multiple taxa, with support for traversing taxonomic hierarchies when sequences aren't available at the given taxonomic level (dictated by input taxid). See [gene_fetch](https://github.com/SchistoDan/gene_fetch/tree/main) repository for more information. 1_gene_fetch.py provided in /scripts.
+## 3. Gathering sample-specific pseudo-references using Gene Fetch ##
+A Python tool for retrieving protein and/or gene sequences from NCBI databases. The script can fetch both protein and nucleotide sequences for a given gene across multiple taxa, with support for traversing taxonomic hierarchies when sequences aren't available at the given taxonomic level (dictated by input taxid). See [gene_fetch](https://github.com/SchistoDan/gene_fetch/tree/main) repository for more information. 1_gene_fetch.py provided in scripts/.
 
-## 4. Edit config.yaml for run ##
+## 4. Customising snakemake configuration file ##
 - Update config.yaml with neccessary paths and variables.
-- 'merge' preprocessing = adapter- and poly g-trimming, deduplication and PE read merging (fastp)-> 'cleaning' of sequence headers -> MGE
-- 'concat' preprocessing = gunzip and 'cleaning' of sequence headers -> adapter- and poly g-trimming, and deduplication (fastp) -> concatenation of PE reads -> read trimming (cutadapt) -> MGE
+- 'merge' preprocessing = adapter- and poly g-trimming, deduplication and PE read merging (fastp) -> 'cleaning' of sequence headers -> MGE
+- 'concat' preprocessing = gunzip and 'cleaning' of sequence headers -> adapter- and poly g-trimming, and deduplication (fastp) -> concatenation of PE reads -> read trimming (Trim Galore (cutadapt)) -> MGE
+![image](https://github.com/user-attachments/assets/b9c291e0-6146-4b5d-ab24-b4abefff2c0f)
+
 ```
 ## Run parameters
 # MGE run name identifier
