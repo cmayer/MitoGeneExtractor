@@ -192,17 +192,13 @@ def chunk_list(lst: list, chunk_size: int):
 def create_output_subdirectories(base_output_dir: str) -> Dict[str, str]:
     """
     Create subdirectories for different output file types.
+    Omits directories for removed sequences per user request.
     """
     subdirs = {
         'filter_pass_seqs': os.path.join(base_output_dir, 'filter_pass_seqs'),
         'consensus_seqs': os.path.join(base_output_dir, 'consensus_seqs'),
         'metrics': os.path.join(base_output_dir, 'metrics'),
         'filter_annotated_seqs': os.path.join(base_output_dir, 'filter_annotated_seqs'),
-        'removed_seqs': os.path.join(base_output_dir, 'removed_seqs'),
-        'removed_human_seqs': os.path.join(base_output_dir, 'removed_human_seqs'),
-        'removed_at_seqs': os.path.join(base_output_dir, 'removed_at_seqs'),
-        'removed_outlier_seqs': os.path.join(base_output_dir, 'removed_outlier_seqs'),
-        'removed_ref_comparison_seqs': os.path.join(base_output_dir, 'removed_ref_comparison_seqs'),
         'logs': os.path.join(base_output_dir, 'logs')
     }
     
@@ -251,7 +247,6 @@ def check_file_already_processed(base_name: str, output_subdirs: Dict[str, str])
             return False
     
     return True
-
 
 # =============================================================================
 # Sequence Analysis Functions
@@ -1359,16 +1354,7 @@ def process_fasta_file(input_file: str,
         'consensus': os.path.join(output_subdirs['consensus_seqs'], f"{base_name}_consensus.fasta"),
         'metrics': os.path.join(output_subdirs['metrics'], f"{base_name}_metrics.csv"),
         'ordered_annotated': os.path.join(output_subdirs['filter_annotated_seqs'], f"{base_name}_ordered_annotated.fasta"),
-        'removed': os.path.join(output_subdirs['removed_seqs'], f"{base_name}_removed_all.fasta"),
         'log': os.path.join(output_subdirs['logs'], f"{base_name}_log.txt")
-    }
-    
-    # Create category-specific paths for removed sequences
-    removed_paths = {
-        'human_similar': os.path.join(output_subdirs['removed_human_seqs'], f"{base_name}_removed_human.fasta"),
-        'at_difference': os.path.join(output_subdirs['removed_at_seqs'], f"{base_name}_removed_at.fasta"),
-        'statistical_outlier': os.path.join(output_subdirs['removed_outlier_seqs'], f"{base_name}_removed_outlier.fasta"),
-        'reference_outlier': os.path.join(output_subdirs['removed_ref_comparison_seqs'], f"{base_name}_removed_reference.fasta")
     }
     
     # Initialise statistics
@@ -1462,18 +1448,16 @@ def process_fasta_file(input_file: str,
                 write_sequences_to_fasta([consensus_record], output_paths['consensus'])
                 log_message(f"Wrote consensus sequence to: {output_paths['consensus']}", log_file)
             
-            # Write removed sequences
-            all_removed = []
+            # Track removed sequence counts for stats without writing files
+            all_removed_count = 0
             for reason, records in filter_result.removed_records.items():
                 if records:
-                    write_sequences_to_fasta(records, removed_paths[reason])
-                    all_removed.extend(records)
+                    all_removed_count += len(records)
                     stats['removed_sequences'][reason] = len(records)
-                    log_message(f"Wrote {len(records)} {reason} sequences to: {removed_paths[reason]}", log_file)
+                    log_message(f"Filtered out {len(records)} {reason} sequences", log_file)
             
-            if all_removed:
-                write_sequences_to_fasta(all_removed, output_paths['removed'])
-                log_message(f"Wrote {len(all_removed)} total removed sequences to: {output_paths['removed']}", log_file)
+            if all_removed_count:
+                log_message(f"Total of {all_removed_count} sequences were filtered out", log_file)
             
             write_ordered_annotated_alignment(
                 filter_result.kept_records,
