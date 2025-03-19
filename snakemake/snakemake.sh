@@ -28,7 +28,7 @@ conda activate mge_env
 snakemake --snakefile ./workflow/Snakefile --configfile ./config/config.yaml --unlock
 
 # Run snakemake workflow on cluster
-snakemake --verbose \
+snakemake \
           --cluster "sbatch --parsable --partition=day --signal=USR2@90 --mem={resources.mem_mb}MB --cpus-per-task={threads} --output=slurm-%j-%x.out --error=slurm-%j-%x.err" \
           --cluster-config ./config/cluster_config.yaml \
           --cores 28 \
