@@ -49,6 +49,7 @@ A Python tool for retrieving protein and/or gene sequences from NCBI databases. 
   - See [fasta_cleaner.py repository](https://github.com/bge-barcoding/fasta-cleaner) for information on filtering variables and thresholds (default below suitable in most cases).
   - See [Gene Fetch repository](https://github.com/bge-barcoding/gene_fetch) for guidance on creating [sequence_reference_file.csv](https://github.com/bge-barcoding/gene_fetch?tab=readme-ov-file#normal-mode).
 ```
+# config.yaml
 ## Run parameters
 # MGE run name identifier
 run_name: "mge_concat_r1_13_15_s50_100"
@@ -112,7 +113,7 @@ fasta_cleaner:
   - Default: Sets the default/minimum parameters to fallback on if not listed for a specific rule
 - The aforementioned files will need tweaking to run on your cluster set up.
 
-# Resource allocation #
+### Resource allocation ###
 - SBATCH scheduler job parameters:
   - 'cpus-per-task' and 'mem' only apply to the 'master' job that coordinates the workflow and submits individual jobs to the job scheduler. Specified resources are only allocated for this 'master' job. Therefore, only 5-15G of memory and 2-4 CPUs are likely needed. It is recommended to set a relatively 'long' partition (e.g. several days-week) for this 'master' job, as it will be active for the entire run.
 - Rule-specific resources in Snakefile:
@@ -177,10 +178,6 @@ results/
 │   └── filter_pass_seqs/           # Aligned sequences passing 'cleaning' parameters per sample
 │   └── logs/                       # Fasta_cleaner.py logs containing running parameters and raw stats per sample
 │   └── metrics/                    # Scores for each kept and removed read in the input MGE alignment 
-│   └── removed_at_seqs/            # Sequences removed due to AT% threshold per sample
-│   └── removed_human_seqs/         # Sequences removed due to Human COI similarity, per sample
-│   └── removed_outlier_seqs/       # Sequences removed due to base outliers, per sample
-│   └── removed_ref_comparison_seqs/# Sequences removed due to reference sequence similarity (if supplied), per sample
 │   └── all_consensus_seqeunces.fasta
 │   └── combined_statistics.csv     # Summary stats file of parsed stats from logs
 └── <run_name>.csv                  # Summary stats file produced by extract_stats_to_csv rule (see below for example)
@@ -193,13 +190,10 @@ See scripts/.
 - [**mge_stats.py**](https://github.com/SchistoDan/MitoGeneExtractor/blob/main/snakemake/scripts/mge_stats.py) = This script (incorporated into 'rule extract_stats_to_csv') uses alignment fasta files and MGE.out files to generate summary statistics for each sample.
 - [**fasta_compare.py**](https://github.com/SchistoDan/MitoGeneExtractor/blob/main/snakemake/scripts/fasta_compare.py) = Supplementary script that can be run after the MGE pipeline is finished. It will compare barcodes produced using different parameter combinations (from one run or multiple runs) for each sample, ranks each barcode 1-5 based on [BOLD BIN criteria](https://v3.boldsystems.org/index.php/resources/handbook?chapter=2_databases.html&section=bins), and select the 'best' (BOLD BIN compliant) barcode.
 
-## Workflow ##
-...tbc
-
 
 ## To do ##
 - Split Snakefile into rules (goes towards Workflow Hub compatibility)
-- 
+- Update test data and associated files.
 - Integrate 1_gene_fetch.py into snakefile.
 - Make Workflow Hub compatible.
 - Generate RO-crates.
@@ -211,5 +205,4 @@ See scripts/.
 
 
 ## Contributing ##
-
 - Please feel free to submit issues, fork the repository, and create pull requests for any improvements.
