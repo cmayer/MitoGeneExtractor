@@ -2,14 +2,10 @@
 Snakemake workflow for extracting high-quality barcoding gene regions, built around MitoGeneExtractor and adapted for genome skims of museum speicmens. 
 
 # Requirements: #
-- Snakefile
-- config.yaml
+- Paired-end reads in .fastq.gz or .fastq format
+- samples_file.csv
+- sequence_references_file.csv
 - Activated conda env (see mge_env.yaml)
-- Can be run on SLURM cluster using 'snakemake.sh'
-- cluster_config.yaml (if running on SLURM cluster)
-
-
-
 
 
 
@@ -17,17 +13,17 @@ Snakemake workflow for extracting high-quality barcoding gene regions, built aro
 ## 1. Set up conda environment and clone github repository ##
 - Install conda.
 ```bash
-conda env create -f mge_env.yaml
+conda env create -f /path/to/mge_env.yaml
 git clone https://github.com/bge-barcoding/MitoGeneExtractor-BGE.git [path/to/installation/dir]
 cd [path/to/installation/dir]
 git status
 ```
 
 ## 2. Generate samples.csv ###
+- Must contain ID, forward (read paths), reverse (read paths), and taxid columns (see below for example). Column 1 can be named 'ID', 'process_id', 'Process ID', 'process id', 'Process id', 'PROCESS ID', 'sample', 'SAMPLE', or 'Sample'.
 - Can be created manually, or via [sample-processing](https://github.com/bge-barcoding/sample-processing) workflow.
-- Column 1 can be named 'ID', 'process_id', 'Process ID', 'process id', 'Process id', 'PROCESS ID', 'sample', 'SAMPLE', or 'Sample'.
-- Due to regex matching to aggregate statistics, the sample ID will be considered as the string before the first '_'. It is therefore recommended that sample names do not use '_' characters. E.g. BSNHM002-24 instead of BSNHM002_24, or P3-1-A10-2-G1 instead of P3_1_A10_2_G1.
-- Reads must be PE, either be compressed or uncompressed.
+- Due to regex matching in order to aggregate statistics, the sample ID will be considered as the string before the first underscore. It is therefore recommended that sample names do not use '_' characters. E.g. BSNHM002-24 instead of BSNHM002_24, or P3-1-A10-2-G1 instead of P3_1_A10_2_G1.
+- taxid's can be found manually by searching the expected species/genus/family of each sample in the [NCBI taxonomy database](https://www.ncbi.nlm.nih.gov/taxonomy).
   
 **samples.csv example**
 | ID | forward | reverse | taxid |
@@ -37,7 +33,9 @@ git status
 | BSNHM046-24 | abs/path/to/R1.fq.gz | abs/path/to/R2.fq.gz | 3084599 |
 
 ## 3. Gathering sample-specific pseudo-references using Gene Fetch ##
-A Python tool for retrieving protein and/or gene sequences from NCBI databases. The script can fetch both protein and nucleotide sequences for a given gene across multiple taxa, with support for traversing taxonomic hierarchies when sequences aren't available at the given taxonomic level (dictated by input taxid). See [gene_fetch](https://github.com/SchistoDan/gene_fetch/tree/main) repository for more information. 1_gene_fetch.py provided in scripts/.
+- gene_fetch.py retrieves the protein pseudo-references for each sample using the samples taxonomic identifier (taxid).
+- The tool can fetch both protein and nucleotide sequences from NCBI databases for a given gene. See [gene_fetch](https://github.com/SchistoDan/gene_fetch/tree/main) repository for more information.
+- 'gene_fetch.py' also provided in scripts/.
 
 ## 4. Customising snakemake configuration file ##
 - Pre-processing modes:
@@ -147,10 +145,6 @@ results/
 │   └── ...
 ├── logs/
 │   └── mge/
-│   └── (clean_headers/)            # Per-sample clean_headers_merge logs (if run in 'merge' mode)
-│   └── (gunzip/)                   # Per-sample fastq_concat logs (if run in 'concat' mode)
-│   └── (concat/)                   # Per-sample clean_headers_merge logs (if run in 'merge' mode)
-│   └── (trim_galore/)              # Per-sample qulity_trim logs (if run in 'merge' mode)
 │   └── (gunzip.log)                # Aggregated logs from gunzip_and_clean_headers rule (if run in 'concat' mode)
 │   └── (concat_reads.log)          # Aggregated logs from fastq_concat rule (if run in 'concat' mode)
 │   └── (trim_galore.log)           # Aggregated logs from quality_trim rule (if run in 'concat' mode)
