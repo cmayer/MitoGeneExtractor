@@ -1,11 +1,13 @@
 # MGE snakemake pipeline #
-Snakemake workflow for extraction of barcoding regions built around MitoGeneExtractor and adapted for genome skims of museum speicmens. 
+Snakemake workflow for extracting high-quality barcoding gene regions, built around MitoGeneExtractor and adapted for genome skims of museum speicmens. 
 
 # Requirements: #
 - Snakefile
-- config.yaml (see below)
-- Activated conda env - See mge_env.yaml
-- Can be run on a cluster using 'snakemake.sh'
+- config.yaml
+- Activated conda env (see mge_env.yaml)
+- Can be run on SLURM cluster using 'snakemake.sh'
+- cluster_config.yaml (if running on SLURM cluster)
+
 
 
 
@@ -43,19 +45,23 @@ A Python tool for retrieving protein and/or gene sequences from NCBI databases. 
 - 'merge' preprocessing = adapter- and poly g-trimming, deduplication and PE read merging (fastp)-> 'cleaning' of sequence headers -> MGE
 - 'concat' preprocessing = gunzip and 'cleaning' of sequence headers -> adapter- and poly g-trimming, and deduplication (fastp) -> concatenation of PE reads -> read trimming (cutadapt) -> MGE
 ```
+## Run parameters
 # MGE run name identifier
 run_name: "mge_concat_r1_13_15_s50_100"
-# Path to MGE installation
-mge_path: "path/to/MitoGeneExtractor-v1.9.5"
+
+# Path to MGE installation (MitoGeneExtractor-vX.X.X file)
+mge_path: "/absolute/path/to/MitoGeneExtractor/MitoGeneExtractor-v1.9.5"
+
 # Path to samples.csv
-samples_file: "path/to/samples.csv"
-# Path to protein_references.csv
-sequence_reference_file: "path/to/sequence_references.csv"
-# Path to output directory. Will make final dir if it does not exist already.
-output_dir: "path/to/results/mge_concat_r1_13_15_s50_100"
-# Gene(s) of interest
-genes:
-  - cox1
+samples_file: "/absolute/path/to/samples_file.csv"
+
+# Path to references.csv
+sequence_reference_file: "/absolute/path/to/sequence_reference_file.csv"
+
+# Path to output directory. Will make final dir if it does not exist already
+output_dir: "/absolute/path/to/output/directory"
+
+## MGE parameters
 # Exonerate relative score threshold parameter
 r:
   - 1
@@ -65,72 +71,125 @@ r:
 s:
   - 50
   - 100
-#Read pre-processing method. Options: "merge" or "concat" (fastp-merge (i.e. 'merge') or standard PE fastq concatenation (i.e. 'concat')). 
+  
+## Read pre-processing method
+# Options: "merge" or "concat" (fastp-merge (i.e. 'merge') or standard PE fastq concatenation (i.e. 'concat')). 
 preprocessing_mode: "concat"
+
+## Consensus sequence post-processing (using fasta_cleaner.py)
+fasta_cleaner:
+  consensus_threshold: 0.5
+  human_threshold: 0.95
+  at_difference: 0.1
+  at_mode: "absolute"
+  outlier_percentile: 90.0
+  disable_human: false
+  disable_at: false
+  disable_outliers: false
+  reference_dir: null 
 ```
 
-## 5. Run snakefile ##
-- Locally: snakemake --snakefile <Snakefile> --configfile <config.yaml>
-  - Optional: '-n' for dry run. '-p' to print shell commands to log. '--unlock' to unlock directory after 'failed' run.
-- Cluster: See snakemake.sh
-  - Optional: '--rerun-incomplete' to resume a previously failed run.
+## 5. Run workflow (via snakemake.sh) ##
+- 
+These SBATCH parameters (parition, mem, and cpus-per-task) are solely for the main snakemake process.
+These may need some tweaking, although 5-20G of memory is likely more than enough.
+
+The Master Job (Initial SBATCH Script)
+#SBATCH --mem=10G
+#SBATCH --cpus-per-task=4
+This only allocates resources for the master job that runs MitoComp itself
+This job primarily just coordinates and submits individual rule jobs to SLURM
+It doesn't need much computational power - it's mostly managing the workflow
+
+Snakemake Parallelism Settings
+-s "--cores 28 --jobs 25"
+--jobs 25: Up to 25 separate SLURM jobs can run simultaneously
+--cores 28: Primarily affects any rules that might run locally (on the master node)
+
+Cluster Config File
+default:
+   ntasks: 4
+   mem: 50G
+get_organelle:
+   mem: 20G
+   job-name: GETORG
+Each individual rule job gets its own SLURM allocation based on this config
+Rules use the specific settings if defined, otherwise fall back to "default"
+GetOrganelle will get 20GB memory and 4 tasks (from default)
 
 ## 6. Results structure ##
 ```
 results/
-├── alignment/
-│   └── alignment_files.log
+├── alignment/                      # MGE sequence alignments
 │   └── sample1_alignment.fasta
 │   └── sample2_alignment.fasta
 │   └── ...
-├── consensus/
-│   └── sample1_consensuys.fasta
-│   └── sample2_consensus.fasta
+├── consensus/                      # MGE consensus sequences   
+│   └── sample1_consensus.fasta
+│   └── sample2_consensus.fasta  
 │   └── ...
-│   └── <run_name>.fasta
-├── err/
+│   └── <run_name>.fasta            # Concatenated consensus multi-fasta
+├── err/                            # MGE error/alignment logs
 │   └── sample1.err
 │   └── sample2.err
 │   └── ...
-├── logs/
-│   └── sample1.log
-│   └── sample2.log
-│   └── ...
-├── out/
+├── out/                            # MGE raw outputs/run logs
 │   └── sample1.out
 │   └── sample2.out
 │   └── ...
+├── logs/
+│   └── mge/
+│   └── (clean_headers/)            # Per-sample clean_headers_merge logs (if run in 'merge' mode)
+│   └── (gunzip/)                   # Per-sample fastq_concat logs (if run in 'concat' mode)
+│   └── (concat/)                   # Per-sample clean_headers_merge logs (if run in 'merge' mode)
+│   └── (trim_galore/)              # Per-sample qulity_trim logs (if run in 'merge' mode)
+│   └── (gunzip.log)                # Aggregated logs from gunzip_and_clean_headers rule (if run in 'concat' mode)
+│   └── (concat_reads.log)          # Aggregated logs from fastq_concat rule (if run in 'concat' mode)
+│   └── (trim_galore.log)           # Aggregated logs from quality_trim rule (if run in 'concat' mode)
+│   └── (clean_headers.log)         # Aggregated logs from clean_headers_merge rule (if run in 'merge' mode)
+│   └── alignment_files.log         # List of alignment files in 'alignment/'
+│   └── concat_consensus.log        # Log from concatenate_fasta rule 
+│   └── rename_complete.txt         # Confirmation of consensus sequence filename and header renaming complete 
+│   └── rename_fasta.log            # Log from concatenate_fasta rule 
+│   └── fasta_cleaner.log           # Log from fasta_cleaner rule/fasta_cleaner.py
+│   └── mge_stats.log               # Log from extract_stats_to_csv rule
+│   └── cleaning_complete.txt       # Confirmation cleanup_files (final) rule has run
 ├── trimmed_data/
+│   └── reports/                    # Per-sample fastp HTML and JSON reports (and trim_galore reports if run in 'concat' mode)
+│   └── sample1_fastp.out
+│   └── sample1_fastp.err
+│   └── (sample1_merged_clean.fq)   # If run in 'merge' mode
+│   └── (sample1_R1_trimmed.fastq)  # If run in 'concat' mode
+│   └── (sample1_R2_trimmed.fastq)  # If run in 'concat' mode
+│   └── sample1_R1_trimmed.fq.gz
+│   └── sample1_R2_trimmed.fq.gz
 │   └── ...
-│   └── (reports/)
-├── cleanup_complete.txt
-├── <run_name>.csv
-└── <run_name>-contaminants.csv
+├── fasta_cleaner/
+│   └── consensus_seqs/             # 'Cleaned' consensus sequences per sample
+│   └── filter_annotated_seqs/      # Aligned and annotated (kept/removed) sequences per sample
+│   └── filter_pass_seqs/           # Aligned sequences passing 'cleaning' parameters per sample
+│   └── logs/                       # Fasta_cleaner.py logs containing running parameters and raw stats per sample
+│   └── metrics/                    # Scores for each kept and removed read in the input MGE alignment 
+│   └── removed_at_seqs/            # Sequences removed due to AT% threshold per sample
+│   └── removed_human_seqs/         # Sequences removed due to Human COI similarity, per sample
+│   └── removed_outlier_seqs/       # Sequences removed due to base outliers, per sample
+│   └── removed_ref_comparison_seqs/# Sequences removed due to reference sequence similarity (if supplied), per sample
+│   └── all_consensus_seqeunces.fasta
+│   └── combined_statistics.csv     # Summary stats file of parsed stats from logs
+└── <run_name>.csv                  # Summary stats file produced by extract_stats_to_csv rule (see below for example)
 ```
 
-## Scripts ##
-- **1_gene_fetch.py** = Fetches protein references for each sample using taxids from samples.csv to query NCBI DBs (via BioEntrez API). Fetches closest reference available to input taxid.
-- **mge_stats.py** = This script (incorporated into 'rule extract_stats_to_csv') will use alignment fasta files and MGE.out files to generate summary statistics for each sample.
-```
-python ./scripts/mge_stats.py <log_file> <output_file> <out_file_dir>
-  log_file: Path to a text file containing a list of FASTA file paths (one per line) # Produced by 'create_alignment_log' rule
-  output_file: Name of the output CSV file (will also generate a -contaminants.csv variant)
-  out_file_dir: Directory containing MGE .out files with barcode sequence statistics
-```
-- **fasta_compare.py** = Supplementary script that can be run after the MGE pipeline is finished. It will compare barcodes produced using different parameter combinations (from one run or multiple runs) for each sample, ranks each barcode 1-5 based on [BOLD BIN criteria](https://v3.boldsystems.org/index.php/resources/handbook?chapter=2_databases.html&section=bins), and select the 'best' (BOLD BIN compliant) barcode.
-```
-python ./scripts/fasta_compare_new.py OUTPUT_CSV OUTPUT_FASTA OUTPUT_BARCODE_FASTA INPUT_FILES --log-file LOG_FILE --verbose
-  OUTPUT_CSV: Path where the analysis results CSV file will be saved
-  OUTPUT_FASTA: Path where the best full sequences FASTA file will be saved
-  OUTPUT_BARCODE_FASTA: Path where the best barcode sequences FASTA file will be saved
-  INPUT_FILES: One or more input FASTA files to analyze (space-separated)
-  
-  Optional:
-  --log-file LOG_FILE: Specify a custom path for the log file (default: creates timestamped log in current directory)
-  --verbose, -v: Enable detailed debug logging
-```
+## Integrated and supplementary scripts ##
+See scripts/.
+- [**1_gene_fetch.py**](https://github.com/bge-barcoding/gene_fetch) = Supplementary script that fetches protein references for each sample using taxids from samples.csv to query NCBI DBs (via BioEntrez API). Fetches closest reference available to input taxid. See [1_gene_fetch.py](https://github.com/bge-barcoding/gene_fetch) github repository for more information.
+- [**fasta_cleaner.py**](https://github.com/SchistoDan/MitoGeneExtractor/blob/main/snakemake/scripts/fasta_cleaner.py) = This script (incorproated into 'fasta_cleaner' rule) 'cleans' MGE alignment files using AT% thresholds, base consensus similarity, human COI similarity, and (if supplied) reference sequence similarity. Outputs 'cleaned' consensus sequences for each sample. Modified from [fasta_cleaner.py](https://github.com/bge-barcoding/fasta-cleaner), see original github repository for more information.
+- [**mge_stats.py**](https://github.com/SchistoDan/MitoGeneExtractor/blob/main/snakemake/scripts/mge_stats.py) = This script (incorporated into 'rule extract_stats_to_csv') uses alignment fasta files and MGE.out files to generate summary statistics for each sample.
+- [**fasta_compare.py**](https://github.com/SchistoDan/MitoGeneExtractor/blob/main/snakemake/scripts/fasta_compare.py) = Supplementary script that can be run after the MGE pipeline is finished. It will compare barcodes produced using different parameter combinations (from one run or multiple runs) for each sample, ranks each barcode 1-5 based on [BOLD BIN criteria](https://v3.boldsystems.org/index.php/resources/handbook?chapter=2_databases.html&section=bins), and select the 'best' (BOLD BIN compliant) barcode.
+
 ## Workflow ##
 ...tbc
+
+
 ## To do ##
 - Integrate 1_gene_fetch.py into snakefile.
 - Make Workflow Hub compatible.
@@ -144,4 +203,4 @@ python ./scripts/fasta_compare_new.py OUTPUT_CSV OUTPUT_FASTA OUTPUT_BARCODE_FAS
 
 ## Contributing ##
 
-- Please gfeel free to submit issues, fork the repository, and create pull requests for any improvements.
+- Please feel free to submit issues, fork the repository, and create pull requests for any improvements.
