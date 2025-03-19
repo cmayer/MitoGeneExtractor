@@ -45,7 +45,9 @@ A Python tool for retrieving protein and/or gene sequences from NCBI databases. 
   - 'concat' = gunzip and 'cleaning' of sequence headers -> adapter- and poly g-trimming, and deduplication (fastp) -> concatenation of PE reads -> read trimming (Trim Galore (cutadapt)) -> MGE
 ![image](https://github.com/user-attachments/assets/21ce71b2-42df-4442-bcde-d41ee89fa3c1)
 - Update config.yaml with neccessary paths and variables.
-
+  - See [MitoGeneExtractor README.md](https://github.com/bge-barcoding/MitoGeneExtractor-BGE/blob/main/README.md) for explanation of Exonernate run paramters.
+  - See [fasta_cleaner.py repository](https://github.com/bge-barcoding/fasta-cleaner) for information on filtering variables and thresholds (default below suitable in most cases).
+  - See [Gene Fetch repository](https://github.com/bge-barcoding/gene_fetch) for guidance on creating [sequence_reference_file.csv](https://github.com/bge-barcoding/gene_fetch?tab=readme-ov-file#normal-mode).
 ```
 ## Run parameters
 # MGE run name identifier
@@ -54,10 +56,10 @@ run_name: "mge_concat_r1_13_15_s50_100"
 # Path to MGE installation (MitoGeneExtractor-vX.X.X file)
 mge_path: "/absolute/path/to/MitoGeneExtractor/MitoGeneExtractor-v1.9.5"
 
-# Path to samples.csv
+# Path to samples_file.csv
 samples_file: "/absolute/path/to/samples_file.csv"
 
-# Path to references.csv
+# Path to sequence_reference_file.csv
 sequence_reference_file: "/absolute/path/to/sequence_reference_file.csv"
 
 # Path to output directory. Will make final dir if it does not exist already
@@ -91,8 +93,19 @@ fasta_cleaner:
   reference_dir: null 
 ```
 
-## 5. Run workflow (via snakemake.sh) ##
-- 
+## 5. Run snakemake workflow (via cluster) ##
+- [snakemake.sh](https://github.com/bge-barcoding/MitoGeneExtractor-BGE/blob/main/snakemake/snakemake.sh) cluster submission script
+  - SBATCH parameters only apply to the 'master' job that coordinates the workflow and submits individual jobs to the job scheduler. Specified resources are only allocated for this 'master' job, and therefore only 5-20G of memory and 2-4 CPUs are likely needed. It is recommended to set a relatively 'long' partition (e.g. several days-week) for this 'master' job, as it will be active for the entire run.
+  - Snakemake workflow exceuction command:
+    - --cluster-config: Lists path to cluster configuration file (see below for explanation).
+    - --cores: 
+    - --jobs: Maximum number of simultaneous (SLURM) jobs that will be run. E.g., '--jobs 25' = Up to 25 separate SLURM jobs can run simultaneously. 100 parallel is the maximum allowed. 
+    - --latency-wait: Required when working on a distributed filesystem (e.g. NFS/GPFS). Set at 60 seconds by default. May be necessary to increase if experiencing latency/'missing' file issues.
+    - --rerun-incomplete: If the snakemake workflow fails or is stopped for any reason, adding this option to the run command will enable the workflow to carry on from where it stopped.
+    - 
+- [cluster_config.yaml]()
+  - .
+  - . 
 These SBATCH parameters (parition, mem, and cpus-per-task) are solely for the main snakemake process.
 These may need some tweaking, although 5-20G of memory is likely more than enough.
 
@@ -193,6 +206,8 @@ See scripts/.
 
 
 ## To do ##
+- Split Snakefile into rules (goes towards Workflow Hub compatibility)
+- 
 - Integrate 1_gene_fetch.py into snakefile.
 - Make Workflow Hub compatible.
 - Generate RO-crates.
