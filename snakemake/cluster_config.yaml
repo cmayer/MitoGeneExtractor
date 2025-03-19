@@ -1,0 +1,76 @@
+# cluster_config.yaml
+# Sets the default parameters to fallback on if not listed for a specific rule.
+__default__:
+    partition: medium
+    output: slurm-%j-%x.out
+    error: slurm-%j-%x.err
+    mem: 8G
+    cpus-per-task: 4
+
+fastp_pe_merge:
+    mem: 8G
+    cpus-per-task: 8
+
+clean_headers_merge:
+    mem: 2G
+    cpus-per-task: 4
+
+aggregate_clean_headers_logs:
+    mem: 2G
+    cpus-per-task: 2
+
+gunzip_and_clean_headers:
+    mem: 2G
+    cpus-per-task: 4
+
+aggregate_gunzip_logs:
+    mem: 2G
+    cpus-per-task: 2
+
+fastp_pe_concat:
+    mem: 2G
+    cpus-per-task: 4
+
+fastq_concat:
+    mem: 8G
+    cpus-per-task: 4
+
+aggregate_concat_logs:
+    mem: 2G
+    cpus-per-task: 2
+
+quality_trim:
+    mem: 4G
+    cpus-per-task: 4
+
+aggregate_trim_galore_logs:
+    mem: 2G
+    cpus-per-task: 2
+
+MitoGeneExtractor:
+    mem: 24G
+    cpus-per-task: 4
+
+rename_fasta_headers:
+    mem: 4G
+    cpus-per-task: 2
+
+concatenate_fasta:
+    mem: 8G
+    cpus-per-task: 8
+
+create_alignment_log:
+    mem: 2G
+    cpus-per-task: 4
+
+fasta_cleaner:
+    mem: 24G
+    cpus-per-task: 24
+
+extract_stats_to_csv:
+    mem: 16G
+    cpus-per-task: 8
+
+cleanup_files:
+    mem: 4G
+    cpus-per-task: 2
