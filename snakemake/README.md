@@ -94,44 +94,36 @@ fasta_cleaner:
 ```
 
 ## 5. Run snakemake workflow (via cluster) ##
-- [snakemake.sh](https://github.com/bge-barcoding/MitoGeneExtractor-BGE/blob/main/snakemake/snakemake.sh) cluster submission script
-  - SBATCH parameters only apply to the 'master' job that coordinates the workflow and submits individual jobs to the job scheduler. Specified resources are only allocated for this 'master' job, and therefore only 5-20G of memory and 2-4 CPUs are likely needed. It is recommended to set a relatively 'long' partition (e.g. several days-week) for this 'master' job, as it will be active for the entire run.
-  - Snakemake workflow exceuction command:
-    - --cluster-config: Lists path to cluster configuration file (see below for explanation).
-    - --cores: 
-    - --jobs: Maximum number of simultaneous (SLURM) jobs that will be run. E.g., '--jobs 25' = Up to 25 separate SLURM jobs can run simultaneously. 100 parallel is the maximum allowed. 
-    - --latency-wait: Required when working on a distributed filesystem (e.g. NFS/GPFS). Set at 60 seconds by default. May be necessary to increase if experiencing latency/'missing' file issues.
-    - --rerun-incomplete: If the snakemake workflow fails or is stopped for any reason, adding this option to the run command will enable the workflow to carry on from where it stopped.
-    - 
+- [snakemake.sh](https://github.com/bge-barcoding/MitoGeneExtractor-BGE/blob/main/snakemake/snakemake.sh) cluster submission script:
+  - --cluster: Defines how jobs are submitted to SLURM.
+    - --parsable: Tells sbatch to only return the job ID.
+    - --signal=USR2@90: Sends a signal 90 seconds before job time limit (for clean termination).
+    - --cluster-config: Lists path to cluster configuration file (see below for explanation) and enables use of rule-specific resource requirements.
+    - --mem={resources.mem_mb}MB: Dynamically sets memory allocation by using the mem parameter from each snakemake rule.
+    - --cpus-per-task={threads}: Uses the threads parameter from each snakemake rule.
+    - --output=slurm-%j-%x.out & --error=slurm-%j-%x.err: Sets naming convention for .out and .err files of individual jobs. '%j' = Job ID. '%x' = Job name.
+  - --snakefile: List path to Snakefile.
+  - --configfile: List path to snakemake workflow configuration file.
+  - --latency-wait: Required when working on a distributed filesystem (e.g. NFS/GPFS). Set at 60 seconds by default. May be necessary to increase if experiencing latency/'missing' file issues.
+  - --rerun-incomplete: If the snakemake workflow fails or is stopped for any reason, adding this option to the run command will enable the workflow to carry on from where it stopped.
+
 - [cluster_config.yaml]()
-  - .
-  - . 
-These SBATCH parameters (parition, mem, and cpus-per-task) are solely for the main snakemake process.
-These may need some tweaking, although 5-20G of memory is likely more than enough.
+  - Enables job-specific resource allocation based on job requirements and system capability. 
+  - Default: Sets the default/minimum parameters to fallback on if not listed for a specific rule
+- The aforementioned files will need tweaking to run on your cluster set up.
 
-The Master Job (Initial SBATCH Script)
-#SBATCH --mem=10G
-#SBATCH --cpus-per-task=4
-This only allocates resources for the master job that runs MitoComp itself
-This job primarily just coordinates and submits individual rule jobs to SLURM
-It doesn't need much computational power - it's mostly managing the workflow
-
-Snakemake Parallelism Settings
--s "--cores 28 --jobs 25"
---jobs 25: Up to 25 separate SLURM jobs can run simultaneously
---cores 28: Primarily affects any rules that might run locally (on the master node)
-
-Cluster Config File
-default:
-   ntasks: 4
-   mem: 50G
-get_organelle:
-   mem: 20G
-   job-name: GETORG
-Each individual rule job gets its own SLURM allocation based on this config
-Rules use the specific settings if defined, otherwise fall back to "default"
-GetOrganelle will get 20GB memory and 4 tasks (from default)
-
+# Resource allocation #
+- SBATCH scheduler job parameters:
+  - 'cpus-per-task' and 'mem' only apply to the 'master' job that coordinates the workflow and submits individual jobs to the job scheduler. Specified resources are only allocated for this 'master' job. Therefore, only 5-15G of memory and 2-4 CPUs are likely needed. It is recommended to set a relatively 'long' partition (e.g. several days-week) for this 'master' job, as it will be active for the entire run.
+- Rule-specific resources in Snakefile:
+  - Each rule can specify threads and memory resources (in Mb). These are the base values Snakemake uses initially.
+- Cluster config values:
+  - The 'cpus-per-task' and 'mem' values override or supplement rule-specific values in the Snakefile. If a rule doesn't specify resources, it will fallback to the listed defaults.
+- Global limits:
+  - '--cores': Limits total cores used across all concurrent jobs in the workflow.
+  - '--jobs': Maximum number of simultaneous cluster jobs that will be run. E.g., '--jobs 25' = Up to 25 separate SLURM jobs can run simultaneously. 100 parallel is the maximum allowe
+ 
+  
 ## 6. Results structure ##
 ```
 results/
