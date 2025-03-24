@@ -65,12 +65,13 @@ sequence_reference_file: "/absolute/path/to/sequence_reference_file.csv"
 output_dir: "/absolute/path/to/output/directory"
 
 ## MGE parameters
-# Exonerate relative score threshold parameter
+# Exonerate relative score threshold parameter (reasonable: 0.7-2)
 r:
   - 1
   - 1.3
   - 1.5
-# Exonerate minimum score threshold parameter
+
+# Exonerate minimum score threshold parameter (e.g. 50-100)
 s:
   - 50
   - 100
