@@ -2,7 +2,8 @@
 """
 rename_fasta_headers.py - A script to rename FASTA headers in consensus files
 
-This script renames the headers in FASTA consensus files based on standardized naming conventions.
+This script renames the headers in FASTA consensus files based on standardized naming conventions
+and concatenates them directly into a single multi-fasta file without creating intermediate files.
 It's designed to be called by a Snakemake rule.
 """
 
@@ -18,6 +19,7 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Lock, Event
 
 # Lock for thread-safe file writing
+concatenated_file_lock = Lock()
 log_lock = Lock()
 
 # Global variables for process management
@@ -52,8 +54,10 @@ def signal_handler(signum, frame):
     sys.exit(0)
 
 def process_file(file_info):
-    """Process a single file, to be called by the thread pool"""
-    input_file, output_file, preprocessing_mode, log_file = file_info
+    """
+    Process a single file, read its content, rename headers and append to the concatenated file
+    """
+    input_file, concatenated_file, preprocessing_mode, log_file = file_info
     
     try:
         base_name = os.path.basename(input_file)
@@ -68,62 +72,65 @@ def process_file(file_info):
         # Add suffix based on preprocessing mode
         suffix = "_merge" if preprocessing_mode == "merge" else ""
         
-        # Ensure output directory exists
-        os.makedirs(os.path.dirname(output_file), exist_ok=True)
-        
-        with open(input_file, 'r') as infile, open(output_file, 'w') as outfile:
+        # Read input file content and prepare output content with renamed headers
+        output_content = []
+        with open(input_file, 'r') as infile:
             for line in infile:
                 if line.startswith('>'):
                     new_header = f">{sample}_r_{r}_s_{s}_{con_suffix}{suffix}\n"
-                    outfile.write(new_header)
+                    output_content.append(new_header)
                 else:
-                    outfile.write(line)
+                    output_content.append(line)
         
-        return output_file, None  # Return output file path and no error
+        # Ensure output ends with a newline
+        if output_content and not output_content[-1].endswith('\n'):
+            output_content[-1] += '\n'
+        
+        # Add another newline to separate entries in the concatenated file
+        output_content.append('\n')
+        
+        # Append to concatenated file in a thread-safe manner
+        with concatenated_file_lock:
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(concatenated_file), exist_ok=True)
+            
+            with open(concatenated_file, 'a') as outfile:
+                outfile.writelines(output_content)
+        
+        return input_file, None  # Return input file path and no error
     except Exception as e:
-        return output_file, str(e)  # Return output file path and error message
+        return input_file, str(e)  # Return input file path and error message
 
-def check_completion(output_files, complete_file, log_file):
+def check_completion(input_files, complete_file, log_file, concatenated_file):
     """
-    Check if all expected outputs have been created and terminate if they have
-    
-    Args:
-        output_files (list): List of expected output files
-        complete_file (str): Path to completion status file
-        log_file (str): Path to log file
+    Check if the concatenated file has been created and terminate if needed
     """
     global early_termination
     
-    log_message("Timeout reached, checking if all tasks are complete...", log_file)
+    log_message("Timeout reached, checking if concatenation is complete...", log_file)
     
-    # Check if all output files exist
-    missing_files = []
-    for output_file in output_files:
-        if not os.path.exists(output_file):
-            missing_files.append(output_file)
-    
-    # Check if completion file exists or is about to be created
-    completion_file_exists = os.path.exists(complete_file) or all_tasks_complete.is_set()
-    
-    if not missing_files and (completion_file_exists or all_tasks_complete.is_set()):
-        log_message("All expected outputs found. Script appears to have completed successfully.", log_file)
-        log_message("Terminating process gracefully due to timeout check.", log_file)
+    # Check if concatenated file exists and appears valid
+    if os.path.exists(concatenated_file) and os.path.getsize(concatenated_file) > 0:
+        log_message(f"Concatenated file found: {concatenated_file} (Size: {os.path.getsize(concatenated_file)} bytes)", log_file)
         
-        # Ensure completion file exists
-        if not os.path.exists(complete_file):
-            create_completion_file(complete_file, "Timeout-triggered completion", 0)
+        # Check if completion file exists or is about to be created
+        completion_file_exists = os.path.exists(complete_file) or all_tasks_complete.is_set()
         
-        early_termination = True
-        cleanup_resources()
-        os._exit(0)  # Force immediate exit
+        if completion_file_exists or all_tasks_complete.is_set():
+            log_message("Concatenated file created and completion flag set. Operation appears successful.", log_file)
+            log_message("Terminating process gracefully due to timeout check.", log_file)
+            
+            # Ensure completion file exists
+            if not os.path.exists(complete_file):
+                create_completion_file(complete_file, "Timeout-triggered completion", 0)
+            
+            early_termination = True
+            cleanup_resources()
+            os._exit(0)  # Force immediate exit
+        else:
+            log_message("Concatenated file exists but completion file not yet created", log_file)
     else:
-        if missing_files:
-            log_message(f"Timeout check: Still missing {len(missing_files)} output files. Continuing to wait...", log_file)
-            if len(missing_files) <= 10:
-                for missing in missing_files:
-                    log_message(f"  Missing: {missing}", log_file)
-        if not completion_file_exists:
-            log_message("Completion file not yet created", log_file)
+        log_message(f"Concatenated file missing or empty: {concatenated_file}", log_file)
 
 def create_completion_file(complete_file, status_message, error_count, start_time=None, end_time=None):
     """Create a standardized completion file"""
@@ -142,15 +149,16 @@ def create_completion_file(complete_file, status_message, error_count, start_tim
         f.write(f"Status: {status_message}\n")
         f.write(f"Errors: {error_count}")
 
-def rename_fasta_headers(input_files, output_files, complete_file, log_file, preprocessing_mode="concat", num_threads=1, timeout_minutes=10):
+def rename_and_concatenate_fasta(input_files, complete_file, log_file, concatenated_file, 
+                                preprocessing_mode="concat", num_threads=1, timeout_minutes=60):
     """
-    Rename headers in FASTA consensus files using parallel processing.
+    Rename headers in FASTA consensus files and directly concatenate them in a single operation.
     
     Args:
         input_files (list): List of input consensus FASTA files
-        output_files (list): List of output renamed FASTA files
         complete_file (str): Path to write completion status
         log_file (str): Path to log file
+        concatenated_file (str): Path to write concatenated multi-FASTA file
         preprocessing_mode (str): Mode of preprocessing ('merge' or 'concat')
         num_threads (int): Number of threads to use for parallel processing
         timeout_minutes (int): Number of minutes after which to check if tasks are complete
@@ -158,23 +166,31 @@ def rename_fasta_headers(input_files, output_files, complete_file, log_file, pre
     global executor, timeout_timer, all_tasks_complete
     
     start_time = datetime.now()
-    log_message(f"Starting rename_fasta_headers at: {start_time.strftime('%Y-%m-%d %H:%M:%S')}", log_file)
+    log_message(f"Starting rename_and_concatenate_fasta at: {start_time.strftime('%Y-%m-%d %H:%M:%S')}", log_file)
     log_message(f"Processing {len(input_files)} files using {num_threads} threads", log_file)
+    log_message(f"Will concatenate renamed files directly into: {concatenated_file}", log_file)
     log_message(f"Timeout check set for {timeout_minutes} minutes", log_file)
+    
+    # Ensure concatenated file directory exists
+    os.makedirs(os.path.dirname(concatenated_file), exist_ok=True)
+    
+    # Initialize concatenated file (empty it if it exists)
+    with open(concatenated_file, 'w') as f:
+        pass
     
     # Set up timeout timer to check completion status
     timeout_seconds = timeout_minutes * 60
     timeout_timer = threading.Timer(
         timeout_seconds, 
         check_completion, 
-        args=[output_files, complete_file, log_file]
+        args=[input_files, complete_file, log_file, concatenated_file]
     )
     timeout_timer.daemon = True  # Allow the timer to be terminated when the main thread exits
     timeout_timer.start()
     
     # Prepare arguments for parallel processing
-    file_args = [(input_file, output_file, preprocessing_mode, log_file) 
-                 for input_file, output_file in zip(input_files, output_files)]
+    file_args = [(input_file, concatenated_file, preprocessing_mode, log_file) 
+                 for input_file in input_files]
     
     processed_count = 0
     errors = []
@@ -182,12 +198,12 @@ def rename_fasta_headers(input_files, output_files, complete_file, log_file, pre
     # Process files in parallel with managed executor
     executor = ThreadPoolExecutor(max_workers=num_threads)
     try:
-        for output_file, error in executor.map(process_file, file_args):
+        for input_file, error in executor.map(process_file, file_args):
             processed_count += 1
             
             if error:
-                log_message(f"Error processing {output_file}: {error}", log_file)
-                errors.append((output_file, error))
+                log_message(f"Error processing {input_file}: {error}", log_file)
+                errors.append((input_file, error))
             
             # Log progress periodically
             if processed_count % 50 == 0 or processed_count == len(input_files):
@@ -201,30 +217,19 @@ def rename_fasta_headers(input_files, output_files, complete_file, log_file, pre
     if timeout_timer and timeout_timer.is_alive():
         timeout_timer.cancel()
         timeout_timer = None
-    
-    # Report any missing files
-    missing_files = []
-    for output_file in output_files:
-        if not os.path.exists(output_file):
-            missing_files.append(output_file)
-            log_message(f"Warning: Output file missing: {output_file}", log_file)
-    
-    if missing_files:
-        log_message(f"Warning: {len(missing_files)} output files are missing!", log_file)
-    else:
-        log_message("All output files successfully created", log_file)
 
     if errors:
         log_message(f"Completed with {len(errors)} errors", log_file)
     else:
-        log_message("Rename operation completed successfully with no errors", log_file)
+        log_message("Rename and concatenation operation completed successfully with no errors", log_file)
 
     end_time = datetime.now()
     duration = end_time - start_time
     log_message(f"Operation duration: {duration}", log_file)
     
     # Create checkpoint file
-    create_completion_file(complete_file, "Completed normally", len(errors), start_time, end_time)
+    status = "Completed normally" if not errors else f"Completed with {len(errors)} errors"
+    create_completion_file(complete_file, status, len(errors), start_time, end_time)
     log_message("Checkpoint file created", log_file)
     
     # Set completion flag
@@ -239,15 +244,21 @@ def main():
     # Register cleanup function to run on exit
     atexit.register(cleanup_resources)
     
-    parser = argparse.ArgumentParser(description='Rename headers in FASTA consensus files')
+    parser = argparse.ArgumentParser(description='Rename headers in FASTA consensus files and directly concatenate them')
     
     # Arguments for file list
     parser.add_argument('--input-file-list', help='File containing list of input FASTA files')
-    parser.add_argument('--output-file-list', help='File containing list of output FASTA files')
     
     # Arguments for direct file specification
     parser.add_argument('--input-files', nargs='*', help='Space-separated list of input FASTA files')
-    parser.add_argument('--output-files', nargs='*', help='Space-separated list of output FASTA files')
+    
+    # Output files arguments (kept for backward compatibility but not used)
+    parser.add_argument('--output-file-list', help='File containing list of output FASTA files (ignored)')
+    parser.add_argument('--output-files', nargs='*', help='Space-separated list of output FASTA files (ignored)')
+    
+    # Argument for concatenated output file
+    parser.add_argument('-c', '--concatenated-consensus', dest='concatenated_file', required=True,
+                        help='Output filename or path for the concatenated multi-FASTA file (will add .fasta extension if missing)')
     
     # Required arguments
     parser.add_argument('--complete-file', required=True, help='Path to write completion status')
@@ -263,45 +274,36 @@ def main():
     args = parser.parse_args()
     
     input_files = []
-    output_files = []
     
     # Check if we have input file list
-    if args.input_file_list and args.output_file_list:
+    if args.input_file_list:
         # Read input files list
         with open(args.input_file_list, 'r') as f:
             input_files = [line.strip() for line in f if line.strip()]
-        
-        # Read output files list
-        with open(args.output_file_list, 'r') as f:
-            output_files = [line.strip() for line in f if line.strip()]
     
     # Check if we have direct input files
-    elif args.input_files and args.output_files:
+    elif args.input_files:
         input_files = args.input_files
-        output_files = args.output_files
     
     # If neither option is provided
     else:
-        error_msg = "Error: You must provide either --input-file-list and --output-file-list OR --input-files and --output-files"
+        error_msg = "Error: You must provide either --input-file-list OR --input-files"
         print(error_msg)
         with open(args.log_file, 'a') as f:
             f.write(f"{error_msg}\n")
         sys.exit(1)
     
-    # Validate that input and output file lists have the same length
-    if len(input_files) != len(output_files):
-        error_msg = f"Error: Number of input files ({len(input_files)}) must match number of output files ({len(output_files)})"
-        print(error_msg)
-        with open(args.log_file, 'a') as f:
-            f.write(f"{error_msg}\n")
-        sys.exit(1)
+    # Set concatenated file path
+    concatenated_file = args.concatenated_file
+    if not concatenated_file.endswith('.fasta'):
+        concatenated_file += '.fasta'
     
     try:
-        rename_fasta_headers(
+        rename_and_concatenate_fasta(
             input_files,
-            output_files,
             args.complete_file,
             args.log_file,
+            concatenated_file,
             args.preprocessing_mode,
             args.threads,
             args.timeout_minutes
