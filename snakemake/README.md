@@ -123,6 +123,7 @@ fasta_cleaner:
   - '--cores': Limits total cores used across all concurrent jobs in the workflow.
   - '--jobs': Maximum number of simultaneous cluster jobs that will be run. E.g., '--jobs 25' = Up to 25 separate SLURM jobs can run simultaneously. 100 parallel is the maximum allowe
 
+- **A workflow running 570 samples (genome skims) in 'concat' preprocessing mode and using default MGE parameters (r:1, s:100) ran end-to-end in approximately 11.5 hours (using listed resources allocated in cluster_config.yaml)**
   
 ## 6. Results structure ##
 ```
