@@ -86,16 +86,6 @@ For each input file, generates files organised in subdirectories:
         - {basename}_metrics.csv: Detailed metrics for all sequences
     filter_annotated_seqs/
         - {basename}_ordered_annotated.fasta: All sequences with filtering annotations
-    removed_seqs/
-        - {basename}_removed_all.fasta: All removed sequences combined
-    removed_human_seqs/
-        - {basename}_removed_human.fasta: Sequences removed due to human similarity
-    removed_at_seqs/
-        - {basename}_removed_at.fasta: Sequences removed due to AT content
-    removed_outlier_seqs/
-        - {basename}_removed_outlier.fasta: Sequences removed as statistical outliers
-    removed_ref_comparison_seqs/
-        - {basename}_removed_reference.fasta: Sequences removed based on reference comparison
     logs/
         - {basename}_log.txt: Detailed processing log for each file
         - processing_summary.txt: Overall processing summary
@@ -231,7 +221,7 @@ def check_file_already_processed(base_name: str, output_subdirs: Dict[str, str])
     # Define expected output files based on base_name
     expected_files = {
         'cleaned': os.path.join(output_subdirs['filter_pass_seqs'], f"{base_name}_cleaned.fasta"),
-        'consensus': os.path.join(output_subdirs['consensus_seqs'], f"{base_name}_consensus.fasta"),
+        'consensus': os.path.join(output_subdirs['consensus_seqs'], f"{base_name}_.fasta"),
         'metrics': os.path.join(output_subdirs['metrics'], f"{base_name}_metrics.csv"),
         'ordered_annotated': os.path.join(output_subdirs['filter_annotated_seqs'], f"{base_name}_ordered_annotated.fasta"),
         'log': os.path.join(output_subdirs['logs'], f"{base_name}_log.txt")
@@ -988,13 +978,14 @@ def write_ordered_annotated_alignment(kept_records: List[SeqRecord],
     # Write to file
     write_sequences_to_fasta(sorted_records, output_path)
 
-def concatenate_consensus_sequences(consensus_dir: str, output_file: str) -> None:
+def concatenate_consensus_sequences(consensus_dir: str, output_file: str, preprocessing_mode: str = 'concat') -> None:
     """
     Concatenate all consensus sequences from the consensus directory into a single FASTA file.
     
     Args:
         consensus_dir: Directory containing individual consensus FASTA files
         output_file: Path to output concatenated FASTA file
+        preprocessing_mode: If 'merge', '_merge' will be appended to sequence headers
     """
     consensus_files = [
         f for f in os.listdir(consensus_dir)
@@ -1013,7 +1004,18 @@ def concatenate_consensus_sequences(consensus_dir: str, output_file: str) -> Non
             filepath = os.path.join(consensus_dir, filename)
             with open(filepath) as infile:
                 for line in infile:
-                    outfile.write(line)
+                    # Modify headers
+                    if line.startswith('>'):
+                        # Replace '_consensus' with '_fcleaner'
+                        modified_line = line.replace('_consensus', '_fcleaner')
+                        
+                        # Append '_merge' if preprocessing mode is 'merge'
+                        if preprocessing_mode == 'merge' and not modified_line.rstrip().endswith('_merge'):
+                            modified_line = modified_line.rstrip() + '_merge\n'
+                        
+                        outfile.write(modified_line)
+                    else:
+                        outfile.write(line)
 
 def extract_log_statistics(log_file_path: str) -> Dict[str, Any]:
     """
@@ -1344,6 +1346,7 @@ def process_fasta_file(input_file: str,
     """Process a single FASTA file with all enabled filtering methods."""
     # Get base name for clear identification
     base_name = get_base_filename(input_file)
+    original_filename = os.path.basename(input_file)
     
     # Create output subdirectories
     output_subdirs = create_output_subdirectories(output_dir)
@@ -1351,7 +1354,7 @@ def process_fasta_file(input_file: str,
     # Set up all output paths
     output_paths = {
         'cleaned': os.path.join(output_subdirs['filter_pass_seqs'], f"{base_name}_cleaned.fasta"),
-        'consensus': os.path.join(output_subdirs['consensus_seqs'], f"{base_name}_consensus.fasta"),
+        'consensus': os.path.join(output_subdirs['consensus_seqs'], f"{base_name}_fcleaner.fasta"),
         'metrics': os.path.join(output_subdirs['metrics'], f"{base_name}_metrics.csv"),
         'ordered_annotated': os.path.join(output_subdirs['filter_annotated_seqs'], f"{base_name}_ordered_annotated.fasta"),
         'log': os.path.join(output_subdirs['logs'], f"{base_name}_log.txt")
@@ -1442,7 +1445,7 @@ def process_fasta_file(input_file: str,
                 
                 consensus_record = SeqRecord(
                     Seq(filter_result.consensus_seq),
-                    id=f"{base_name}_consensus",
+                    id=f"{base_name}_fcleaner",
                     description=f"c{consensus_threshold}_h{human_threshold}_a{at_threshold}_p{outlier_percentile}"
                 )
                 write_sequences_to_fasta([consensus_record], output_paths['consensus'])
@@ -1483,10 +1486,11 @@ def process_fasta_file(input_file: str,
             log_message(separator + "\n", log_file)
             
         except Exception as e:
-            error_msg = f"Error processing {base_name}: {str(e)}"
-            log_message(error_msg, log_file, error=True)
+            # Simplify the error - DO NOT print to stdout here, just log it
+            error_msg = f"Error processing {original_filename}: {str(e)}"
+            log_message(error_msg, log_file, stdout=False)  # Change stdout=False
             log_message(f"Traceback:\n{traceback.format_exc()}", log_file)
-            raise RuntimeError(error_msg)
+            raise RuntimeError(error_msg)  # Pass the error up without printing
     
     return stats
 
@@ -1620,7 +1624,15 @@ def parallel_process_directory(args: argparse.Namespace) -> None:
                     update_progress(filename, success=True)
                 except Exception as e:
                     update_progress(filename, success=False)
-                    print(f"ERROR: Error processing {filename}: {str(e)}")
+                    # Print only the simple error message, avoiding nesting
+                    error_msg = str(e)
+                    # If we have a nested error message, simplify it
+                    if "Error processing" in error_msg and "Error processing" in error_msg[20:]:
+                        # Extract just the innermost error
+                        innermost_error = error_msg.split(": ")[-1]
+                        print(f"ERROR: Error processing {filename}: {innermost_error}")
+                    else:
+                        print(f"ERROR: {error_msg}")
         except KeyboardInterrupt:
             print("\nProcessing interrupted by user. Waiting for running tasks to complete...")
             executor.shutdown(wait=True)
@@ -1659,7 +1671,8 @@ def parallel_process_directory(args: argparse.Namespace) -> None:
     concatenated_consensus_file = os.path.join(args.output_dir, 'all_consensus_sequences.fasta')
     concatenate_consensus_sequences(
         output_subdirs['consensus_seqs'],
-        concatenated_consensus_file
+        concatenated_consensus_file,
+        args.preprocessing
     )
     print(f"Concatenated consensus sequences written to: {concatenated_consensus_file}")
     
@@ -1778,6 +1791,14 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         '-r', '--reference_dir',
         help='Optional directory containing reference FASTA files (named same as input files but with "_reference.fasta" suffix)'
+    )
+    
+    parser.add_argument(
+        '--preprocessing',
+        type=str,
+        choices=['concat', 'merge'],
+        default='concat',
+        help='Preprocessing mode that was used in the workflow. If "merge", "_merge" will be appended to fasta headers'
     )
     
     args = parser.parse_args()
