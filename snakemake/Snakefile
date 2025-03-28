@@ -1,0 +1,950 @@
+import os
+import csv
+import yaml
+from snakemake.io import expand
+import pandas as pd
+import glob
+import sys
+from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
+from threading import Lock
+
+
+
+       
+# Load cluster config
+try:
+    with open("./config/cluster_config.yaml") as f:
+        cluster_config = yaml.safe_load(f)
+except:
+    cluster_config = {}
+
+# Get resource values from cluster_config
+def get_cluster_mem(rule_name, default="8G"):
+    """
+	Get memory allocation from cluster config for each rule. 
+	If rule not listed in cluster config then use default allocation.
+	"""
+    # Check if rule exists in cluster config
+    if rule_name in cluster_config:
+        mem_str = cluster_config[rule_name].get("mem", default)
+    # Otherwise use default section
+    elif "__default__" in cluster_config:
+        mem_str = cluster_config["__default__"].get("mem", default)
+    else:
+        mem_str = default
+    
+    # Convert from string (e.g. "8G") to MB
+    if isinstance(mem_str, str):
+        if mem_str.endswith("G"):
+            return int(float(mem_str.rstrip("G")) * 1024)
+        elif mem_str.endswith("M"):
+            return int(float(mem_str.rstrip("M")))
+        else:
+            try:
+                return int(float(mem_str))
+            except ValueError:
+                return int(float(default.rstrip("G")) * 1024)
+    else:
+        return int(mem_str)  # Handle case where it's already a number
+
+def get_cluster_threads(rule_name, default=4):
+    """
+	Get CPU count from cluster config for each rule.
+	If rule not listed in cluster config then use default allocation.
+	"""
+    # Check if rule exists in cluster config
+    if rule_name in cluster_config:
+        return cluster_config[rule_name].get("cpus-per-task", default)
+    # Otherwise use default section
+    elif "__default__" in cluster_config:
+        return cluster_config["__default__"].get("cpus-per-task", default)
+    else:
+        return default
+
+
+
+
+
+# Parse samples from .csv files
+def parse_samples(samples_file):
+    samples = {}
+    with open(samples_file, mode='r') as infile:
+        reader = csv.DictReader(infile)
+        for row in reader:
+            sample_id = row['ID']
+            forward_read = row['forward']
+            reverse_read = row['reverse']
+            samples[sample_id] = {"R1": forward_read, "R2": reverse_read}
+    return samples
+
+# Parse references from CSV
+def parse_sequence_references(sequence_reference_file):
+    sequence_references = {}
+    with open(sequence_reference_file, mode='r') as infile:
+        reader = csv.DictReader(infile)
+        for row in reader:
+            sample_id = row['process_id']
+            reference_name = row['reference_name']
+            protein_reference_path = row['protein_reference_path']
+            nucleotide_reference_path = row['nucleotide_reference_path']
+            sequence_references[sample_id] = {
+                "reference_name": reference_name, 
+                "protein_path": protein_reference_path,
+                "nucleotide_path": nucleotide_reference_path
+            }    
+    return sequence_references
+
+
+
+# Config validation
+def validate_config(config):
+    required_keys = ['samples_file', 'sequence_reference_file', 'output_dir', 'r', 's', 'run_name', 'mge_path']
+    missing_keys = [key for key in required_keys if key not in config]
+    
+    if missing_keys:
+        sys.stderr.write(f"Missing required configuration keys: {', '.join(missing_keys)}\n")
+        sys.exit(1)
+    
+    # Validate file existence
+    if not os.path.exists(config['samples_file']):
+        sys.stderr.write(f"Samples file not found: {config['samples_file']}\n")
+        sys.exit(1)
+    
+    if not os.path.exists(config['sequence_reference_file']):
+        sys.stderr.write(f"Sequence reference file not found: {config['sequence_reference_file']}\n")
+        sys.exit(1)
+    
+    if not os.path.exists(config['mge_path']):
+        sys.stderr.write(f"MitoGeneExtractor path not found: {config['mge_path']}\n")
+        sys.exit(1)
+    
+    # Validate r and s parameters
+    if not isinstance(config['r'], list) or not config['r']:
+        sys.stderr.write("'r' must be a non-empty list\n")
+        sys.exit(1)
+    
+    if not isinstance(config['s'], list) or not config['s']:
+        sys.stderr.write("'s' must be a non-empty list\n")
+        sys.exit(1)
+
+# Validate configuration file
+validate_config(config)
+
+
+# Print configuration for debugging
+print("Loaded config keys:", config.keys())
+print("Configuration loaded:", config)
+
+
+# Load parameters from config file
+samples = parse_samples(config["samples_file"])
+sequence_references = parse_sequence_references(config["sequence_reference_file"])
+
+
+# Create output directory structure
+output_dir = config["output_dir"]
+Path(output_dir).mkdir(parents=True, exist_ok=True)
+
+
+# Required parameters
+r = config["r"]
+s = config["s"]
+run_name = config["run_name"]
+mge_path = config["mge_path"]
+
+
+# Preprocessing parameters with default as 'concat'
+preprocessing_mode = config.get("preprocessing_mode", "concat")
+
+# Fasta-cleaner and Fasta_compare parameters with defaults
+fasta_cleaner_params = config.get("fasta_cleaner", {
+    "consensus_threshold": 0.5,
+    "human_threshold": 0.95,
+    "at_difference": 0.1,
+    "at_mode": "absolute",
+    "outlier_percentile": 90.0,
+    "disable_human": False,
+    "disable_at": False,
+    "disable_outliers": False
+})
+
+fasta_compare_params = config.get("fasta_compare", {
+    "target": "cox1",
+    "verbose": False
+})
+
+
+#Create lists of samples and corresponding references, and link them
+sample_list = list(samples.keys())
+reference_list = [sequence_references[sample]["reference_name"] for sample in sample_list]
+sample_reference_pairs = list(zip(sample_list, reference_list))
+
+# Generate all combinations for each sample+reference pair with all r and s values
+all_mge_cons = []
+for sample, ref in sample_reference_pairs:
+    for r_val in config["r"]:
+        for s_val in config["s"]:
+            all_mge_cons.append(
+                os.path.join(output_dir, f"consensus/{sample}_r_{r_val}_s_{s_val}_con_{ref}.fas")
+            )
+
+
+# Print run parameters to stdout
+print(f"Run name: {run_name}")
+print(f"Output directory: {output_dir}")
+print(f"r params: {r}")
+print(f"s params: {s}")
+print("Sample files:", samples)
+print("Sequence references:", sequence_references)
+print("reference list:", reference_list)
+print("sample reference pairs:", sample_reference_pairs)
+
+
+# Create subdirectories at start to avoid race conditions
+for subdir in ["consensus", "alignment", "trimmed_data", "logs", "out", "err", "fasta_cleaner"]:
+    Path(os.path.join(output_dir, subdir)).mkdir(parents=True, exist_ok=True)
+
+
+# Rule them all
+rule all:
+    input:
+        # Preprocessing mode-specific log files conditionally
+        [] if preprocessing_mode == "merge" else [
+            os.path.join(output_dir, "logs/concat_reads.log"),
+            os.path.join(output_dir, "logs/trim_galore.log")
+        ],
+        # For merge mode only
+        [] if preprocessing_mode != "merge" else [
+            os.path.join(output_dir, "logs/clean_headers.log")
+        ],        
+        # Common files
+        all_mge_cons,
+        os.path.join(output_dir, f"consensus/{run_name}.fasta"),
+        os.path.join(output_dir, "logs/alignment_files.log"),
+        os.path.join(output_dir, "logs/rename_complete.txt"),
+        os.path.join(output_dir, f"{run_name}.csv"),
+        os.path.join(output_dir, "logs/cleaning_complete.txt"),
+        os.path.join(output_dir, "fasta_cleaner/combined_statistics.csv"),
+        os.path.join(output_dir, "cleanup_complete.txt")
+
+
+# Preprocessing rules for merge mode
+if preprocessing_mode == "merge":
+    rule fastp_pe_merge:
+        input:
+            R1=lambda wildcards: samples[wildcards.sample]["R1"],
+            R2=lambda wildcards: samples[wildcards.sample]["R2"]
+        output:
+            R1_trimmed=os.path.join(output_dir, "trimmed_data/{sample}_R1_trimmed.fq.gz"),
+            R2_trimmed=os.path.join(output_dir, "trimmed_data/{sample}_R2_trimmed.fq.gz"),
+            report=os.path.join(output_dir, "trimmed_data/reports/{sample}_fastp_report.html"),
+            json=os.path.join(output_dir, "trimmed_data/reports/{sample}_fastp_report.json"),
+            merged_reads=temp(os.path.join(output_dir, "trimmed_data/{sample}_merged.fq")),
+            unpaired_R1=temp(os.path.join(output_dir, "trimmed_data/unpaired/{sample}_unpaired_R1.fq")),
+            unpaired_R2=temp(os.path.join(output_dir, "trimmed_data/unpaired/{sample}_unpaired_R2.fq"))
+        log:
+            out=os.path.join(output_dir, "trimmed_data/{sample}_fastp.out"),
+            err=os.path.join(output_dir, "trimmed_data/{sample}_fastp.err")
+        threads: lambda wildcards: get_cluster_threads("fastp_pe_merge", 8)
+        resources:
+            mem_mb=lambda wildcards: get_cluster_mem("fastp_pe_merge", "8G")
+        retries: 2
+        shell:
+            """
+            # Log job info
+            echo "Starting fastp merge for sample {wildcards.sample}" > {log.out}
+            echo "Started: $(date)" >> {log.out}
+            echo "Input files: {input.R1}, {input.R2}" >> {log.out}
+
+            fastp -i {input.R1} -I {input.R2} \
+                  -o {output.R1_trimmed} -O {output.R2_trimmed} \
+                  --adapter_sequence=AGATCGGAAGAGCACACGTCTGAACTCCAGTCA \
+                  --adapter_sequence_r2=AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT \
+                  --dedup \
+                  --trim_poly_g \
+                  --merge --merged_out {output.merged_reads} \
+                  --unpaired1 {output.unpaired_R1} \
+                  --unpaired2 {output.unpaired_R2} \
+                  -h {output.report} -j {output.json} \
+                  > {log.out} 2> {log.err}
+
+            # Log job completion and disk usage
+            echo "Completed: $(date)" >> {log.out}
+            echo "Output files sizes:" >> {log.out}
+            du -h {output.R1_trimmed} {output.R2_trimmed} {output.merged_reads} >> {log.out}
+            """
+
+    rule clean_headers_merge:
+        input:
+            merged_reads=os.path.join(output_dir, "trimmed_data/{sample}_merged.fq")
+        output:
+            clean_merged=os.path.join(output_dir, "trimmed_data/{sample}_merged_clean.fq")
+        log:            
+            os.path.join(output_dir, "logs/clean_headers/{sample}.log")
+        threads: lambda wildcards: get_cluster_threads("clean_headers_merge", 2)
+        resources:
+            mem_mb=lambda wildcards: get_cluster_mem("clean_headers_merge", "2G")
+        retries: 2
+        shell:
+            """
+            # Create directories first to avoid race conditions
+            mkdir -p $(dirname {log})
+            mkdir -p $(dirname {output.clean_merged})
+            
+            # Create log header with timestamp and sample ID
+            echo "Cleaning headers for {wildcards.sample}" > {log}
+            echo "Started: $(date)" >> {log}
+            echo "Host: $(hostname)" >> {log}
+            
+            # Add robust error handling with retries
+            for attempt in $(seq 1 3); do
+                echo "Attempt $attempt of 3" >> {log}
+                
+                if ! [ -r "{input.merged_reads}" ]; then
+                    echo "Input file not readable, waiting 10 seconds..." >> {log}
+                    sleep 10
+                    continue
+                fi
+                
+                # Use perl with temporary file approach to be more robust
+                TMP_OUTPUT=$(mktemp)
+                if perl -pe 's/ /_/g' {input.merged_reads} > $TMP_OUTPUT; then
+                    # Move the temp file to the final location only if successful
+                    mv $TMP_OUTPUT {output.clean_merged}
+                    echo "Completed: $(date)" >> {log}
+                    echo "Output file size: $(du -h {output.clean_merged} | cut -f1)" >> {log}
+                    echo "--------------------------------------------" >> {log}
+                    exit 0
+                else
+                    echo "Perl command failed on attempt $attempt" >> {log}
+                    rm -f $TMP_OUTPUT
+                    sleep 5
+                fi
+            done
+            
+            # If all attempts fail
+            echo "FAILED after 3 attempts: $(date)" >> {log}
+            exit 1
+            """
+
+    rule aggregate_clean_headers_logs:
+        input:
+            sample_logs=expand(os.path.join(output_dir, "logs/clean_headers/{sample}.log"), sample=sample_list)
+        output:
+            combined_log=os.path.join(output_dir, "logs/clean_headers.log")
+        threads: lambda wildcards: get_cluster_threads("aggregate_clean_headers_logs", 1)
+        resources:
+            mem_mb=lambda wildcards: get_cluster_mem("aggregate_clean_headers_logs", "2G")
+        shell:
+            """
+            # Create header for aggregated log file
+            echo "===============================================" > {output.combined_log}
+            echo "Aggregated clean headers logs - Created $(date)" >> {output.combined_log}
+            echo "===============================================" >> {output.combined_log}
+            echo "" >> {output.combined_log}
+        
+            # Concatenate all sample logs into a combined log
+            cat {input.sample_logs} >> {output.combined_log}
+            """
+
+
+    # Define input for MGE based on merge mode
+    def get_mge_input(wildcards):
+        return os.path.join(output_dir, f"trimmed_data/{wildcards.sample}_merged_clean.fq")
+
+else: # concat mode
+    rule fastp_pe_concat:
+        input:
+            R1=lambda wildcards: samples[wildcards.sample]["R1"],
+            R2=lambda wildcards: samples[wildcards.sample]["R2"]
+        output:
+            R1_trimmed=os.path.join(output_dir, "trimmed_data/{sample}_R1_trimmed.fastq"),
+            R2_trimmed=os.path.join(output_dir, "trimmed_data/{sample}_R2_trimmed.fastq"),
+            report=os.path.join(output_dir, "trimmed_data/reports/{sample}_fastp_report.html"),
+            json=os.path.join(output_dir, "trimmed_data/reports/{sample}_fastp_report.json")
+        log:
+            out=os.path.join(output_dir, "trimmed_data/{sample}_fastp.out"),
+            err=os.path.join(output_dir, "trimmed_data/{sample}_fastp.err")
+        threads: lambda wildcards: get_cluster_threads("fastp_pe_concat", 4)  
+        resources:
+            mem_mb=lambda wildcards: get_cluster_mem("fastp_pe_concat", "4G")  
+        retries: 3
+        shell:
+            """
+            # Create output directories if they don't exist
+            mkdir -p $(dirname {output.R1_trimmed})
+            mkdir -p $(dirname {output.report})
+            
+            # Create a consistent log header with timestamp and sample ID
+            LOG_HEADER="[$(date '+%Y-%m-%d %H:%M:%S')] Sample: {wildcards.sample}"
+            
+            # Initialize the log files
+            echo "$LOG_HEADER - Starting fastp processing (attempt ${{SLURM_RESTART_COUNT:-1}})" > {log.out}
+            echo "$LOG_HEADER - Input files: {input.R1}, {input.R2}" >> {log.out}
+            echo "$LOG_HEADER - Output files: {output.R1_trimmed}, {output.R2_trimmed}" >> {log.out}
+            
+            # Log input file sizes and existence
+            echo "$LOG_HEADER - Input file details:" >> {log.out}
+            if [[ -f "{input.R1}" ]]; then
+                echo "  R1: $(du -h {input.R1} | cut -f1) ($(stat -c%s {input.R1}) bytes)" >> {log.out}
+            else
+                echo "  ERROR: R1 input file does not exist" >> {log.out}
+                exit 1
+            fi
+            
+            if [[ -f "{input.R2}" ]]; then
+                echo "  R2: $(du -h {input.R2} | cut -f1) ($(stat -c%s {input.R2}) bytes)" >> {log.out}
+            else
+                echo "  ERROR: R2 input file does not exist" >> {log.out}
+                exit 1
+            fi
+            
+            # Run fastp with comprehensive logging
+            echo "$LOG_HEADER - Starting fastp: $(date)" >> {log.out}
+            
+            # Execute fastp with error handling
+            if fastp -i {input.R1} -I {input.R2} \\
+                     -o {output.R1_trimmed} -O {output.R2_trimmed} \\
+                     -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCA \\
+                     -A AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT \\
+                     --dedup \\
+                     --trim_poly_g \\
+                     --thread {threads} \\
+                     -h {output.report} -j {output.json} \\
+                     >> {log.out} 2> {log.err}; then
+                echo "$LOG_HEADER - Fastp completed successfully: $(date)" >> {log.out}
+            else
+                FASTP_EXIT=$?
+                echo "$LOG_HEADER - ERROR: Fastp failed with exit code $FASTP_EXIT: $(date)" >> {log.out}
+                
+                # Examine error log for specific issues
+                if grep -q "different read numbers" {log.err}; then
+                    echo "$LOG_HEADER - ERROR: Read count mismatch detected in input files" >> {log.out}
+                    echo "$LOG_HEADER - Error details from fastp:" >> {log.out}
+                    grep -A 5 "different read numbers" {log.err} >> {log.out}
+                fi
+                
+                # Check if output files were at least partially created
+                if [[ -f {output.R1_trimmed} ]]; then
+                    echo "$LOG_HEADER - R1 output was created but may be incomplete: $(du -h {output.R1_trimmed} | cut -f1)" >> {log.out}
+                fi
+                
+                if [[ -f {output.R2_trimmed} ]]; then
+                    echo "$LOG_HEADER - R2 output was created but may be incomplete: $(du -h {output.R2_trimmed} | cut -f1)" >> {log.out}
+                fi
+                
+                # Propagate the error to trigger a retry
+                exit $FASTP_EXIT
+            fi
+            
+            # Validate output files
+            if [[ ! -s {output.R1_trimmed} ]]; then
+                echo "$LOG_HEADER - ERROR: R1 output file is empty after processing" >> {log.out}
+                exit 1
+            fi
+            
+            if [[ ! -s {output.R2_trimmed} ]]; then
+                echo "$LOG_HEADER - ERROR: R2 output file is empty after processing" >> {log.out}
+                exit 1
+            fi
+            
+            # Calculate and log read counts from output files
+            echo "$LOG_HEADER - Calculating read counts in output files..." >> {log.out}
+            R1_READS=$(($(wc -l < {output.R1_trimmed}) / 4))
+            R2_READS=$(($(wc -l < {output.R2_trimmed}) / 4))
+            echo "$LOG_HEADER - Read counts: R1=$R1_READS reads, R2=$R2_READS reads" >> {log.out}
+            
+            # Verify read counts match between R1 and R2
+            if [[ $R1_READS -ne $R2_READS ]]; then
+                echo "$LOG_HEADER - WARNING: Read count mismatch in output files (R1=$R1_READS, R2=$R2_READS)" >> {log.out}
+                # Not failing here since the files were created, but logging the issue
+            fi
+            
+            # Clean headers
+            echo "$LOG_HEADER - Cleaning headers in output files" >> {log.out}
+            perl -i -pe 's/ /_/g' {output.R1_trimmed}
+            perl -i -pe 's/ /_/g' {output.R2_trimmed}
+            echo "$LOG_HEADER - Headers cleaned" >> {log.out}
+            
+            # Log detailed output file information
+            echo "$LOG_HEADER - Output file details:" >> {log.out}
+            echo "  R1: $(du -h {output.R1_trimmed} | cut -f1) ($(stat -c%s {output.R1_trimmed}) bytes)" >> {log.out}
+            echo "  R2: $(du -h {output.R2_trimmed} | cut -f1) ($(stat -c%s {output.R2_trimmed}) bytes)" >> {log.out}
+            
+            # Log successful completion
+            echo "$LOG_HEADER - Processing completed successfully at $(date)" >> {log.out}
+            echo "$LOG_HEADER - ----------------------------------------" >> {log.out}
+            """
+
+
+    rule fastq_concat:
+        input:
+            R1=os.path.join(output_dir, "trimmed_data/{sample}_R1_trimmed.fastq"),
+            R2=os.path.join(output_dir, "trimmed_data/{sample}_R2_trimmed.fastq")
+        output:
+            temp(os.path.join(output_dir, "trimmed_data/{sample}_concat.fastq"))
+        log:
+            os.path.join(output_dir, "logs/concat/{sample}.log")
+        threads: lambda wildcards: get_cluster_threads("fastq_concat", 2)
+        resources:
+            mem_mb=lambda wildcards: get_cluster_mem("fastq_concat", "4G")
+        retries: 2
+        shell:
+            """
+            echo "Concatenating files for {wildcards.sample}" > {log}
+            echo "Started: $(date)" >> {log}
+            
+            # Concatenation
+            (cat {input.R1} && cat {input.R2}) > {output}
+            
+            echo "Completed: $(date)" >> {log}
+            echo "Output file size: $(du -h {output} | cut -f1)" >> {log}
+            """
+
+    rule aggregate_concat_logs:
+        input:
+            sample_logs=expand(os.path.join(output_dir, "logs/concat/{sample}.log"), sample=sample_list)
+        output:
+            combined_log=os.path.join(output_dir, "logs/concat_reads.log")
+        threads: lambda wildcards: get_cluster_threads("aggregate_concat_logs", 2)
+        resources:
+            mem_mb=lambda wildcards: get_cluster_mem("aggregate_concat_logs", "1G")
+        shell:
+            """
+            echo "===============================================" > {output.combined_log}
+            echo "Aggregated concat logs - Created $(date)" >> {output.combined_log}
+            echo "===============================================" >> {output.combined_log}
+            echo "" >> {output.combined_log}
+        
+            # Concatenate all sample logs into a combined log
+            cat {input.sample_logs} >> {output.combined_log}
+            """
+
+    rule quality_trim:
+        input:
+            os.path.join(output_dir, "trimmed_data/{sample}_concat.fastq")
+        output:
+            temp(os.path.join(output_dir, "trimmed_data/{sample}_concat_trimmed.fq")),
+            report=os.path.join(output_dir, "trimmed_data/reports/{sample}_concat.fastq_trimming_report.txt")
+        params:
+            outdir=os.path.join(output_dir, "trimmed_data/"),
+            report_dir=os.path.join(output_dir, "trimmed_data/reports/")
+        log:
+            os.path.join(output_dir, "logs/trim_galore/{sample}.log")
+        threads: lambda wildcards: get_cluster_threads("quality_trim", 2)
+        resources:
+            mem_mb=lambda wildcards: get_cluster_mem("quality_trim", "4G")
+        retries: 3
+        shell:
+            """
+            echo "Quality trimming for {wildcards.sample}" > {log}
+            echo "Started: $(date)" >> {log}
+            echo "Input file: {input}" >> {log}
+			
+			# Run trim_galore
+            trim_galore --cores {threads} \
+                       --dont_gzip \
+                       --output_dir {params.outdir} \
+                       --basename {wildcards.sample}_concat \
+                       {input}
+
+            # Move reports to out location
+            mv {params.outdir}/{wildcards.sample}_concat.fastq_trimming_report.txt {output.report}
+
+            # Log job completion
+            echo "Completed: $(date)" >> {log}
+            echo "Output file size: $(du -h {output[0]} | cut -f1)" >> {log}
+            """
+
+    rule aggregate_trim_galore_logs:
+        input:
+            sample_logs=expand(os.path.join(output_dir, "logs/trim_galore/{sample}.log"), sample=sample_list)
+        output:
+            combined_log=os.path.join(output_dir, "logs/trim_galore.log")
+        threads: lambda wildcards: get_cluster_threads("aggregate_trim_galore_logs", 2)
+        resources:
+            mem_mb=lambda wildcards: get_cluster_mem("aggregate_trim_galore_logs", "1G")
+        shell:
+            """
+            echo "===============================================" > {output.combined_log}
+            echo "Aggregated trim_galore logs - Created $(date)" >> {output.combined_log}
+            echo "===============================================" >> {output.combined_log}
+            echo "" >> {output.combined_log}
+        
+            # Concatenate all sample logs into a combined log
+            cat {input.sample_logs} >> {output.combined_log}
+            """
+
+    # Define input for MGE based on concat mode
+    def get_mge_input(wildcards):
+        return os.path.join(output_dir, f"trimmed_data/{wildcards.sample}_concat_trimmed.fq")
+
+
+
+
+#Common rules for both preprocessing routes below
+#MGE rule
+rule MitoGeneExtractor:
+    input:
+        DNA=get_mge_input,
+        AA=lambda wildcards: sequence_references[wildcards.sample]["protein_path"]
+    output:
+        alignment=os.path.join(output_dir, "alignment/{sample}_r_{r}_s_{s}_align_{reference_name}.fas"),
+        consensus=os.path.join(output_dir, "consensus/{sample}_r_{r}_s_{s}_con_{reference_name}.fas"),
+        vulgar=os.path.join(output_dir, "logs/mge/{sample}_vulgar_r_{r}_s_{s}_{reference_name}.txt")
+    log:
+        out=os.path.join(output_dir, "out/{sample}_r_{r}_s_{s}_summary_{reference_name}.out"),
+        err=os.path.join(output_dir, "err/{sample}_r_{r}_s_{s}_summary_{reference_name}.err")
+    params:
+        mge_executor=config["mge_path"]
+    threads: lambda wildcards: get_cluster_threads("MitoGeneExtractor", 4)
+    resources:
+        # Blend dynamic allocation with retry logic
+        mem_mb=lambda wildcards, attempt: min(get_cluster_mem("MitoGeneExtractor", "12G") * attempt, get_cluster_mem("MitoGeneExtractor", "48G"))
+    retries: 2
+    shell:
+        """
+        # Logging header
+        echo "===== Job Info =====" > {log.out}
+        echo "Started: $(date)" >> {log.out}
+        echo "Node: $(hostname)" >> {log.out}
+        echo "Attempt: ${{SLURM_RESTART_COUNT:-0}}" >> {log.out}
+        echo "Memory allocated: {resources.mem_mb}MB" >> {log.out}
+        echo "===================" >> {log.out}
+
+        # Log input files sizes
+        echo "Input DNA file size: $(du -h {input.DNA} | cut -f1)" >> {log.out}
+        echo "Input AA file: {input.AA}" >> {log.out}
+        echo "Available system memory before execution:" >> {log.out}
+        free -h >> {log.out}
+             
+        # Run MGE & track resource usage
+        /usr/bin/time -v {params.mge_executor} \\
+        -q {input.DNA} -p {input.AA} \\
+        -o {output_dir}/alignment/{wildcards.sample}_r_{wildcards.r}_s_{wildcards.s}_align_ \\
+        -c {output_dir}/consensus/{wildcards.sample}_r_{wildcards.r}_s_{wildcards.s}_con_ \\
+        -V {output.vulgar} \\
+        -r {wildcards.r} -s {wildcards.s} \\
+        -n 0 -C 5 -t 0.5 \\
+        --verbosity 4 \\
+        >> {log.out} 2>> {log.err} || {{
+            # If the command fails, log error and system state
+            EXIT_CODE=$?
+            echo "MitoGeneExtractor failed with exit code $EXIT_CODE" >> {log.out}
+            echo "Available system memory after failure:" >> {log.out}
+            free -h >> {log.out}
+            echo "System load:" >> {log.out}
+            uptime >> {log.out}
+            echo "Top memory processes:" >> {log.out}
+            ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%mem | head -n 10 >> {log.out}
+            
+            # Forward error code
+            exit $EXIT_CODE
+        }}
+
+        # Log job completion
+        echo "Job completed: $(date)" >> {log.out}
+        echo "Available system memory after execution:" >> {log.out}
+        free -h >> {log.out}
+		
+		# Log output file sizes
+        echo "Output file sizes:" >> {log.out}
+        if [ -f "{output.consensus}" ] && [ -f "{output.alignment}" ]; then
+            du -h {output.consensus} {output.alignment} >> {log.out}
+        else
+            echo "Warning: Output files not found. Check for errors." >> {log.out}
+        fi
+        """
+
+
+#Rename headers in consensus files (differs based on preprocessing mode)
+rule rename_and_combine_cons:
+    input:
+        consensus_files=all_mge_cons
+    output:
+        complete=os.path.join(output_dir, "logs/rename_complete.txt"),
+        concat_cons=os.path.join(output_dir, f"consensus/{run_name}.fasta")
+    log:
+        os.path.join(output_dir, "logs/rename_fasta.log")
+    params:
+        script=os.path.join(workflow.basedir, "scripts/rename_headers.py"),
+        preprocessing_mode=preprocessing_mode,
+    threads: lambda wildcards: get_cluster_threads("rename_and_combine_cons", 2)
+    resources:
+        mem_mb=lambda wildcards: get_cluster_mem("rename_and_combine_cons", "4G")
+    shell:
+        """ 
+        # Run script
+        python {params.script} \
+            --input-files {input.consensus_files} \
+            --concatenated-consensus {output.concat_cons} \
+            --complete-file={output.complete} \
+            --log-file={log} \
+            --preprocessing-mode={params.preprocessing_mode} \
+            --threads={threads}
+    
+        # Touch completion file to ensure timestamp is updated
+        touch {output.complete}
+        """
+
+
+# Create list of alignment files for stats
+rule create_alignment_log:
+    input:
+        alignment_files=lambda wildcards: glob.glob(os.path.join(output_dir, "alignment/*_align_*.fas")),
+        concat_cons=os.path.join(output_dir, f"consensus/{run_name}.fasta")
+    output:
+        alignment_log=os.path.join(output_dir, "logs/alignment_files.log")
+    threads: lambda wildcards: get_cluster_threads("create_alignment_log", 2)
+    resources:
+        mem_mb=lambda wildcards: get_cluster_mem("create_alignment_log", "2G")
+    run:
+        alignment_files = input.alignment_files
+
+        with open(output.alignment_log, 'w') as log_file:
+            for file in alignment_files:
+                log_file.write(f"{file}\n")
+
+
+
+# Run fasta_cleaner script on MGE alignment files
+rule fasta_cleaner:
+    input:
+        alignment_log=os.path.join(output_dir, "logs/alignment_files.log"),
+        concat_cons=os.path.join(output_dir, f"consensus/{run_name}.fasta")
+    output:
+        completion_flag=os.path.join(output_dir, "logs/cleaning_complete.txt"),
+        cleaning_csv=os.path.join(output_dir, "fasta_cleaner/combined_statistics.csv")
+    params:
+        output_dir=os.path.join(output_dir, "fasta_cleaner"),
+        script=os.path.join(workflow.basedir, "scripts/fasta_cleaner_mge.py"),
+        consensus_threshold=fasta_cleaner_params["consensus_threshold"],
+        human_threshold=fasta_cleaner_params["human_threshold"],
+        at_difference=fasta_cleaner_params["at_difference"],
+        reference_dir=fasta_cleaner_params.get("reference_dir", None),
+        at_mode=fasta_cleaner_params["at_mode"],
+        outlier_percentile=fasta_cleaner_params["outlier_percentile"],
+        preprocessing_mode=preprocessing_mode,
+        disable_flags=" ".join([
+            "--disable_human" if fasta_cleaner_params["disable_human"] else "",
+            "--disable_at" if fasta_cleaner_params["disable_at"] else "",
+            "--disable_outliers" if fasta_cleaner_params["disable_outliers"] else ""
+        ]).strip()
+    log:
+        os.path.join(output_dir, "logs/fasta_cleaner.log")
+    threads: lambda wildcards: get_cluster_threads("fasta_cleaner", workflow.cores)
+    resources:
+        mem_mb=lambda wildcards: get_cluster_mem("fasta_cleaner", "12G")
+    shell:
+        """
+        # Debug log
+        echo "Script path: {params.script}"
+        
+        # Create out dir
+        mkdir -p {params.output_dir}
+        
+        # Create temp input dir & symlink to alignment files
+        TMP_INPUT_DIR=$(mktemp -d)
+        echo "Created temp dir: $TMP_INPUT_DIR"
+        
+        # Debug show content of alignment log
+        echo "Content of alignment log:"
+        cat {input.alignment_log}
+        
+        while IFS= read -r alignment_file; do
+            echo "Processing: $alignment_file"
+            if [ ! -f "$alignment_file" ]; then
+                echo "Warning: File not found: $alignment_file" >&2
+                continue
+            fi
+            ln -s "$(realpath "$alignment_file")" "$TMP_INPUT_DIR/$(basename "$alignment_file")"
+        done < {input.alignment_log}
+        
+        # Debug show content of temp dir
+        echo "Content of temp directory:"
+        ls -la "$TMP_INPUT_DIR"
+
+        # Construct reference dir arg
+        REFERENCE_DIR_ARG=""
+        if [ "{params.reference_dir}" != "None" ] && [ -n "{params.reference_dir}" ]; then
+             REFERENCE_DIR_ARG="--reference_dir {params.reference_dir}"
+        fi
+        
+        # Run script with set -x for debugging
+        set -x
+        python {params.script} \\
+            -i "$TMP_INPUT_DIR" \\
+            -o {params.output_dir} \\
+            --consensus_threshold {params.consensus_threshold} \\
+            --human_threshold {params.human_threshold} \\
+            --at_difference {params.at_difference} \\
+            --at_mode {params.at_mode} \\
+            --percentile_threshold {params.outlier_percentile} \\
+			--preprocessing {params.preprocessing_mode} \\
+            {params.disable_flags} \\
+            $REFERENCE_DIR_ARG \\
+            2>&1 | tee {log}
+        set +x
+            
+        # Cleanup tem dir
+        rm -rf "$TMP_INPUT_DIR"
+        
+        # Touch completion file
+        touch {output.completion_flag}
+        """
+
+
+# Extract, aggregate and calculate stats from inputs
+rule extract_stats_to_csv:
+    input:
+        alignment_log=os.path.join(output_dir, "logs/alignment_files.log"),
+        out_files=expand(os.path.join(output_dir, "out/{sample}_r_{r}_s_{s}_summary_{reference_name}.out"),
+                         zip, 
+                         sample=[s for s, _ in sample_reference_pairs],
+                         reference_name=[ref for _, ref in sample_reference_pairs],
+                         r=config["r"],
+                         s=config["s"]),
+        concat_cons=os.path.join(output_dir, f"consensus/{run_name}.fasta"),
+        cleaning_csv=os.path.join(output_dir, "fasta_cleaner/combined_statistics.csv"),
+        cleaner_complete=os.path.join(output_dir, "logs/cleaning_complete.txt")
+    output:
+        stats=os.path.join(output_dir, f"{run_name}.csv")
+    params:
+        script=os.path.join(workflow.basedir, "scripts/mge_stats.py"),
+        out_dir=os.path.join(output_dir, "out/"),
+        log_dir=os.path.join(output_dir, "logs")
+    threads: lambda wildcards: get_cluster_threads("extract_stats_to_csv", workflow.cores)
+    resources:
+        mem_mb=lambda wildcards: get_cluster_mem("extract_stats_to_csv", "6G")
+    shell:
+        """
+		
+		# Run script
+        python {params.script} -a {input.alignment_log} -o {output.stats} -od {params.out_dir} -c {input.cleaning_csv}
+
+        # Relocate logs
+        mv mge_stats.log {params.log_dir}/
+        """
+
+# Clean up superfluous files
+rule cleanup_files:
+    input:
+        summary_csv=os.path.join(output_dir, f"{run_name}.csv"),
+        clean_headers_log=os.path.join(output_dir, "logs/clean_headers.log") if preprocessing_mode == "merge" else [],
+        concat_logs=os.path.join(output_dir, "logs/concat_reads.log") if preprocessing_mode != "merge" else [],
+        trim_galore_logs=os.path.join(output_dir, "logs/trim_galore.log") if preprocessing_mode != "merge" else []
+    output:
+        touch(os.path.join(output_dir, "cleanup_complete.txt"))
+    threads: lambda wildcards: get_cluster_threads("cleanup_files", 1)
+    resources:
+        mem_mb=lambda wildcards: get_cluster_mem("cleanup_files", "1G")
+    run:
+        # Initialise
+        removed_files = 0
+        removed_dirs = []
+        cleaned_dirs = []
+        
+        # Remove (empty) .log files in mge subdir - both modes
+        mge_log_dir = os.path.join(output_dir, "logs/mge")
+        if os.path.exists(mge_log_dir):
+            mge_log_files = glob.glob(os.path.join(mge_log_dir, "*.log"))
+            for mge_log_file in mge_log_files:
+                print(f"Removing MGE log file: {mge_log_file}")
+                os.remove(mge_log_file)
+                removed_files += 1
+            print(f"Removed {len(mge_log_files)} MGE log files")
+            cleaned_dirs.append(mge_log_dir)
+        else:
+            print(f"MGE log directory not found: {mge_log_dir}")
+        
+        # Clean up individual clean_headers log files - merge mode
+        if preprocessing_mode == "merge":
+            clean_headers_dir = os.path.join(output_dir, "logs/clean_headers")
+            if os.path.exists(clean_headers_dir):
+                clean_headers_logs = glob.glob(os.path.join(clean_headers_dir, "*.log"))
+                for log_file in clean_headers_logs:
+                    print(f"Removing clean_headers log file: {log_file}")
+                    os.remove(log_file)
+                    removed_files += 1
+                print(f"Removed {len(clean_headers_logs)} clean_headers log files")
+                cleaned_dirs.append(clean_headers_dir)
+                
+                # Remove the clean_headers subdirectory if it's empty
+                try:
+                    if len(os.listdir(clean_headers_dir)) == 0:
+                        os.rmdir(clean_headers_dir)
+                        print(f"Removed empty directory: {clean_headers_dir}")
+                        removed_dirs.append(clean_headers_dir)
+                except OSError as e:
+                    print(f"Could not remove directory {clean_headers_dir}: {e}")
+            else:
+                print(f"clean_headers directory not found: {clean_headers_dir}")
+        
+        # Clean up individual concat log files - concat mode
+        if preprocessing_mode != "merge":
+            # Clean up concat logs
+            concat_dir = os.path.join(output_dir, "logs/concat")
+            if os.path.exists(concat_dir):
+                concat_logs = glob.glob(os.path.join(concat_dir, "*.log"))
+                for log_file in concat_logs:
+                    print(f"Removing concat log file: {log_file}")
+                    os.remove(log_file)
+                    removed_files += 1
+                print(f"Removed {len(concat_logs)} concat log files")
+                cleaned_dirs.append(concat_dir)
+                
+                # Remove concat subdir
+                try:
+                    if len(os.listdir(concat_dir)) == 0:
+                        os.rmdir(concat_dir)
+                        print(f"Removed empty directory: {concat_dir}")
+                        removed_dirs.append(concat_dir)
+                except OSError as e:
+                    print(f"Could not remove directory {concat_dir}: {e}")
+            else:
+                print(f"concat directory not found: {concat_dir}")
+            
+            # Clean up individual trim_galore log files - concat mode
+            trim_galore_dir = os.path.join(output_dir, "logs/trim_galore")
+            if os.path.exists(trim_galore_dir):
+                trim_galore_logs = glob.glob(os.path.join(trim_galore_dir, "*.log"))
+                for log_file in trim_galore_logs:
+                    print(f"Removing trim_galore log file: {log_file}")
+                    os.remove(log_file)
+                    removed_files += 1
+                print(f"Removed {len(trim_galore_logs)} trim_galore log files")
+                cleaned_dirs.append(trim_galore_dir)
+                
+                # Remove trim_galore subdir
+                try:
+                    if len(os.listdir(trim_galore_dir)) == 0:
+                        os.rmdir(trim_galore_dir)
+                        print(f"Removed empty directory: {trim_galore_dir}")
+                        removed_dirs.append(trim_galore_dir)
+                except OSError as e:
+                    print(f"Could not remove directory {trim_galore_dir}: {e}")
+            else:
+                print(f"trim_galore directory not found: {trim_galore_dir}")
+        
+        # Write completion message and cleanup info to output file
+        with open(output[0], 'w') as f:
+            f.write("Cleanup complete at " + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\n\n")
+            
+            f.write(f"Total log files removed: {removed_files}\n\n")
+            
+            f.write("Directories fully removed:\n")
+            if removed_dirs:
+                for dir_path in removed_dirs:
+                    f.write(f"- {dir_path}\n")
+            else:
+                f.write("- No directories were fully removed\n")
+            
+            f.write("\nDirectories cleaned of log files:\n")
+            if cleaned_dirs:
+                for dir_path in cleaned_dirs:
+                    f.write(f"- {dir_path}\n")
+            else:
+                f.write("- No directories were cleaned\n")
+            
+            f.write("\nPreprocessing mode: " + preprocessing_mode)

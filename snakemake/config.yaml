@@ -1,0 +1,24 @@
+# MGE run name identifier
+run_name: "mge_concat_r1_13_15_s50_100"
+# Path to MGE installation
+mge_path: "path/to/MitoGeneExtractor-v1.9.5"
+# Path to samples.csv
+samples_file: "path/to/samples.csv"
+# Path to protein_references.csv
+sequence_reference_file: "path/to/sequence_references.csv"
+# Path to output directory. Will make final dir if it does not exist already.
+output_dir: "path/to/results/mge_concat_r1_13_15_s50_100"
+# Gene(s) of interest
+genes:
+  - cox1
+# Exonerate relative score threshold parameter
+r:
+  - 1
+  - 1.3
+  - 1.5
+# Exonerate minimum score threshold parameter
+s:
+  - 50
+  - 100
+#Read pre-processing method. Options: "merge" or "concat" (fastp-merge (i.e. 'merge') or standard PE fastq concatenation (i.e. 'concat')). 
+preprocessing_mode: "concat"
