@@ -2,6 +2,10 @@
 #include "tclap/CmdLine.h"
 #include "climits"
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
+
 using namespace TCLAP;
 using namespace std;
 
@@ -12,7 +16,7 @@ string                      global_tmp_directory;
 unsigned                    global_verbosity;
 unsigned                    global_num_bp_beyond_exonerate_alignment_if_at_start_or_end;
 string                      global_exonerate_binary;
-string                      global_vulgar_file_folder;
+string                      global_vulgar_directory;
 string                      global_alignment_output_file;
 float                       global_consensus_threshold;
 string                      global_consensus_sequence_output_filename;
@@ -51,6 +55,17 @@ void good_bye_and_exit(int error)
   exit(error);
 }
 
+bool directory_exists(const char* dir_path)
+{
+  // Most backword compatible way to determine whether a directory exists.
+  struct stat info;
+
+  int res = stat( dir_path, &info );
+
+  if (res != 0)
+    return false;
+  return (info.st_mode & S_IFDIR);
+}
 
 
 void init_param()
@@ -119,8 +134,8 @@ void read_and_init_parameters(int argc, char** argv)
     */
 
     ValueArg<unsigned> verbosity_Arg("", "verbosity",
-	"Specifies how much run time information is printed to the console. Values: 0: minimal output, 1: important notices, 2: more notices, 3: basic progress, 4: detailed progress, 50-100: debug output, 1000: all output.",
-	false, global_verbosity, "int");
+                                     "Specifies how much run time information is printed to the console. Values: 0: minimal output, 1: important notices, 2: more notices, 3: and basic progress, 4: and detailed progress, 50-100: and debug output, 1000: all output.",
+                                     false, global_verbosity, "int");
     cmd.add(verbosity_Arg);
 
 
@@ -149,7 +164,8 @@ void read_and_init_parameters(int argc, char** argv)
 					 "input files are specified, or if fastq file "
 					 "are specified. With this option these files "
 					 "will not be created in the directory the program "
-					 "was launched, but in the specified tmp directory. ",
+					 "was launched, but in the specified tmp directory. "
+                     "Temporary files are created without file extensions.",
 					 false, global_tmp_directory, "string");
     cmd.add(tmp_directory_Arg);
 
@@ -181,7 +197,7 @@ void read_and_init_parameters(int argc, char** argv)
     
     ValueArg<int> genetic_code_number_Arg("C", "genetic_code",
 	 "The number of the genetic code to use in Exonerate, if this step is required. See https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi for details. Default: 2, i.e. "
-	"vertebrate mitochondrial code.",
+	"vertebrate mitochondrial code. Exonerate only accepts one genetic code, so for multiple references only one genetic code can be used.",
 	false, global_genetic_code_number, "int");
     cmd.add(genetic_code_number_Arg);
 
@@ -282,15 +298,15 @@ void read_and_init_parameters(int argc, char** argv)
 				        false, global_exonerate_binary, "string");
     cmd.add(exonerate_path_Arg);
 
-    ValueArg<string> vulgar_file_folder_Arg("V", "vulgar_file",
-				     "Specifies the name of the folder in which vulgar files, generated as exonerate output, are stored. "
+    ValueArg<string> vulgar_directory_Arg("V", "vulgar_directory",
+				     "Specifies the name of the directory in which vulgar files, generated as exonerate output, are stored. "
                      "For each input file a vular file with the same base name as the input file, but with the extension "
                      ".vulgar is read as input or generated if it does not exist. "
-				     "If the vulgar file does not exist MitoGeneExtractor will run Exonerate in "
-				     "order to create the file. The created file will then be used to proceed. "
-				     "If no folder is specified with this option, the current working directory is used to store the vulgar files. ",
-				     false, global_vulgar_file_folder, "string");
-    cmd.add(vulgar_file_folder_Arg);
+				     "If the vulgar files do not exist MitoGeneExtractor will run Exonerate in "
+				     "order to create the files. The created file will then be used to proceed. "
+				     "If no directory is specified with this option, the current working directory is used to store the vulgar files. ",
+				     false, global_vulgar_directory, "string");
+    cmd.add(vulgar_directory_Arg);
 
     ValueArg<string> alignment_output_file_name_Arg("o", "",
        "Specifies the base name of alignment output file(s). Aligned input sequences "
@@ -337,7 +353,7 @@ void read_and_init_parameters(int argc, char** argv)
     global_verbosity                                   = verbosity_Arg.getValue();
     global_num_bp_beyond_exonerate_alignment_if_at_start_or_end = bp_beyond_Arg.getValue();
     global_exonerate_binary                            = exonerate_path_Arg.getValue();
-    global_vulgar_file_folder                          = vulgar_file_folder_Arg.getValue();
+    global_vulgar_directory                          = vulgar_directory_Arg.getValue();
     global_alignment_output_file                       = alignment_output_file_name_Arg.getValue();
     global_consensus_sequence_output_filename          = consensus_output_file_Arg.getValue();
     global_consensus_threshold                         = consensus_threshold_Arg.getValue();
@@ -399,12 +415,12 @@ void read_and_init_parameters(int argc, char** argv)
   else if (global_include_only_gap_alignments)
     global_gap_frameshift_mode = 2;
 
-  if (global_vulgar_file_folder.empty())
+  if (global_vulgar_directory.empty())
   {
-    global_vulgar_file_folder = "./";
+    global_vulgar_directory = "./";
   }
-  else if (global_vulgar_file_folder.back() != '/')
-    global_vulgar_file_folder.push_back('/');
+  else if (global_vulgar_directory.back() != '/')
+    global_vulgar_directory.push_back('/');
 
   if (global_consensus_threshold > 1 || global_consensus_threshold < 0)
   {
@@ -431,6 +447,23 @@ void read_and_init_parameters(int argc, char** argv)
   }
 
   global_tmp_directory.erase(global_tmp_directory.find_last_not_of(" \n\r\t/")+1);
+  if (!directory_exists(global_tmp_directory.c_str()))
+  {
+    cerr << "ERROR: The specified temporary directory:\n"
+         << global_tmp_directory
+         << "\ndoes not exist. Exiting\n";
+    good_bye_and_exit(-6);
+  }
+
+  if (!directory_exists(global_vulgar_directory.c_str()))
+  {
+    cerr << "ERROR: The specified directory for vulgar files:\n"
+    << global_vulgar_directory
+    << "\ndoes not exist. Exiting\n";
+    good_bye_and_exit(-6);
+  }
+
+
 }
 
 
@@ -475,7 +508,7 @@ void print_parameters(std::ostream &os, const char *s)
   os << s << "Alignment output file:                                  " << global_alignment_output_file
      << std::endl;
 
-  os << s << "Vulgar folder:                                          " << global_vulgar_file_folder
+  os << s << "Vulgar directory:                                       " << global_vulgar_directory
      << std::endl;
 
   if (!global_exonerate_binary.empty()) 

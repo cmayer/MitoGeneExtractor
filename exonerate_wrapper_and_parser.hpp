@@ -9,15 +9,15 @@
 #include <ctime>
 #include <iomanip>
 #include "faststring3.h"
-#include "CSequences3.h"
-#include "CSequence_Mol3.h"
+#include "CSequences3.1.h"
+#include "CSequence_Mol3.1.h"
 #include "Ctriple.h"
 #include "CFile/CFile2_3.h"
 #include "CDnaString3.h"
 #include "global-types-and-parameters_MitoGeneExtractor.h"
 #include "statistic_functions.h"
 #include "fastq.h"
-#include "Cfastq-sequences.h"
+#include "Cfastq-sequences3.1.h"
 #include <unordered_set>
 #include <filesystem>
 

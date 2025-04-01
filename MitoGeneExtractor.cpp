@@ -9,15 +9,15 @@
 #include <ctime>
 #include <iomanip>
 #include "faststring3.h"
-#include "CSequences3.h"
-#include "CSequence_Mol3.h"
+#include "CSequences3.1.h"
+#include "CSequence_Mol3.1.h"
 #include "Ctriple.h"
 #include "CFile/CFile2_3.h"
 #include "CDnaString3.h"
 #include "global-types-and-parameters_MitoGeneExtractor.h"
 #include "statistic_functions.h"
 #include "fastq.h"
-#include "Cfastq-sequences.h"
+#include "Cfastq-sequences3.1.h"
 #include <unordered_set>
 
 #include "exonerate_wrapper_and_parser.hpp"
@@ -109,7 +109,7 @@ void append_fastq_files_to_exonerate_input_file(FILE *ofp, vector<string> global
 
     //    fq_in.print(cout);
 
-    CSequences3 *pseqs = new CSequences3(CSequence_Mol::dna);
+    CSequences3 *pseqs = new CSequences3(SeqType_dna);
     fq_in_collection.add_sequences_to_CSequences_object(pseqs);
     pseqs->ExportSequences(ofp, 'f', UINT_MAX);
     delete pseqs;
@@ -645,10 +645,10 @@ void determine_alignment_string(CSequence_Mol* theSeq, const vulgar &vul, unsign
 
   if (global_verbosity >= 100)
   {
-    cerr << "determine_alignment_string was called with the following parameters:\n"
-    << "query_prot_length:  " << query_prot_length << endl;
-    cerr << "Reference (query):  " << vul.get_queryID() << endl;
-    cerr << "Reference (target): " << vul.get_targetID() << endl;
+    cerr << "DEBUG(100): determine_alignment_string was called with the following parameters:\n";
+    cerr << "DEBUG(100): query_prot_length:  " << query_prot_length << endl;
+    cerr << "DEBUG(100): Reference (query):  " << vul.get_queryID() << endl;
+    cerr << "DEBUG(100): Reference (target): " << vul.get_targetID() << endl;
   }
 
   unsigned length_this_nuc_seq = theSeq->length();
@@ -714,8 +714,8 @@ void determine_alignment_string(CSequence_Mol* theSeq, const vulgar &vul, unsign
       if (global_verbosity >= 1000)
       {
         cout << endl;
-        cout << "Sequence:    " << seq_count << endl;
-        cout << "gaps_before: " << gaps_before << endl;
+        cout << "DEBUG(1000): Sequence:    " << seq_count << endl;
+        cout << "DEBUG(1000): gaps_before: " << gaps_before << endl;
       }
 
       if (vul.is_revcomp())
@@ -724,7 +724,7 @@ void determine_alignment_string(CSequence_Mol* theSeq, const vulgar &vul, unsign
         unsigned new_start_in_seqDNA;
 
         if (global_verbosity >= 1000)
-          cout << "Number add_length_beginning: " << add_length_beginning << endl;
+          cout << "DEBUG(1000): Number add_length_beginning: " << add_length_beginning << endl;
 
         if (start_in_seqDNA > 0) // Could be 0, and nothing should be done
         {
@@ -782,10 +782,10 @@ void determine_alignment_string(CSequence_Mol* theSeq, const vulgar &vul, unsign
       } // END Not revcomp
 
       if (global_verbosity >= 1000)
-        cout << "Add partial codon front \"" << add_seq_before << "\" might have length 0." << endl;
+        cout << "DEBUG(1000): Add partial codon front \"" << add_seq_before << "\" might have length 0." << endl;
 
       if (global_verbosity >= 50)
-        cout << "Add front length: " << add_seq_before.length() << " " << theSeq->getName() << endl;
+        cout << "DEBUG(50): Add front length: " << add_seq_before.length() << " " << theSeq->getName() << endl;
 
     }  // END if (gaps_before > 0)
   } // END if (global_num_bp_beyond_exonerate_alignment_if_at_end > 0)
@@ -914,7 +914,7 @@ void determine_alignment_string(CSequence_Mol* theSeq, const vulgar &vul, unsign
 
           ++num_WARNINGS;
           if (global_verbosity >= 1)
-            cout << "WARNING: Rare gap case: G 0 x. Additional bases are skipped." << endl;
+            cout << "WARNING: Rare gap case: G 0 x. Additional bases are skipped for sequence ID " << vul.get_targetID() << endl;
           DNA_pos   += vul.attributes[i].third();
           add_or_count(map_of_insertion_sites_suggested_in_reference, make_pair(3*amino_pos, 3*vul.attributes[i].third()));
         }
@@ -946,7 +946,7 @@ void determine_alignment_string(CSequence_Mol* theSeq, const vulgar &vul, unsign
   unsigned gaps_after = query_prot_length*3 - count;
 
   if (global_verbosity >= 40)
-    cout << "DEBUG: " << theSeq->getName() << " gaps_after: " << gaps_after << endl;
+    cout << "DEBUG(40): " << theSeq->getName() << " gaps_after: " << gaps_after << endl;
 
   if (global_num_bp_beyond_exonerate_alignment_if_at_start_or_end > 0)
   {
@@ -955,8 +955,8 @@ void determine_alignment_string(CSequence_Mol* theSeq, const vulgar &vul, unsign
       if (global_verbosity >= 1000)
       {
         cout << endl;
-        cout << "Sequence:   " << seq_count << endl;
-        cout << "gaps_after: " << gaps_after << endl;
+        cout << "DEBUG(1000): Sequence:   " << seq_count << endl;
+        cout << "DEBUG(1000): gaps_after: " << gaps_after << endl;
       }
       if (vul.is_revcomp())
       {
@@ -967,7 +967,7 @@ void determine_alignment_string(CSequence_Mol* theSeq, const vulgar &vul, unsign
         unsigned new_start_in_seqDNA = end_in_seqDNA;
 
         if (global_verbosity >= 1000)
-          cout << "Number potential_add_at_end_of_inserted_revcomp_seq: " << add_length_end << endl;
+          cout << "DEBUG(1000): Number potential_add_at_end_of_inserted_revcomp_seq: " << add_length_end << endl;
 
         if (add_length_end > 0) // Could be 0, and nothing should be done
         {
@@ -1000,7 +1000,7 @@ void determine_alignment_string(CSequence_Mol* theSeq, const vulgar &vul, unsign
         unsigned new_start_in_seqDNA = end_in_seqDNA;
 
         if (global_verbosity >= 1000)
-          cout << "Number add_length_end: " << add_length_end << endl;
+          cout << "DEBUG(1000): Number add_length_end: " << add_length_end << endl;
 
         if (add_length_end > 0) // Could be 0, and nothing should be done
         {
@@ -1018,10 +1018,10 @@ void determine_alignment_string(CSequence_Mol* theSeq, const vulgar &vul, unsign
       } // END Not vul.is_revcomp()
 
       if (global_verbosity >= 1000)
-        cout << "Add at back \"" << add_seq_after << "\" might have length 0." << endl;
+        cout << "DEBUG(1000): Add at back \"" << add_seq_after << "\" might have length 0." << endl;
 
       if (global_verbosity >= 50)
-        cout << "Add back length: " << add_seq_after.length() << " " << theSeq->getName() << endl;
+        cout << "DEBUG(50): Add back length: " << add_seq_after.length() << " " << theSeq->getName() << endl;
 
       gaps_after -= add_seq_after.length();
     } // END  if (gaps_after > 0)
@@ -1170,7 +1170,7 @@ int align_sequences_using_vulgar(const vector<faststring>  &seqnames_of_referenc
 
     if (global_verbosity >= 4)
     {
-      cout << "Creating alignments for (read) sequence ID: " << target_key << endl;
+      cout << "PROGRESS: Creating alignments for (read) sequence ID: " << target_key << endl;
     }
 
     // Determine equal range. We could call equal range, but we already
@@ -1339,9 +1339,9 @@ int align_sequences_using_vulgar(const vector<faststring>  &seqnames_of_referenc
                                    all_maps_of_insertion_sites_suggested_in_reference[ref_loop_index]);
 
         if (global_verbosity >= 5)
-          cerr << "Determining alignment for DNA seqID (target) and ref_index: " << target_key << ", " << ref_index << endl;
+          cerr << "PROGRESS: Determining alignment for DNA seqID (target) and ref_index: " << target_key << ", " << ref_index << endl;
 
-        result_alignments_for_references[ref_index]->add_seq_to_alignment(CSequence_Mol::dna, target_key, newseqDNA, 'N');
+        result_alignments_for_references[ref_index]->add_seq_to_dataset(SeqType_dna, target_key, newseqDNA, 'N');
         vector_of_hit_stats_for_query_reference[ref_index].increment_good_hits_added_to_alignment();
         // Add DNA seq to seqs_included_in_alignments_for_references:
         //          seqs_included_in_alignments_for_references[i].insert(theSeq);
@@ -1379,52 +1379,56 @@ int align_sequences_using_vulgar(const vector<faststring>  &seqnames_of_referenc
     // Write some stats about the hits:
     if (global_verbosity >= 1)
     {
-      cout << "\n\n---------------------------------\n";
-      cout << "Some stats for the exonerate results for reference: " << seqnames_of_references[ref_ind] << '\n';
-      cout << "---------------------------------\n";
+      cout << "\n\nINFO: ---------------------------------\n";
+      cout << "INFO: Some stats for the exonerate results for reference: " << seqnames_of_references[ref_ind] << '\n';
+      cout << "INFO: ---------------------------------\n";
       cout.setf(ios::left);
       //  unsigned s1 = vec_of_hits_as_in_file.size; // vec_exonerate_results.size();
-      cout << setw(50) << "Number of input sequences considered:" << seqs_DNA_reads_target.GetTaxaNum() << '\n';
-      cout << "Number of input sequences successful aligned with exonerate (all)\n"
-      << setw(50) << "to the amino acid sequence found in vulgar file: "
+      cout << setw(70) << "INFO: Number of input sequences:" << seqs_DNA_reads_target.GetTaxaNum() << '\n';
+      cout << "INFO: Number of input sequences successful aligned with exonerate\n";
+      cout << left << setw(70) << "INFO: to the amino acid sequence, see vulgar file: "
       <<  vector_of_hit_stats_for_query_reference[ref_ind].hits_in_vulgar_file << endl;
       //  unsigned s2 = map_exonerate_count_results.size();
-      cout << "Number of successful exonerate alignments without skipped hits.\n"
-      << setw(50) << "This is the number of aligned reads: "
+      cout << "INFO: Number of successfully aligned sequences without skipped hits.\n"
+      << setw(70) << "INFO: This is the number of aligned reads: "
       << vector_of_hit_stats_for_query_reference[ref_ind].good_hits_added_to_alignment
       << endl;
-      //  cout << setw(50) << "Number of sequences in result file: " << seqs_DNA_result.GetTaxaNum() << endl;
+      //  cout << setw(70) << "Number of sequences in result file: " << seqs_DNA_result.GetTaxaNum() << endl;
 
-      cout << "-------------------------------------------\n";
+      cout << "INFO: -------------------------------------------\n";
       if (global_gap_frameshift_mode == 0)
-        cout << setw(50) << "# skipped reads due to gappy alignment:            "
+        cout << "INFO: Skipped reads due to gappy alignment:            "
         << vector_of_hit_stats_for_query_reference[ref_ind].skipped_G << endl;
       if (global_gap_frameshift_mode == 2)
-        cout << setw(50) << "# skipped reads due to no gaps in alignment:       "
+        cout << "INFO: Skipped reads due to no gaps in alignment:       "
         << vector_of_hit_stats_for_query_reference[ref_ind].skipped_no_G << endl;
 
-      cout << setw(50) << "# skipped reads due to frameshifts in alignment:     "
+      cout << "INFO: Skipped reads due to frameshifts in alignment:     "
       << vector_of_hit_stats_for_query_reference[ref_ind].skipped_F << endl;
 
-      cout << setw(50) << "# skipped reads due to multiple hits:                "
+      cout << "INFO: Skipped reads due to multiple hits:                "
       << vector_of_hit_stats_for_query_reference[ref_ind].skipped_double_vulgar  << endl;
 
-      cout << setw(50) << "# skipped reads due to low rel. score:               "
+      cout << "INFO: Skipped reads due to low rel. score:               "
       << vector_of_hit_stats_for_query_reference[ref_ind].skipped_relative_score << endl;
 
-      cout << setw(50) << "# Added to different reference due to better score:  "
+      cout << "INFO: Added to different reference due to better score:  "
       << vector_of_hit_stats_for_query_reference[ref_ind].not_best_score_for_query << endl;
 
-      cout << setw(50) << "# number of hits not considered:                     "
+      cout << "INFO: Total number of hits not considered:               "
       << vector_of_hit_stats_for_query_reference[ref_ind].not_considered << endl;
 
-      cout << "Gap insertion sites and lengths suggested from reads for the reference:\n";
+      cout << "INFO: -------------------------------------------\n";
+      cout << "INFO: Gap insertion sites and lengths suggested from reads for the reference:\n";
+      cout << "INFO: -------------------------------------------\n";
       if (all_maps_of_insertion_sites_suggested_in_reference[ref_ind].size() > 0)
         print_Mymap(cout, all_maps_of_insertion_sites_suggested_in_reference[ref_ind]);
       else
         cout << "None\n";
 
-      cout << "Gap sites in query sequences:\n";
+      cout << "INFO: -------------------------------------------\n";
+      cout << "INFO: Gap sites in query sequences:\n";
+      cout << "INFO: -------------------------------------------\n";
       if ( all_maps_of_gap_sites_in_queries[ref_ind].size() > 0)
         print_Mymap(cout,  all_maps_of_gap_sites_in_queries[ref_ind]);
       else
@@ -1434,7 +1438,7 @@ int align_sequences_using_vulgar(const vector<faststring>  &seqnames_of_referenc
       if (global_verbosity >= 2)
       {
         unsigned **coverage_profile = result_alignments_for_references[ref_ind]->get_DNA_site_profile();
-        cout << "Alignment coverage for this gene:\n";
+        cout << "INFO: Alignment coverage for this gene:\n";
         print_DNA_profile(cout, coverage_profile, result_alignments_for_references[ref_ind]->GetPosNum());
       }
     }
@@ -1480,15 +1484,15 @@ int align_sequences_using_vulgar(const vector<faststring>  &seqnames_of_referenc
         consensus_seq.removeSpacesBack("-");
         consensus_seq.removeSpaces("-~");
       }
-      /*
-       if (global_verbosity >= 50)
-       {
-       cerr << "Coverage values obtained while determining the consensus sequence:\n";
-       for (unsigned i=0; i<coverage_vec.size(); ++i)
-       cerr << i << "\t" << coverage_vec[i] << endl;
-       cerr << "=====================\n";
-       }
-       */
+
+      if (global_verbosity >= 100)
+      {
+         cerr << "DEBUG(100): Coverage values obtained while determining the consensus sequence:\n";
+         for (unsigned i=0; i<coverage_vec.size(); ++i)
+         cerr << i << "\t" << coverage_vec[i] << endl;
+         cerr << "=====================\n";
+      }
+
 
       string outfilename = global_consensus_sequence_output_filename + ref_name.c_str() + ".fas";
 
@@ -1507,24 +1511,24 @@ int align_sequences_using_vulgar(const vector<faststring>  &seqnames_of_referenc
       // Write some final coverage stats:
       if (global_verbosity >= 1)
       {
-        unsigned mi, ma;
-        double mean, sd, Q1, Q2, Q3;
+        unsigned mi=0, ma=0;
+        double mean=0, sd=0, Q1=0, Q2=0, Q3=0;
         vec_min_max(coverage_vec, mi, ma);
         vec_mean_sd(coverage_vec, mean, sd);
         // Be careful: coverage_vec will be sorted after calling this function:
         vec_median_quartile_sort_method3(coverage_vec, Q1, Q2, Q3);
 
-        cout << "-------------------------------------------\n";
-        cout << "Alignment coverage stats:\n";
+        cout << "INFO: -------------------------------------------\n";
+        cout << "INFO: Alignment coverage stats:\n";
         cout.precision(2);
         cout.setf(ios::fixed);
-        cout << "-------------------------------------------\n";
-        cout << setw(50) << "Length of alignment: " << query_prot_length*3 << '\n';
-        cout << setw(50) << "Coverage minimum:    " << mi   << '\n';
-        cout << setw(50) << "Coverage maximum:    " << ma   << '\n';
-        cout << setw(50) << "Coverage mean:       " << mean << '\n';
-        cout << setw(50) << "Coverage median:     " << Q2   << '\n';
-        cout << "-------------------------------------------\n";
+        cout << "INFO: -------------------------------------------\n";
+        cout << setw(50) << "INFO: Length of alignment: " << query_prot_length*3 << '\n';
+        cout << setw(50) << "INFO: Coverage minimum:    " << mi   << '\n';
+        cout << setw(50) << "INFO: Coverage maximum:    " << ma   << '\n';
+        cout << setw(50) << "INFO: Coverage mean:       " << mean << '\n';
+        cout << setw(50) << "INFO: Coverage median:     " << Q2   << '\n';
+        cout << "INFO: -------------------------------------------\n";
       } // END  if (global_verbosity >= 1) // Write some final coverage stats:
     } // END if (!global_consensus_sequence_output_filename.empty())
   } // for (int i=0; i<seqnames_of_references.size(); ++i) // Final output loop:
@@ -1547,11 +1551,15 @@ int main(int argc, char **argv)
   // This makes things a bit confusing here:
 
   read_and_init_parameters(argc, argv);
-  print_parameters(cout, "");
+  if (global_verbosity >= 1)
+  {
+    print_parameters(cout, "INFO: ");
+    cout << "INFO: Progress:\n";
+  }
 
   bool combined_input_sequence_file_created = false;
-  CSequences3 seqs_DNA_reads_target(CSequence_Mol::dna);
-  CSequences3 seqs_prot_query(CSequence_Mol::protein);
+  CSequences3 seqs_DNA_reads_target(SeqType_dna);
+  CSequences3 seqs_prot_query(SeqType_protein);
 
   //  CSequences2 seqs_DNA_result(CSequence_Mol::dna);
   // unsigned skipped_double_vulgar=0, skipped_G=0, skipped_F=0, skipped_relative_score=0, skipped_no_G=0;
@@ -1578,14 +1586,17 @@ int main(int argc, char **argv)
     }
 
     string tmpstring = global_tmp_directory + "/Concatenated_exonerate_input_XXXXXX";
-    cerr << "Filename:" << tmpstring << endl;
-
+    if (global_verbosity >= 1000)
+      cerr << "DEBUG(1000): Temporary filename position 0: " << tmpstring << endl;
 
     char  *tmpstr = new char [global_tmp_directory.length() + 40];
     strcpy (tmpstr, tmpstring.c_str());
-    cerr << "Filename:" << tmpstr << endl;
+    if (global_verbosity >= 1000)
+      cerr << "DEBUG(1000): Temporary filename position 1: " << tmpstr << endl;
     int   fd = mkstemp(tmpstr);
-    cerr << "Filename:" << tmpstr << endl;
+
+    if (global_verbosity >= 1)
+      cerr << "PROGRESS: Temporary fasta file has been created: " << tmpstr << endl;
 
     FILE  *ofp = fdopen(fd, "w");
     combined_input_sequence_file_created = true;
@@ -1625,7 +1636,7 @@ int main(int argc, char **argv)
   CFile query_prot_file;
 
   if (global_verbosity >= 3)
-    cout << "Reading fasta file with protein reference sequence: " << global_input_prot_reference_sequence << endl;
+    cout << "PROGRESS: Reading fasta file with protein reference sequence: " << global_input_prot_reference_sequence << endl;
 
   query_prot_file.ffopen(global_input_prot_reference_sequence.c_str());
   if (query_prot_file.fail())
@@ -1663,7 +1674,8 @@ int main(int argc, char **argv)
   vector<faststring>   seqnames_of_references;
   seqs_prot_query.get_short_sequence_names(seqnames_of_references);
 
-  cout << "DEBUG: Lenth seqnames_of_references " << seqnames_of_references.size() << endl;
+  if (global_verbosity >= 100)
+    cout << "DEBUG(100): Lenth of seqnames_of_references vector: " << seqnames_of_references.size() << endl;
 
   map<faststring, size_t> map_query_prot_lengths;
   for (std::vector<faststring>::size_type i=0; i < seqnames_of_references.size(); ++i)
@@ -1676,7 +1688,7 @@ int main(int argc, char **argv)
 
   if (global_verbosity >= 100)
   {
-    cerr << "Sequence names found in reference file:\n";
+    cerr << "DEBUG(100): Sequence names found in reference file:\n";
     for (std::vector<faststring>::size_type i=0; i<seqnames_of_references.size(); ++i)
       cerr << seqnames_of_references[i] << endl;
   }
@@ -1699,7 +1711,7 @@ int main(int argc, char **argv)
   vector<CSequences3*> result_alignments_for_references;
   for (std::vector<faststring>::size_type ref_ind=0; ref_ind < seqnames_of_references.size(); ++ref_ind)
   {
-    result_alignments_for_references.push_back(new CSequences3(CSequence_Mol::dna) );
+    result_alignments_for_references.push_back(new CSequences3(SeqType_dna) );
   }
 
   //**************************
@@ -1720,7 +1732,7 @@ int main(int argc, char **argv)
 
   if (global_verbosity >= 3)
   {
-    cout << "Reading input DNA sequences from fasta file: " << global_input_dna_fasta_file << endl;
+    cout << "PROGRESS: Reading input DNA sequences from fasta file: " << global_input_dna_fasta_file << endl;
   }
 
   query_file.ffopen(global_input_dna_fasta_file.c_str());
@@ -1739,7 +1751,8 @@ int main(int argc, char **argv)
   if (error < 0)
   {
     cerr << "ERROR: Exiting: An error occurred while reading the input file: " << global_input_dna_fasta_file
-    << " Double check the input type or the file you specified."    << endl;
+         << ". Double check that the input file exists and is in fasta format. "
+            "Note that fastq files have to be specified with the -q option not with the -d option.\n";
     good_bye_and_exit(-3);
   }
 
@@ -1759,7 +1772,7 @@ int main(int argc, char **argv)
 
   if (global_verbosity >= 3)
   {
-    cout << "Finished reading input DNA sequences. Found this number of input DNA sequences: "
+    cout << "PROGRESS: Finished reading input DNA sequences. Found this number of input DNA sequences: "
          << seqs_DNA_reads_target.GetTaxaNum()  << endl;
   }
 
@@ -1771,7 +1784,7 @@ int main(int argc, char **argv)
     seqs_DNA_reads_target.memory_usage(mem1, mem2, mem3, mean2);
 
     {
-      cout << "Estimated memory usage of sequences in memory: " << endl
+      cout << "DEBUG(2000): Estimated memory usage of sequences in memory: " << endl
       << "class CSequences2:           " << mem1 << endl
       << "seqData vector content:      " << mem2 << endl
       << "seqData vector content: (GB) " << (float)mem2/1024/1024/1024 << endl
@@ -1786,7 +1799,7 @@ int main(int argc, char **argv)
 
   if (global_verbosity >= 3)
   {
-    cout << "Finished reading fasta file with protein reference sequence." << endl;
+    cout << "PROGRESS: Finished reading fasta file with protein reference sequence." << endl;
   }
 
   //**************************
@@ -1797,7 +1810,7 @@ int main(int argc, char **argv)
   exonerate_parameters ep(global_exonerate_binary.c_str(),
                           global_input_prot_reference_sequence.c_str(),
                           global_input_dna_fasta_file.c_str(),
-                          global_vulgar_file_folder.c_str(),
+                          global_vulgar_directory.c_str(),
                           global_genetic_code_number,
                           global_frameshift_penalty,
                           10, // Maximum number of trials
@@ -1850,20 +1863,20 @@ int main(int argc, char **argv)
   if (global_verbosity >= 3)
   {
     size_t s1 = vec_of_hits_as_in_file.size();
-    cout << "Number of exonerate hits (including multiple hits) to the amino "
+    cout << "PROGRESS: Number of exonerate hits (including multiple hits) to the amino "
     "acid sequence\nfound in input file:, without skipped hits: " << s1 << endl;
     //    cout << "Number of hits that have been filtered (gaps, frameshift, relative score): " << count_not_considered << endl;
     size_t s2 = map_of_vulgar_hits_targets_as_keys.size();
     // TODO: Check what is the difference to s1. The text has been changed. I think s1 used to be without double hits?
     //       If s1 == s2, we can remove one line or indicate.
-    cout << "Number of successful exonerate alignments with multiple hits: " << s2 << endl;
+    cout << "PROGRESS: Number of successful exonerate alignments with multiple hits: " << s2 << endl;
     //    cout << "Number of queryID, targetID hit pairs: " << size_query_target_set(map_of_vulgar_hits_targets_as_keys);
   }
 
   // Debug output:
   if (global_verbosity >= 100)
   {
-    cout << "DEBUG OUTPUT: Exonerate results.\n";
+    cout << "DEBUG (100): Exonerate results.\n";
 
     vector<vulgar *>::iterator it;
     it = vec_of_hits_as_in_file.begin();
@@ -1885,7 +1898,7 @@ int main(int argc, char **argv)
 
     for (unsigned i=0; i<names.size(); ++i)
     {
-      cout << "Name " << i << " " << names[i] << endl;
+      cout << "DEBUG(100): Name " << i << " " << names[i] << endl;
     }
   }
 
@@ -1912,9 +1925,9 @@ align_sequences_using_vulgar(seqnames_of_references,
   if (num_WARNINGS > 0)
   {
     if (global_verbosity >= 1)
-      cout << "There have been " << num_WARNINGS << " warnings or notes. See above for details." << endl;
+      cout << "INFO: There have been " << num_WARNINGS << " warnings or notes. See above for details." << endl;
     else
-      cout << "Due to the verbosity parameter set to 0, you missed "
+      cout << "INFO: Due to the verbosity parameter set to 0, you missed "
       << num_WARNINGS
       << " warnings or notes. Increase the verbosity if you want to see the details and run again." << endl;
   }

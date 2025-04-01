@@ -6,10 +6,10 @@
 #include <vector>
 //#include "faststring3.h"
 
-#define DEBUG
+// #define DEBUG
 
 #define PROGNAME "MitoGeneExtractor"
-#define VERSION  "1.9.6"
+#define VERSION  "1.9.6beta2"
 
 #define macromax(x,y) ((x)<(y) ? (y) : (x))
 #define macromin(x,y) ((x)<(y) ? (x) : (y))
@@ -40,7 +40,7 @@ extern std::string                 global_tmp_directory;
 extern unsigned                    global_verbosity;
 extern unsigned                    global_num_bp_beyond_exonerate_alignment_if_at_start_or_end;
 extern std::string                 global_exonerate_binary;
-extern std::string                 global_vulgar_file_folder;
+extern std::string                 global_vulgar_directory;
 extern std::string                 global_alignment_output_file;
 extern float                       global_consensus_threshold;
 extern std::string                 global_consensus_sequence_output_filename;

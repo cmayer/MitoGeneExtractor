@@ -6,11 +6,11 @@ bool test_exonerate_binary(const faststring &binary_path)
    faststring cmd = binary_path + " -v";
    int err = system(cmd.c_str());
 
-   if (global_verbosity>10)
+   if (global_verbosity>=10)
    {
-      cout << "Testing existance of exonerate  binary by calling: " << cmd << "\n";
+      cout << "DEGUB(10): Testing existance of exonerate  binary by calling: " << cmd << "\n";
       if (WEXITSTATUS(err) == 1)
-         cout << "Binary exists, so we proceed.";
+         cout << "DEGUB(10): Binary exists, so we proceed.";
    }
    return WEXITSTATUS(err) == 1;
 }
@@ -135,7 +135,7 @@ int run_and_parse_exonerate_for_single_input_file(
     if ( !fileExists(vulgar_output_file_name.c_str()))
     {
       if (global_verbosity >= 1 && count_appempts_to_read_vulgar_file == 1)
-        cout << "No vulgar file with the specified name has been found. So the binary \""
+        cout << "INFO: No vulgar file with the specified name has been found. So the binary \""
         << global_exonerate_binary << "\" will be used to create the vulgar file." << endl;
 
       int num_trials = run_exonerate(ep);
@@ -148,12 +148,12 @@ int run_and_parse_exonerate_for_single_input_file(
       }
 
       if (global_verbosity >= 1)
-        cout << "Exonerate result file was created successfully after N = " << num_trials << " trials." << endl;
+        cout << "INFO: Exonerate result file was created successfully after N = " << num_trials << " trials." << endl;
     }
     else
     {
       if (global_verbosity >= 1)
-        cout << "The specified vulgar file exists, so it does not have to be recomputed with exonerate." << endl;
+        cout << "INFO: The specified vulgar file exists, so it does not have to be recomputed with exonerate." << endl;
     }
 
     //*****************************
@@ -238,7 +238,7 @@ int run_and_parse_exonerate_for_single_input_file(
           if (global_relative_score_threshold && vul.relative_score() < global_relative_score_threshold)
           {
             cerr << "NOTE: Exonerate hit skipped due to low relative alignment score: " << vul.relative_score()
-            << " " << vul.get_targetID() << endl;
+            << " for sequence ID " << vul.get_targetID() << endl;
             vector_of_hit_stats_for_query_reference[refnumber].increment_skipped_relative_score();
             vector_of_hit_stats_for_query_reference[refnumber].increment_not_considered();
             //      ++skipped_relative_score;
@@ -291,7 +291,7 @@ int run_and_parse_exonerate_for_single_input_file(
   // Debug output:
   if (/* DISABLES CODE */ (0))
   {
-    cout << "Finished reading exonerate results. Please hit any key to continue.\n" << endl;
+    cout << "DEBUG: Finished reading exonerate results. Please hit any key to continue.\n" << endl;
     cin.get();
   }
 

@@ -17,6 +17,7 @@
 #include <list>
 #include <cfloat>
 #include <climits>
+#include <cassert>
 
 #define _MINBUFFER_CAPACITY 4
 
@@ -1374,6 +1375,7 @@ public:
     }
   }
 
+  // In place toupper
   void toupper()
   {
     unsigned char *b = (unsigned char *) begin();
@@ -1389,6 +1391,7 @@ public:
     }
   }
 
+  // In place toupper. Returns *this. Thus, can be chained.
   faststring& ToUpper()
   {
     toupper();
@@ -1725,7 +1728,26 @@ public:
     }
     _len -= i-j;
   }
-  
+
+  void remove_with_vector(const std::vector<bool>& mask)
+  {
+    if (size() != mask.size())
+    {
+      std::cerr << "Internal error: In faststring::remove_with_vector. String and vector have different lengths.\n";
+    }
+
+    faststring::size_type writeIndex = 0;
+    for (faststring::size_type readIndex = 0; readIndex < size(); ++readIndex)
+    {
+      if (mask[readIndex])
+      {
+        _buf[writeIndex++] = _buf[readIndex]; // Overwrite unwanted characters
+      }
+    }
+    shorten(writeIndex); // Trim the string to its new size
+  }
+
+
   /*
    size_type count_symbol(char sym) const
    {
@@ -3851,9 +3873,34 @@ inline bool less_than_pointer_to_faststring(const faststring *a, const faststrin
   return *a < *b;
 }
 
+inline bool less_than_faststring_using_pointer(const faststring *a, const faststring *b)
+{
+  return *a < *b;
+}
+
+inline bool less_than_faststring(const faststring &a, const faststring &b)
+{
+  return a < b;
+}
+
+inline bool less_than_faststring_case_insensitive(const faststring &a, const faststring &b)
+{
+  size_t len = std::min(a.length(), b.length());
+
+  for (size_t i = 0; i < len; ++i)
+  {
+    char c1 = char_toupper(a[i]);
+    char c2 = char_toupper(b[i]);
+    if (c1 != c2)
+      return c1 < c2;
+  }
+  // If all compared characters are equal, compare lengths
+  return a.length() < b.length();
+}
+
 // string without digits has unsigned UINT_MAX as value.
 // without digit if it does not happen to contain UINT_MAX is string.
-inline bool less_than_first_unsigned_in_faststring(const faststring &a, const faststring &b)
+inline bool less_than_faststring_first_unsigned(const faststring &a, const faststring &b)
 {
   unsigned numa = a.extractFirstUnsigned();
   unsigned numb = b.extractFirstUnsigned();
