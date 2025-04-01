@@ -19,6 +19,12 @@
 //
 // 10.2022:    Migrated to faststring3.h (64bit unsigned), CFile2_3.h,
 
+// 12.2024:    Removed all stats. Sequence stats code has been refactored and
+//             and cleaned. Stats are only needed in very few applications
+//             and should only be computed in these applications.
+//
+// 03.2025:    remove_gap_ambig_only_sites     
+
 
 // TODO: Data type handling is/was not optimal.
 //       In function set_taxon_and_sequence the auto_detect_type always superset the
@@ -49,34 +55,60 @@
 #include "CFile/CFile2_3.h"
 #include <cstdio>
 #include "basic-DNA-RNA-AA-routines.h"
-#include "fast-realloc-vector.h"
 #include <cstring>
 #include <cstdio>
 
 class CSequence_Mol;
-bool less_than_sequence_name_fullname_pointer(CSequence_Mol *, CSequence_Mol *);
-bool less_than_sequence_name_first_unsigned_in_fullname_pointer(CSequence_Mol *, CSequence_Mol *);
+
+bool less_than_full_seqname_using_pointer(CSequence_Mol *, CSequence_Mol *);
+bool less_than_full_seqname_caseinsensitive_using_pointer(CSequence_Mol *, CSequence_Mol *);
+bool less_than_full_seqname_first_unsigned_using_pointer(CSequence_Mol *, CSequence_Mol *);
+
+enum SequenceDataTypesEnum {
+   SeqType_dna,      /* DNA sequences (states A, C, G, T) */
+   SeqType_rna,      /* RNA sequences (states A, C, G, U) */
+   SeqType_protein,      /* amino acid sequences         */
+   SeqType_molecular,          /* AA, dna, or rna              */
+   SeqType_unknown,
+   SeqType_auto_detect_type,
+   SeqType_mixed
+};
+
+
+struct basic_sequence_stats
+{
+   SequenceDataTypesEnum datatype;
+
+   size_t  number_of_AAs;           // Does not include Xs and ?
+   size_t  number_of_DNARNA_bases;  // Includes Us but not ambigs
+   size_t  number_of_DNARNA_amgibs; // Includes Ns and '?'
+   size_t  number_of_gaps;
+   size_t  number_of_stars;
+   size_t  number_of_Us;
+
+   size_t  number_of_Xs;
+   size_t  number_of_Ns;
+   size_t  number_raw_original_length; //no spaces, but gaps and stars
+
+   void reset()
+   {
+     number_of_AAs = 0;
+     number_of_DNARNA_bases = 0;
+     number_of_DNARNA_amgibs = 0;
+     number_of_gaps = 0;
+     number_of_stars = 0;
+     number_of_Us = 0;
+     number_of_Xs = 0;
+     number_of_Ns = 0;
+     number_raw_original_length = 0;
+   }
+};
 
 
 
 class CSequence_Mol
 {
 public:
-  enum DataTypesEnum {
-    standard = 1,	// characters with arbitrarily-assigned,
-                    // discrete states, such as discrete
-                    // morphological data
-
-    dna,		/* DNA sequences (states A, C, G, T) */
-    rna,		/* RNA sequences (states A, C, G, U) */
-    //    nucleotide,		/* nucleotide sequences */
-    protein,		/* amino acid sequences         */
-    molecular,          /* AA, dna, or rna              */
-    unknown,
-    auto_detect_type,
-    mixed
-  };
-
   enum processing_flag {
     convert_toupper                  = 1,
     convert_ambig2N                  = 2,
@@ -92,27 +124,14 @@ private:
   faststring      short_name;  // without description after first space
   faststring      description; // description only
 
-  faststring      data;
-  DataTypesEnum   type;
-  char            general_ambig;
-
-  bool            numbers_of_residues_computed;
+  faststring              data;
+  SequenceDataTypesEnum   type;
+  char                    general_ambig;
 
   // General rule: If we convert symbols, we count the new symbols we have in memory,
   // not the symbols in the file. This is more consistent.
   //
-  faststring::size_type  number_of_AAs;           // Does not include Xs and ?
-  faststring::size_type  number_of_DNARNA_bases;  // Includes Us but not ambigs
-  faststring::size_type  number_of_DNARNA_amgibs; // Includes Ns and '?'
-  faststring::size_type  number_of_Us;
-  faststring::size_type  number_of_gaps;
-  faststring::size_type  number_of_stars;
-  faststring::size_type  number_of_questionmarks;
-
-  faststring::size_type  number_of_Xs;
-  faststring::size_type  number_of_Ns;
-  faststring::size_type  number_raw_original_length; //no spaces, but gaps and stars
-  faststring::size_type  number_CG;                  // CG content in case of DNA/RNA
+  //  basic_sequence_stats basic_seq_stats;
 
   bool bitcode_recoded;
 
@@ -159,47 +178,35 @@ private:
   // TODO: Keep case of ambig.
   void change_ambigs()
   {
-    if (type == dna || type == rna)
+    if (type == SeqType_dna || type == SeqType_rna)
     {
       char *it     = data.begin();
       char *it_end = data.end();
 
-      number_of_questionmarks  = 0;
-      number_of_Ns             = 0;
-
       while (it != it_end)
       {
         char c       = *it;
-
-        if ( c == 'N' || c == 'n' || c == '?' )
+        if (c == 'n' || c == '?')
         {
           // Convert all ambiguity codes to N's
-          *it = general_ambig;
+          *it = 'N';
         }
         ++it;
       }
     }
-    else if (type == protein)
+    else if (type == SeqType_protein)
     {
       char *it     = data.begin();
       char *it_end = data.end();
-      
-      number_of_questionmarks  = 0;
-      number_of_Xs             = 0;
 
       while (it != it_end)
       {
         char c       = *it;
 
-        if ( c == 'X' || c == 'x' || c == '?' )
+        if (c == 'x' || c == '?' )
         {
-          // Convert all ambiguity codes to N's
-          ++number_of_DNARNA_amgibs;
-          *it = general_ambig;
-          if (general_ambig == '?' )
-            ++number_of_questionmarks;
-          else
-            ++number_of_Xs;
+          // Convert all ambiguity codes to X's
+          *it = 'X';
         }
         ++it;
       }
@@ -221,51 +228,41 @@ private:
 
     if (rs)
     {}
-
-
   }
 
   void gaps_to_ambig_this_sequence()
   {
     char     *it     = data.begin();
     char     *it_end = data.end();
-    faststring::size_type count=0;
 
-    while (it != it_end)
-    {
-      if (*it =='-')
-      {
-        *it = general_ambig;
-        ++count;
-      }
-      ++it;
-    }
+     if (type == SeqType_dna || type == SeqType_rna)
+     {
+        while (it != it_end)
+        {
+           if (*it =='-')
+           {
+              *it = 'N';
+           }
+           ++it;
+        }
+     }
+     else if (type == SeqType_protein)
+     {
+        while (it != it_end)
+        {
+           if (*it =='-')
+           {
+              *it = 'X';
+           }
+           ++it;
+        }
+     }
 
-    // If residues are computed, we have to change the numbers counts for gaps and ambigs:
-    if (numbers_of_residues_computed)
-    {
-      number_of_gaps -= count; // Should indeed be 0 now.
-
-      if (general_ambig == 'N' || general_ambig == 'n')
-      {
-        number_of_Ns += count;
-      }
-      else if (general_ambig == 'X' || general_ambig == 'x')
-      {
-        number_of_Xs += count;
-      }
-      else if (general_ambig == '?')
-      {
-        number_of_questionmarks += count;
-      }
-      if (type == dna || type == rna)
-      {
-        ++number_of_DNARNA_amgibs += count;
-      }
-    }
   }
 
-
+  // This function was introduced since it was not clear whether
+  // other code should also be added. Since this never happend, the function
+  // could be removed and the line could be pasted to where needed?
   void addCharToData(char c)
   {
     data.push_back(c);
@@ -273,6 +270,7 @@ private:
 
 
   // Reads line of data and removes only white spaces
+  // TODO: Make this more efficient by readling a whole line at once.
   void getRawLine(CFile& infile)
   {
     char            c;
@@ -289,7 +287,10 @@ private:
       c = infile.getchar();
     }
   }
-  
+
+  // Reads line of data and removes only white spaces
+  // Reports back the number of non space symbols read.
+  // TODO: Make this more efficient by readling a whole line at once.
   void getRawLine(CFile& infile, faststring::size_type &num)
   {
     char               c;
@@ -334,73 +335,32 @@ private:
   // Called e.g. indirectly from Phobos
   void getLineOfDNA_toupper_ambig2N_removegaps (CFile& infile, faststring::size_type &pos_in_seq)
   {
-    char                 c;
-    faststring::size_type   pos = pos_in_seq;
-    char                 local_general_ambig = toupper(general_ambig);
+    char                  c;
+    faststring::size_type pos = pos_in_seq; // Lokal variable used to speed up the code.
+    char                  local_general_ambig = toupper_char(general_ambig);
 
     //     ++pos;
     c = infile.getchar();
     while (!infile.fail() && c != '\n')
     {
-      // if the char is a space or something we do not count, we subtract this further below
-      ++number_raw_original_length;
-
       c = toupper_char(c);
 
-      if ( c == 'A' || c == 'T' || c == 'G' || c == 'C')
+      if (is_DNA_base(c) || c == 'U')
       {
         addCharToData(c);
-        ++number_of_DNARNA_bases;
       }
-      else if ( c == 'U')
-      {
-        addCharToData('U');
-        ++number_of_DNARNA_bases;
-        ++number_of_Us;
-      }
-      else if ( c == 'R' || c == 'Y' || c == 'K' || c == 'M' ||
-               c == 'S' || c == 'W' || c == 'B' || c == 'D' ||
-               c == 'H' || c == 'V' )
+      else if ( is_DNA_or_DNA_ambig(c) )
       {
         // Convert all ambiguity codes to N's
         addCharToData(local_general_ambig);
-        ++number_of_DNARNA_amgibs; // includes N and '?'
-        if (local_general_ambig == 'N')
-          ++number_of_Ns;
-        else
-          ++number_of_questionmarks;
       }
-      else if (c == '?' || c == 'N')
+      else if ( isspace(c) || c=='-')
       {
-        addCharToData(local_general_ambig);
-        if (local_general_ambig == 'N')
-          ++number_of_Ns;
-        else
-          ++number_of_questionmarks;
-        ++number_of_DNARNA_amgibs;
-      }
-      else if ( isspace(c) )
-      {
-        --number_raw_original_length; // we do not count spaces
-      }                              // Spaces are removed
-      else if ( c=='-' || c=='*')     // What do we do with gaps and *s - Here they are removed,
-                                      // but their positions are stored in order to able to reconstruct the original coordinates.
-      {                               // I don't really know why we tolerate '*' ? They occur in protein sequences as stop codons.
-        if (c=='-')
-        {
-          ++number_of_gaps;
-        }
-        else
-        {
-          ++number_of_stars;
-        }
-        //	c = infile.getchar();
-        //	++pos;
+         // Skip spaces, gaps
       }
       else // Not a valid symbol
       {
         // we do not count this -just to be consistent before we bail out
-        --number_raw_original_length;
         infile.clear(CFile::__fail_reason1 | CFile::__fail_flag | infile.rdstate()); // Set both fail flags. || 20.7.2021: add rdstate, so that eof flags is not overwritten
         break;
       }
@@ -409,8 +369,6 @@ private:
     }
     pos_in_seq = pos;
   }
-
-  //////*********************** Continue here:
 
 
   void getLineOfDNA_generic (CFile& infile, faststring::size_type &pos_in_seq,
@@ -424,12 +382,11 @@ private:
     bool                convert_toupper_bool  = (pflag & convert_toupper);   // handled
     bool                convert_ambig2N_bool  = (pflag & convert_ambig2N);   // handled
     bool                removegaps_bool       = (pflag & removegaps);        // handled
-    bool                removestars_bool      = (pflag & removestars);       // handled
+//    bool                removestars_bool      = (pflag & removestars);       // not relevant for DNA. Stars in the sequence are an error.
     bool                gaps_to_ambig_bool    = (pflag & gaps_to_ambig);     // handled
 
     // In the routine calling this function it should be checked, that the general_ambig
     // character is upper or lower case, as specified.
-
 
     if (convert_toupper_bool)
       local_general_ambig = toupper(general_ambig);
@@ -439,108 +396,52 @@ private:
     c_upper = toupper_char(c);
     while (!infile.fail() && c != '\n')
     {
-      // if the char is a space or something we do not count, we subtract this further below
-      ++number_raw_original_length;
-
-      if (c >= 'a' && c <= 'z' && convert_toupper_bool)
+      if (convert_toupper_bool)
         c = c_upper;
 
-      if ( c_upper == 'A' || c_upper == 'T' || c_upper == 'G' || c_upper == 'C')
+      if ( is_DNA_base(c) || c_upper == 'U')
       {
         addCharToData(c);
       }
-      else if ( c_upper == 'U')
+      else if (is_DNA_or_DNA_ambig(c))
       {
-        addCharToData(c);
-        ++number_of_DNARNA_bases;
-        ++number_of_Us;
-      }
-      else if (c_upper == 'R' || c_upper == 'Y' || c_upper == 'K' || c_upper == 'M' ||
-               c_upper == 'S' || c_upper == 'W' || c_upper == 'B' || c_upper == 'D' ||
-               c_upper == 'H' || c_upper == 'V' )
-      {
-        if (convert_ambig2N_bool)
+        if (c == '?')
+        {
+           addCharToData('N');
+        }
+        else if (convert_ambig2N_bool)
         {
           // Convert all ambiguity codes to N's, but we preserve the case. 'w' -> 'n' and 'W' -> 'N' etc.
-          if (c <='Z') // i.e. lower case.
-            addCharToData(  tolower(local_general_ambig)  );
+          if (c <='Z') // i.e. upper case.
+            addCharToData('N');
           else
-            addCharToData(  toupper_char(local_general_ambig)  );
-
-          ++number_of_DNARNA_amgibs; // includes N and '?'
-          if (local_general_ambig == '?' )
-            ++number_of_questionmarks;
-          else
-            ++number_of_Ns;
+            addCharToData('n');
         }
         else
         {
-          addCharToData(c);
-        }
-      }
-      else if (c == '?' || c_upper == 'N') // c is either: 'N', 'n', '?'
-      {
-        ++number_of_DNARNA_amgibs;
-        if (local_general_ambig == '?')
-        {
-          addCharToData(local_general_ambig);
-          ++number_of_questionmarks;
-        }
-        else //	c is '?' or 'N' or 'n' and general_ambig is 'N' or 'n' --- add 'N' or 'n'
-        {
-          ++number_of_Ns;
-          if (c == '?')  // convert to general ambig with proper case:
-          {
-            addCharToData(local_general_ambig); // Append general_ambig with appropriate case.
-          }
-          else // c is 'N' or 'n', general_ambig is 'N' or 'n'
-          {
-            addCharToData(c); // Append N or n and preserve case !!! to be consistent with the flags.
-          }
-          // Note: In case of: convert to upper, we have already converted c to upper.
+           addCharToData(c);
         }
       }
       else if ( isspace(c) )
       {
-        --number_raw_original_length; // we do not count spaces
-      }                              // Spaces are removed
-      else if ( c=='-' || c=='*')     // What do we do with gaps and *s - Here they are removed,
-                                      // but their positions are stored in order to able to reconstruct the original coordinates.
-      {                               // I don't really know why we tolerate '*' ? They occur in protein sequences as stop codons.
-        if (c=='-')
+      }                           // Spaces are removed
+      else if ( c=='-')
+      {
+        if ( gaps_to_ambig_bool)
         {
-          if ( gaps_to_ambig_bool)
-          {
-            //	    std::cerr << "Gaps to ambig " << std::endl;
-            addCharToData(local_general_ambig);
-            if (general_ambig == '?' )
-              ++number_of_questionmarks;
-            else
-              ++number_of_Ns;
-            ++number_of_DNARNA_amgibs;
-          }
-          else if ( removegaps_bool )
-          {
-            //	    std::cerr << "Remove gaps " << std::endl;
-            ++number_of_gaps;
-          }
-          else
-          {
-            addCharToData('-');
-            ++number_of_gaps;
-          }
+          addCharToData(local_general_ambig);
         }
-        else if (removestars_bool)
+        else if ( removegaps_bool )
         {
-           ++number_of_stars;
         }
-        //	c = infile.getchar();
-        //	++pos;
+        else
+        {
+          addCharToData('-');
+        }
       }
       else
       {
         // we do not count this -just to be consistent before we bail out
-        --number_raw_original_length;
         infile.clear(CFile::__fail_reason1 | CFile::__fail_flag | infile.rdstate()); // Set both fail flags. || 20.7.2021: add rdstate, so that eof flags is not overwritten
         break;
       }
@@ -560,12 +461,11 @@ private:
     char                local_general_ambig = general_ambig;
 
     faststring::size_type  pos = pos_in_seq;
-    //    signed char     delta;
-    bool                convert_toupper_bool  = (pflag & convert_toupper);   // handled
-                                                                             //    bool            convert_ambig2N_bool  = (pflag & convert_ambig2N);   // handled
-    bool                removegaps_bool       = (pflag & removegaps);        // handled
-                                                                             //    bool            removestars_bool      = (pflag & removestars);       // handled
-    bool                gaps_to_ambig_bool    = (pflag & gaps_to_ambig);// handled
+    bool    convert_toupper_bool  = (pflag & convert_toupper);   // handled
+                                                                 //    bool            convert_ambig2N_bool  = (pflag & convert_ambig2N);   // handled
+    bool    removegaps_bool       = (pflag & removegaps);        // handled
+                                                                 //    bool            removestars_bool      = (pflag & removestars);       // handled
+    bool    gaps_to_ambig_bool    = (pflag & gaps_to_ambig);// handled
 
     // In the routine calling this function it should be checked, that the general_ambig
     // character is upper or lower case, as specified.
@@ -578,22 +478,13 @@ private:
     c_upper = toupper_char(c);
     while (!infile.fail() && c != '\n')
     {
-      // if the char is a space or something we do not count, we subtract this further below
-      ++number_raw_original_length;
-
-      if (c >= 'a' && c <= 'z' && convert_toupper_bool)
+      if (convert_toupper_bool)
         c = c_upper;
 
       if (c == '?' || c_upper == 'X' )
       {
-        if (local_general_ambig == '?')
+        // c is '?' or 'X' or 'x' and general_ambig is 'X' or 'x'
         {
-          addCharToData(local_general_ambig);
-          ++number_of_questionmarks;
-        }
-        else // c is '?' or 'X' or 'x' and general_ambig is 'X' or 'x'
-        {
-          ++number_of_Xs;
           if (c == '?')
           {
             addCharToData(local_general_ambig);
@@ -607,40 +498,31 @@ private:
         if ( is_aa_or_aa_ambig_extended(c) ) // includes other ambigs (!'X', !'x' ,!'?')
         {
           addCharToData(c);
-          ++number_of_AAs; // Counts ambigs but not X or ?
         }
         else if ( isspace(c) )
         {
-          --number_raw_original_length; // we do not count spaces
         }                              // Spaces are removed
-        else if ( c=='-' || c=='*')     // What do we do with gaps and *s - Here they are removed,
-                                        // but their positions are stored in order to able to reconstruct the original coordinates.
-        {                               // I don't really know why we tolerate '*' ? They occur in protein sequences as stop codons.
+        else if ( c=='-' || c=='*')    // Lets handle gaps and *s
+        {
 
           if (c=='-')
           {
             if ( gaps_to_ambig_bool)
             {
               addCharToData(local_general_ambig);
-              if (local_general_ambig == '?' )
-                ++number_of_questionmarks;
-              else
-                ++number_of_Xs;
             }
             else if ( removegaps_bool )
             {
-              ++number_of_gaps;
             }
             else
             {
               addCharToData('-');
-              ++number_of_gaps;
             }
           }
 
           /* 	else if (removestars_bool) */
           /* 	{ */
-          /* 	  ++number_of_stars; */
+          /* 	  ++basic_seq_stats.number_of_stars; */
           /* 	} */
           //	c = infile.getchar();
           //	++pos;
@@ -648,7 +530,6 @@ private:
         else // Unknown symbol
         {
           // we do not count this -just to be consistent before we bail out
-          --number_raw_original_length;
           infile.clear(CFile::__fail_reason2 | CFile::__fail_flag  | infile.rdstate()); // Set both fail flags. || 20.7.2021: add rdstate, so that eof flags is not overwritten
           break;
         }
@@ -664,56 +545,35 @@ private:
   {
     char                c;
     faststring::size_type  pos = pos_in_seq;
-    char                local_general_ambig = toupper_char(general_ambig);
 
     //     ++pos;
     c = infile.getchar();
     while (!infile.fail() && c != '\n')
     {
-      // if the char is a space or something we do not count, we subtract this further below
-      ++number_raw_original_length;
       c = toupper_char(c);
 
-      if ( c == 'A' || c == 'T' || c == 'G' || c == 'C')
+      if ( is_DNA_base(c) || c == 'U')
       {
         addCharToData(c);
-        ++number_of_DNARNA_bases;
       }
-      else if ( c == 'N' || c == '?')
+      else if (c == '?')
       {
-        addCharToData(local_general_ambig);
-        if (general_ambig == 'N')
-          ++number_of_Ns;
-        else
-          ++number_of_questionmarks;
-        ++number_of_DNARNA_amgibs; // includes N and '?'
+        addCharToData('N');
       }
-      else if ( c == 'U')
+      else if (is_DNA_or_DNA_ambig(c))
       {
-        addCharToData('U');
-        ++number_of_DNARNA_bases;
-        ++number_of_Us;
-      }
-      else if ( c == 'R' || c == 'Y' || c == 'K' || c == 'M' ||
-               c == 'S' || c == 'W' || c == 'B' || c == 'D' ||
-               c == 'H' || c == 'V' )
-      {
-        addCharToData(c);
-        ++number_of_DNARNA_amgibs;
+         addCharToData(c);
       }
       else if ( isspace(c) )          // Spaces are removed
       {
-        --number_raw_original_length; // we do not count spaces
       }
       else if ( c=='-' || c=='*')     // What do we do with gaps and *s - Here they are removed, but their positions are stored in order to reconstruct the original coordinates.
       {                               // I don't really know why we tolerate '*' ?
         if (c=='-')
         {
-          ++number_of_gaps;
         }
         else
         {
-          ++number_of_stars;
         }
         //	c = infile.getchar();
         //	++pos;
@@ -723,7 +583,6 @@ private:
         // Something went wrong -> the last reading event from the file failed
         // -> we set the fail flag, this informs the user that something went wrong
         // We do not count this - just to be consistent before we bail out
-        --number_raw_original_length;
         infile.clear(CFile::__fail_reason1 | CFile::__fail_flag  | infile.rdstate()); // Set both fail flags. || 20.7.2021: add rdstate, so that eof flags is not overwritten
         break;
       }
@@ -745,43 +604,30 @@ private:
 
     while (!infile.fail() && c != '\n')
     {
-      // if the char is a space or something we do not count, we subtract this further below
-      ++number_raw_original_length;
-      c = toupper_char(c);
+       c = toupper_char(c);
 
       if (c == 'X' || c=='?')
       {
         addCharToData(local_general_ambig);
-        if (local_general_ambig == 'X' )
-          ++number_of_Xs;
-        else
-          ++number_of_questionmarks;
       }
       else if (is_aa_or_aa_ambig_extended(c) )
       {
         addCharToData(c);
-        ++number_of_AAs;
       }
       else if ( isspace(c) )// Spaces are removed
       {
-        --number_raw_original_length; // we do not count spaces
       }
       else if ( c=='-' || c=='*')     // What do we do with gaps and *s - Here they are removed, but their positions are stored in order to reconstruct the original coordinates.
-      {                                        // I don't really know why we tolerate '*' ?
+      {
         if (c=='-')
         {
-          ++number_of_gaps;
         }
         else
         {
-           ++number_of_stars;
         }
       }
       else
       {
-        // we do not count this -just to be consistent before we bail out
-        --number_raw_original_length;
-
         infile.clear(CFile::__fail_reason2 | CFile::__fail_flag  | infile.rdstate()); // Set both fail flags. || 20.7.2021: add rdstate, so that eof flags is not overwritten
         break;
       }
@@ -798,61 +644,25 @@ private:
     c = infile.getchar();
     while (!infile.fail() && c != '\n')
     {
-      // if the char is a space or something we do not count, we subtract this further below
-      ++number_raw_original_length;
+       c = toupper_char(c);
 
-      c = toupper_char(c);
-
-      if ( c == 'A' || c == 'T' || c == 'G' || c == 'C')
+      if ( is_DNA_base(c))
       {
         addCharToData(c);
-        ++number_of_DNARNA_bases;
       }
-      else if ( c == 'N' || c == '?')
+      else if ( c == 'N' || c == '?' || is_DNA_or_DNA_ambig(c) || c=='-')
       {
         addCharToData(general_ambig);
-        if (general_ambig == 'N')
-          ++number_of_Ns;
-        else
-          ++number_of_questionmarks;
-        ++number_of_DNARNA_amgibs;
       }
       else if ( c == 'U')
       {
         addCharToData('U');
-        ++number_of_DNARNA_bases;
-        ++number_of_Us;
-      }
-      else if ( c == 'R' || c == 'Y' || c == 'K' || c == 'M' ||
-               c == 'S' || c == 'W' || c == 'B' || c == 'D' ||
-               c == 'H' || c == 'V' )
-      {
-        // Convert all ambiguity codes to N's
-        addCharToData(general_ambig);
-        if (general_ambig == 'N')
-          ++number_of_Ns;
-        else
-          ++number_of_questionmarks;
-        ++number_of_DNARNA_amgibs;
-      }
-      else if (c=='-')
-      {
-        addCharToData(general_ambig);
-        if (general_ambig == 'N')
-          ++number_of_Ns;
-        else
-          ++number_of_questionmarks;
-        ++number_of_DNARNA_amgibs;
       }
       else if ( isspace(c) )   // We remove white spaces.
       {                        // I don't really know why we tolerate '*' ?
-        --number_raw_original_length; // we do not count spaces
       }
       else
       {
-        // we do not count this -just to be consistent before we bail out
-        --number_raw_original_length;
-
         infile.clear(CFile::__fail_reason1 | CFile::__fail_flag  | infile.rdstate()); // Set both fail flags. || 20.7.2021: add rdstate, so that eof flags is not overwritten
         return;
       }
@@ -862,24 +672,22 @@ private:
 
 
 public:
-  CSequence_Mol(DataTypesEnum dt, char p_general_ambig = '\0'):
+  CSequence_Mol(SequenceDataTypesEnum dt, char p_general_ambig = '\0'):
   type(dt), general_ambig(p_general_ambig),
-  numbers_of_residues_computed(false), bitcode_recoded(false)
+  bitcode_recoded(false)
   {
     data.reserve(160);
     if (p_general_ambig == '\0') // Use the typical ambig character
     {
-      if      (dt == dna)     general_ambig = 'N';
-      else if (dt == protein) general_ambig = 'X';
-      else                    general_ambig = '?';
+      if      (dt == SeqType_dna)     general_ambig = 'N';
+      else if (dt == SeqType_protein) general_ambig = 'X';
     }
-    reset_numbers_of_residues();
   }
 
 
-  CSequence_Mol(DataTypesEnum dt, faststring name, faststring::size_type len, char p_general_ambig = '\0'):
+  CSequence_Mol(SequenceDataTypesEnum dt, faststring name, faststring::size_type len, char p_general_ambig = '\0'):
   full_name(name),type(dt), general_ambig(p_general_ambig),
-  numbers_of_residues_computed(false), bitcode_recoded(false)
+  bitcode_recoded(false)
   {
     if (len < faststring::npos)
       ++len;
@@ -889,11 +697,9 @@ public:
 
     if (p_general_ambig == '\0') // Use the typical ambig character
     {
-      if      (dt == dna)     general_ambig = 'N';
-      else if (dt == protein) general_ambig = 'X';
-      else                    general_ambig = '?';
+      if      (dt == SeqType_dna)     general_ambig = 'N';
+      else if (dt == SeqType_protein) general_ambig = 'X';
     }
-    reset_numbers_of_residues();
   }
 
 
@@ -908,7 +714,6 @@ public:
   description(s.description),
   type(s.type),
   general_ambig(s.general_ambig),
-  numbers_of_residues_computed(false),
   bitcode_recoded(s.bitcode_recoded)
   {
     if (pos1 == 0 && pos2 >= s.length() )
@@ -925,7 +730,7 @@ public:
     }
   }
   
-  unsigned long memory_usage()
+  size_t memory_usage()
   {
     //    std::cerr << "memory this:        " << sizeof(*this) << std::endl;
     //    std::cerr << "full name capacity: " << full_name.capacity() << std::endl;
@@ -934,7 +739,7 @@ public:
     return (unsigned long) (sizeof(*this) + full_name.capacity() + data.capacity());
   }
 
-  unsigned long memory_usage_detailed(unsigned long &mem_this, unsigned long &mem_name, unsigned long &mem_data)
+  size_t memory_usage_detailed(unsigned long &mem_this, unsigned long &mem_name, unsigned long &mem_data)
   {
     mem_this = sizeof(*this);
     mem_name = full_name.capacity();
@@ -945,7 +750,7 @@ public:
   // Should only be applied to dna sequences
   void convert_ambig2N_this_sequence()
   {
-    if ( !(type == dna || type == rna) )
+    if ( !(type == SeqType_dna || type == SeqType_rna) )
       return;
 
     // This is a DNA sequence:
@@ -956,19 +761,11 @@ public:
     while (it != it_end)
     {
       char c       = *it;
-      char c_upper = toupper_char(c);
 
-      if ( c_upper == 'R' || c_upper == 'Y' || c_upper == 'K' || c_upper == 'M' ||
-          c_upper == 'S' || c_upper == 'W' || c_upper == 'B' || c_upper == 'D' ||
-          c_upper == 'H' || c_upper == 'V' )
+      if (is_DNA_ambig(c))
       {
         // Convert all ambiguity codes to N's
         *it = general_ambig;
-        if (general_ambig == 'N' || general_ambig == 'n')
-          ++number_of_Ns;
-        else
-          ++number_of_questionmarks;
-        ++number_of_DNARNA_amgibs;
       }
       ++it;
     }
@@ -993,7 +790,7 @@ public:
     char *it     = data.begin();
     char *it_end = data.end();
 
-    if (type == dna || type == rna)
+    if (type == SeqType_dna || type == SeqType_rna)
     {
       while (it != it_end)
       {
@@ -1003,7 +800,7 @@ public:
       }
       return true;
     }
-    else if (type == protein)
+    else if (type == SeqType_protein)
     {
       while (it != it_end)
       {
@@ -1026,7 +823,7 @@ public:
     char *it     = data.begin();
     char *it_end = data.end();
 
-    if (type == dna || type == rna)
+    if (type == SeqType_dna || type == SeqType_rna)
     {
       //      std::cout << "Datatype is dna or rna" << std::endl;
 
@@ -1043,7 +840,7 @@ public:
       //            std::cout << "Returning true." << std::endl;
       return true;
     }
-    else if (type == protein)
+    else if (type == SeqType_protein)
     {
       while (it != it_end)
       {
@@ -1066,30 +863,25 @@ public:
     return data.size();
   }
 
-  DataTypesEnum get_datatype()
+  SequenceDataTypesEnum get_datatype()
   {
     return type;
   }
 
   faststring type_as_string()
   {
-    if (type == dna)
+    if (type == SeqType_dna)
       return faststring("DNA");
-    else if (type == rna)
+    else if (type == SeqType_rna)
       return faststring("RNA");
-    else if (type == protein)
+    else if (type == SeqType_protein)
       return faststring("Protein");
     return "Unknown";
   }
 
   void set_taxon_and_sequence(const faststring& taxonName,
-                              const faststring& seqData, DataTypesEnum datatype=auto_detect_type)
+                              const faststring& seqData, SequenceDataTypesEnum datatype=SeqType_auto_detect_type)
   {
-    if (numbers_of_residues_computed)
-    {
-      reset_numbers_of_residues();
-    }
-    
     full_name = taxonName;
     
     find_shortname_and_description();
@@ -1110,15 +902,15 @@ public:
     
     // Should not be necessary:
     //    compute_numbers_of_residues();
-    if (datatype == auto_detect_type || datatype == unknown)
+    if (datatype == SeqType_auto_detect_type || datatype == SeqType_unknown)
     {
-      auto_detect_datatype();
+//      auto_detect_datatype();
       //    std::cerr << "Data type: " << type_as_string()  << std::endl;
       //    std::cerr << "General ambig: " << general_ambig  << std::endl;
-      if (auto_detect_ambig_detect_conflict() )
-      {
-        std::cerr << "Conflict in ambiguity code used in imported sequence." << std::endl;
-      }
+//      if (auto_detect_ambig_detect_conflict() )
+//      {
+//        std::cerr << "Conflict in ambiguity code used in imported sequence." << std::endl;
+//      }
     }
     //    std::cerr << "General ambig: " << general_ambig  << std::endl;
     
@@ -1136,13 +928,11 @@ public:
   {
     size_t pos;
 
-    type = dna;
-    general_ambig = '?';
+    type = SeqType_dna;
+    general_ambig = 'N';
 
     data.clear();
     data.reserve(len+1);
-
-    reset_numbers_of_residues();
 
     full_name = taxonName;
     find_shortname_and_description();
@@ -1177,8 +967,6 @@ public:
       else
         data.push_back('T');
     }
-
-    compute_numbers_of_residues();
 
     //    std::cerr << "Data type: " << type_as_string()  << std::endl;
     //    std::cerr << "General ambig: " << general_ambig  << std::endl;
@@ -1218,30 +1006,33 @@ public:
     return bitcode_recoded;
   }
 
+/*
   faststring::size_type full_original_length() const
   {
     // Remember that some numbers include others:
-    // number_of_DNARNA_amgibs includes 'Ns' and '?', so they are not added again:
-    // number_of_DNARNA_bases  includes 'Us'
-    if (type == dna || type == rna )
+    // basic_seq_stats.number_of_DNARNA_amgibs includes 'Ns' and '?', so they are not added again:
+    // basic_seq_stats.number_of_DNARNA_bases  includes 'Us'
+    if (type == SeqType_dna || type == SeqType_rna )
     {
-      return number_of_DNARNA_bases + number_of_DNARNA_amgibs + number_of_gaps + number_of_stars;
+      return basic_seq_stats.number_of_DNARNA_bases + basic_seq_stats.number_of_DNARNA_amgibs + basic_seq_stats.number_of_gaps + basic_seq_stats.number_of_stars;
     }
-    else if (type == protein)
+    else if (type == SeqType_protein)
     {
-      return number_of_AAs + number_of_gaps + number_of_stars
-      + number_of_Xs + number_of_questionmarks;
+      return basic_seq_stats.number_of_AAs + basic_seq_stats.number_of_gaps + basic_seq_stats.number_of_stars+ basic_seq_stats.number_of_Xs;
     }
     else
     {
-      return number_raw_original_length;
+      return basic_seq_stats.number_raw_original_length;
     }
   }
+*/
 
+   /*
   faststring::size_type length_DNARNA_bases() const
   {
-    return number_of_DNARNA_bases;
+    return basic_seq_stats.number_of_DNARNA_bases;
   }
+*/
 
   const char* getName() // const
   {
@@ -1311,26 +1102,7 @@ public:
     return data.rend();
   }
 
-  void reset_numbers_of_residues()
-  {
-    numbers_of_residues_computed = false;
-
-    number_of_AAs = 0;
-    number_of_DNARNA_bases = 0;
-    number_of_DNARNA_amgibs = 0;
-    number_of_Us = 0;
-    number_of_gaps = 0;
-    number_of_stars = 0;
-    number_of_questionmarks = 0;
-    number_of_Xs = 0;
-    number_of_Ns = 0;
-
-    number_CG = 0;
-
-    number_of_questionmarks = 0;
-    number_raw_original_length = 0;
-  }
-
+/*
   void compute_numbers_of_residues()
   {
     const char *it=data.begin(), *it_end=data.end();
@@ -1349,45 +1121,33 @@ public:
 
       if (is_DNA_or_RNA_base(c))
       {
-        if (c == 'c' || c == 'C' || c == 'G' || c == 'g' )
-          ++number_CG;
-        ++number_of_DNARNA_bases;
+         ++basic_seq_stats.number_of_DNARNA_bases;
       }
 
       if (is_DNA_ambig(c))
-        ++number_of_DNARNA_amgibs;
+        ++basic_seq_stats.number_of_DNARNA_amgibs;
 
       if (is_aa_or_aa_ambig_extended(c) && c!= 'X' && c != '?')
-        ++number_of_AAs;
+        ++basic_seq_stats.number_of_AAs;
 
       if (c == 'N')
       {
-        ++number_of_Ns;
+        ++basic_seq_stats.number_of_Ns;
       }
 
       if (c == '-')
       {
-        ++number_of_gaps;
+        ++basic_seq_stats.number_of_gaps;
       }
 
       if (c == '*')
       {
-        ++number_of_stars;
+        ++basic_seq_stats.number_of_stars;
       }
 
       if (c == 'X')
       {
-        ++number_of_Xs;
-      }
-
-      if (c == '?')
-      {
-        ++number_of_questionmarks;
-      }
-
-      if (c == 'U' || c == 'u')
-      {
-        ++number_of_Us;
+        ++basic_seq_stats.number_of_Xs;
       }
 
       numbers_of_residues_computed = true;
@@ -1399,23 +1159,23 @@ public:
     if (!numbers_of_residues_computed)
       compute_numbers_of_residues();
 
-    faststring::size_type aa_stuff     = number_of_AAs + number_of_Xs + number_of_stars;
-    faststring::size_type DNARNA_stuff = number_of_DNARNA_bases + number_of_DNARNA_amgibs;
+    faststring::size_type aa_stuff     = basic_seq_stats.number_of_AAs + basic_seq_stats.number_of_Xs + basic_seq_stats.number_of_stars;
+    faststring::size_type DNARNA_stuff = basic_seq_stats.number_of_DNARNA_bases + basic_seq_stats.number_of_DNARNA_amgibs;
 
     // reine DNA: 100 > 0.25 * 100 - false - DNA
 
     if (aa_stuff < 0.1*data.length() && DNARNA_stuff < 0.1*data.length() )
-      type = unknown;
+      type = SeqType_unknown;
     else if (aa_stuff > 0.25*DNARNA_stuff)
     {
-      if (number_of_Us > 0)
-        type = rna;
-      else
-        type = dna;
+//      if (number_of_Us > 0)
+//        type = rna;
+//      else
+        type = SeqType_dna;
     }
     else
     {
-      type = protein;
+      type = SeqType_protein;
     }
   }
 
@@ -1424,30 +1184,18 @@ public:
     if (!numbers_of_residues_computed)
       compute_numbers_of_residues();
 
-    if (type == protein)
+    if (type == SeqType_protein)
       general_ambig = 'X';
     else general_ambig = 'N';
 
-    if (number_of_questionmarks > 0)
-      general_ambig = '?';
-
     // Determine conlict:
-    return (   number_of_questionmarks > 0   &&
-            (number_of_Xs > 0 || ((type==dna || type==rna) && number_of_Ns > 0)));
+    return ((basic_seq_stats.number_of_Xs > 0 || ((type==SeqType_dna || type==SeqType_rna) && basic_seq_stats.number_of_Ns > 0)));
   }
-
+*/
 
   void assignSeq(faststring &newseq, processing_flag flag=(processing_flag)0)
   {
     data.assign(newseq);
-    numbers_of_residues_computed = false;
-
-    if (flag & compute_numbers_of_residues_flag)
-      compute_numbers_of_residues();
-    else
-    {
-      reset_numbers_of_residues();
-    }
   }
 
   void maskSeq(const char *start, const char *end, char c)
@@ -1485,11 +1233,11 @@ public:
   {
     if (alphabet == NULL)
     {
-      if (type == dna)
+      if (type == SeqType_dna || SeqType_rna)
       {
         alphabet = DNARNA_symbols;
       }
-      else if (type == protein)
+      else if (type == SeqType_protein)
       {
         alphabet = aa_symbols;
       }
@@ -1539,6 +1287,11 @@ public:
   void degap()
   {
     data.remove_symbol('-');
+  }
+
+  void remove_with_vector(const std::vector<bool>& mask)
+  {
+    data.remove_with_vector(mask);
   }
 
   void append_sequence(CSequence_Mol &s)
@@ -1638,7 +1391,7 @@ public:
   void writeSequence_fasta(FILE *of,
                            faststring::size_type    pos_beg, // 0 based
                            faststring::size_type    pos_end, // 0 based, stop index
-                           const char            *s_name,
+                           const char               *s_name,
                            faststring::size_type    char_per_line=50) const
   {
     const char *beg = data.begin() + pos_beg;
@@ -2183,10 +1936,8 @@ public:
     full_name = "";
     data.clear();
 
-    reset_numbers_of_residues();
-
     c = infile.getchar();
-    while (!infile.fail() && isspace(c)) // Ignore spaces
+    while (!infile.fail() && isspace(c)) // Ignore leading spaces
       c = infile.getchar();
     while (!infile.fail() && c == ';')   // Ignore lines starting with ;
     {
@@ -2225,8 +1976,6 @@ public:
 
     full_name = "";
     data.clear();
-
-    reset_numbers_of_residues();
 
     c = infile.getchar();
     while (!infile.fail() && isspace(c)) // Ignore spaces
@@ -2271,8 +2020,6 @@ public:
     full_name = "";
     data.clear();
 
-    reset_numbers_of_residues();
-
     c = infile.getchar();
     while (!infile.fail() && isspace(c))
       c = infile.getchar();
@@ -2313,8 +2060,6 @@ public:
 
   void fill_range_with(faststring::size_type pos1, faststring::size_type pos2, char c)
   {
-    numbers_of_residues_computed  = false;
-
     char     *it1     = data.begin() + pos1;
     char     *it2     = data.begin() + pos2;
     char     *it_end  = data.end();
@@ -2329,9 +2074,9 @@ public:
     }
   }
 
+  //////*********************** Continue here:
 
   // Called from Phobos:
-  // TODO: I think we should not remove stars any more.
   // Stars should only be tolerated in protein sequences.
   void readFastaSequence_toupper_ambig2N_removegaps(CFile& infile)
   {
@@ -2340,8 +2085,6 @@ public:
 
     full_name = "";
     data.clear();
-
-    reset_numbers_of_residues();
 
     c = infile.getchar();
     while (!infile.fail() && isspace(c))
@@ -2370,7 +2113,7 @@ public:
     while ( !infile.fail() && c != '>' )
     {
       //      std::cerr << data.capacity() << std::endl;
-      if (type == dna)
+      if (type == SeqType_dna)
         getLineOfDNA_toupper_ambig2N_removegaps(infile, pos);
       else
         std::cout << "Not implemented. Use the readFastaSequence_toupper_removegaps(CFile& infile) function instead."
@@ -2391,8 +2134,6 @@ public:
     full_name = "";
     data.clear();
 
-    reset_numbers_of_residues();
-
     c = infile.getchar();
     while (!infile.fail() && isspace(c))
       c = infile.getchar();
@@ -2420,7 +2161,7 @@ public:
     while ( !infile.fail() && c != '>' )
     {
       //      std::cerr << data.capacity() << std::endl;
-      if (type == dna)
+      if (type == SeqType_dna)
         getLineOfDNA_toupper_removegaps(infile, pos);
       else
         getLineOfProtein_toupper_removegaps(infile, pos);
@@ -2449,8 +2190,6 @@ public:
     full_name = "";
     data.clear();
 
-    reset_numbers_of_residues();
-
     c = infile.getchar();
     while (!infile.fail() && isspace(c))
       c = infile.getchar();
@@ -2478,7 +2217,7 @@ public:
     while ( !infile.fail() && c != '>' )
     {
       //      std::cerr << data.capacity() << std::endl;
-      if (type == dna)
+      if (type == SeqType_dna)
         getLineOfDNA_toupper_ambig2N_gaps2ambig(infile);
       else
         std::cout << "Not implemented." << std::endl;
@@ -2491,7 +2230,7 @@ public:
 
   void recode_sequence_to_bitcode()
   {
-    if (type == dna)
+    if (type == SeqType_dna)
     {
       char *it     = data.begin();
       char *it_end = data.end();
@@ -2503,13 +2242,13 @@ public:
       }
       bitcode_recoded = true;
     }
-    else if (type == protein)
+    else if (type == SeqType_protein)
     {}
   }
 
   void backrecode_bitcode_sequence()
   {
-    if (type == dna)
+    if (type == SeqType_dna)
     {
       char *it     = data.begin();
       char *it_end = data.end();
@@ -2521,7 +2260,7 @@ public:
       }
       bitcode_recoded = false;
     }
-    else if (type == protein)
+    else if (type == SeqType_protein)
     {}
   }
 
@@ -2579,8 +2318,6 @@ public:
     full_name = "";
     data.clear();
 
-    reset_numbers_of_residues();
-
     c = infile.getchar();
     while (!infile.fail() && isspace(c))
       c = infile.getchar();
@@ -2608,11 +2345,11 @@ public:
     while ( !infile.fail() && c != '>' )
     {
       //      std::cerr << data.capacity() << std::endl;
-      if (type == dna)
+      if (type == SeqType_dna)
         getLineOfDNA_generic(infile, pos, pflag);
-      else if (type == protein)
+      else if (type == SeqType_protein)
         getLineOfProtein_generic(infile, pos, pflag);
-      else if (type == molecular)
+      else if (type == SeqType_molecular)
       {
         getRawLine(infile);
         if (convert_toupper_bool)
@@ -2625,12 +2362,12 @@ public:
         if (removegaps_bool || removestars_bool)
           remove_gaps_stars_this_sequence(removegaps_bool, removestars_bool);
       }
-      else if (type == auto_detect_type)
+      else if (type == SeqType_auto_detect_type)
       {
         getRawLine(infile);
         if (convert_toupper_bool)
           toupper_this_sequence();
-        auto_detect_datatype();
+//        auto_detect_datatype();
 
         if (convert_ambig2N_bool)
           convert_ambig2N_this_sequence();
@@ -2646,62 +2383,12 @@ public:
         infile.clear(infile.rdstate() & ~CFile::__fail_flag); // Unset the fail flag.
   }
 
-  faststring::size_type get_number_of_Ns()
+/*
+  const basic_sequence_stats &get_basic_seq_stats()
   {
-    if (!numbers_of_residues_computed)
-      compute_numbers_of_residues();
-    return number_of_Ns;
+    return basic_seq_stats;
   }
-
-  faststring::size_type get_number_of_gaps()
-  {
-    if (!numbers_of_residues_computed)
-      compute_numbers_of_residues();
-    return number_of_gaps;
-  }
-
-  double get_gap_proportion()
-  {
-    if (!numbers_of_residues_computed)
-      compute_numbers_of_residues();
-    return (double)number_of_gaps/data.length();
-  }
-
-  faststring::size_type get_number_raw_original_length()
-  {
-    if (!numbers_of_residues_computed)
-      compute_numbers_of_residues();
-    return number_raw_original_length;
-  }
-
-  faststring::size_type get_number_of_DNARNA_bases()
-  {
-    if (!numbers_of_residues_computed)
-      compute_numbers_of_residues();
-    return number_of_DNARNA_bases;
-  }
-
-  faststring::size_type get_number_of_AAs()
-  {
-    if (!numbers_of_residues_computed)
-      compute_numbers_of_residues();
-    return number_of_AAs;
-  }
-
-  faststring::size_type get_number_of_DNARNA_ambigs()
-  {
-    return number_of_DNARNA_amgibs;
-  }
-
-  double get_CG_content()
-  {
-    //    std::cerr << "number_CG " << number_CG   << std::endl;
-    //    std::cerr << "number_of_DNARNA_bases " << number_of_DNARNA_bases   << std::endl;
-    //    //    std::cerr << "number_of_DNARNA_amgibs  " << number_of_DNARNA_amgibs << std::endl;
-
-    return ((double) number_CG)/(number_of_DNARNA_bases);
-  }
-
+*/
 
   bool range_contains_gaps_or_Ns(faststring::size_type pos1, faststring::size_type pos2)
   {
@@ -2750,7 +2437,7 @@ public:
     return count;
   }
 
-  void determine_indices_for_pattern(faststring pattern, std::vector<unsigned> &indices)
+  void determine_indices_for_pattern(faststring pattern, std::vector<size_t> &indices)
   {
     size_t pos = data.find(pattern, 0);
     while(pos != faststring::npos)
@@ -2810,14 +2497,24 @@ public:
   /*   } */
 
 
-  friend bool less_than_sequence_name_fullname_pointer(CSequence_Mol *ps1, CSequence_Mol *ps2)
+  //bool less_than_full_seqname_using_pointer(CSequence_Mol *, CSequence_Mol *);
+  //bool less_than_full_seqname_case_insensitive_using_pointer(CSequence_Mol *, CSequence_Mol *);
+  //bool 
+
+
+  friend bool less_than_full_seqname_using_pointer(CSequence_Mol *ps1, CSequence_Mol *ps2)
   {
     return ps1->full_name < ps2->full_name;
   }
 
-  friend bool less_than_sequence_name_first_unsigned_in_fullname_pointer(CSequence_Mol *ps1, CSequence_Mol *ps2)
+  friend bool less_than_full_seqname_caseinsensitive_using_pointer(CSequence_Mol *ps1, CSequence_Mol *ps2)
   {
-    return less_than_first_unsigned_in_faststring(ps1->full_name, ps2->full_name);
+    return less_than_faststring_case_insensitive(ps1->full_name, ps2->full_name);
+  }
+
+  friend bool less_than_full_seqname_first_unsigned_using_pointer(CSequence_Mol *ps1, CSequence_Mol *ps2)
+  {
+    return less_than_faststring_first_unsigned(ps1->full_name, ps2->full_name);
   }
 
 };

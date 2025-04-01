@@ -8,20 +8,20 @@ SRC    = MitoGeneExtractor.cpp \
 	 global-types-and-parameters_MitoGeneExtractor.cpp \
          exonerate_wrapper_and_parser.cpp
 
-HEADER = CDnaString3.h CSequence_Mol3.h CSequences3.h CSplit2.h Ctriple.h \
+HEADER = CDnaString3.h CSequence_Mol3.1.h CSequences3.1.h CSplit2.h Ctriple.h \
          basic-DNA-RNA-AA-routines.h fast-realloc-vector.h faststring3.h \
          global-types-and-parameters_MitoGeneExtractor.h primefactors.h statistic_functions.h \
-         exonerate_wrapper_and_parser.hpp fastq.h
+         exonerate_wrapper_and_parser.hpp Cfastq-sequences3.1.h
 
 
-all:    MitoGeneExtractor-v1.9.6
+all:    MitoGeneExtractor-v1.9.6beta2
 
 
-MitoGeneExtractor-v1.9.6: $(SRC) $(HEADER)
-	g++ $(CFLAGS) $(INCL) $(SRC) -o MitoGeneExtractor-v1.9.6
+MitoGeneExtractor-v1.9.6beta2: $(SRC) $(HEADER)
+	g++ $(CFLAGS) $(INCL) $(SRC) -o MitoGeneExtractor-v1.9.6beta2
 
 
 clean:
-	rm -f MitoGeneExtractor-v1.9.6
+	rm -f MitoGeneExtractor-v1.9.6beta2
 
 
