@@ -248,7 +248,7 @@ if preprocessing_mode == "merge":
             err=os.path.join(output_dir, "trimmed_data/{sample}_fastp.err")
         threads: lambda wildcards: get_cluster_threads("fastp_pe_merge", 8)
         resources:
-            mem_mb=lambda wildcards: get_cluster_mem("fastp_pe_merge", "8G")
+            mem=lambda wildcards: get_cluster_mem("fastp_pe_merge", "8G")
         retries: 2
         shell:
             """
@@ -284,7 +284,7 @@ if preprocessing_mode == "merge":
             os.path.join(output_dir, "logs/clean_headers/{sample}.log")
         threads: lambda wildcards: get_cluster_threads("clean_headers_merge", 2)
         resources:
-            mem_mb=lambda wildcards: get_cluster_mem("clean_headers_merge", "2G")
+            mem_=lambda wildcards: get_cluster_mem("clean_headers_merge", "2G")
         retries: 2
         shell:
             """
@@ -335,7 +335,7 @@ if preprocessing_mode == "merge":
             combined_log=os.path.join(output_dir, "logs/clean_headers.log")
         threads: lambda wildcards: get_cluster_threads("aggregate_clean_headers_logs", 1)
         resources:
-            mem_mb=lambda wildcards: get_cluster_mem("aggregate_clean_headers_logs", "2G")
+            mem=lambda wildcards: get_cluster_mem("aggregate_clean_headers_logs", "2G")
         shell:
             """
             # Create header for aggregated log file
@@ -368,7 +368,7 @@ else: # concat mode
             err=os.path.join(output_dir, "trimmed_data/{sample}_fastp.err")
         threads: lambda wildcards: get_cluster_threads("fastp_pe_concat", 4)  
         resources:
-            mem_mb=lambda wildcards: get_cluster_mem("fastp_pe_concat", "4G")  
+            mem=lambda wildcards: get_cluster_mem("fastp_pe_concat", "4G")  
         retries: 3
         shell:
             """
@@ -488,7 +488,7 @@ else: # concat mode
             os.path.join(output_dir, "logs/concat/{sample}.log")
         threads: lambda wildcards: get_cluster_threads("fastq_concat", 2)
         resources:
-            mem_mb=lambda wildcards: get_cluster_mem("fastq_concat", "4G")
+            mem=lambda wildcards: get_cluster_mem("fastq_concat", "4G")
         retries: 2
         shell:
             """
@@ -509,7 +509,7 @@ else: # concat mode
             combined_log=os.path.join(output_dir, "logs/concat_reads.log")
         threads: lambda wildcards: get_cluster_threads("aggregate_concat_logs", 2)
         resources:
-            mem_mb=lambda wildcards: get_cluster_mem("aggregate_concat_logs", "1G")
+            mem=lambda wildcards: get_cluster_mem("aggregate_concat_logs", "1G")
         shell:
             """
             echo "===============================================" > {output.combined_log}
@@ -534,7 +534,7 @@ else: # concat mode
             os.path.join(output_dir, "logs/trim_galore/{sample}.log")
         threads: lambda wildcards: get_cluster_threads("quality_trim", 2)
         resources:
-            mem_mb=lambda wildcards: get_cluster_mem("quality_trim", "4G")
+            mem=lambda wildcards: get_cluster_mem("quality_trim", "4G")
         retries: 3
         shell:
             """
@@ -564,7 +564,7 @@ else: # concat mode
             combined_log=os.path.join(output_dir, "logs/trim_galore.log")
         threads: lambda wildcards: get_cluster_threads("aggregate_trim_galore_logs", 2)
         resources:
-            mem_mb=lambda wildcards: get_cluster_mem("aggregate_trim_galore_logs", "1G")
+            mem=lambda wildcards: get_cluster_mem("aggregate_trim_galore_logs", "1G")
         shell:
             """
             echo "===============================================" > {output.combined_log}
@@ -601,8 +601,8 @@ rule MitoGeneExtractor:
     threads: lambda wildcards: get_cluster_threads("MitoGeneExtractor", 4)
     resources:
         # Blend dynamic allocation with retry logic
-        mem_mb=lambda wildcards, attempt: min(get_cluster_mem("MitoGeneExtractor", "12G") * attempt, get_cluster_mem("MitoGeneExtractor", "48G"))
-    retries: 2
+        mem=lambda wildcards, attempt: min(get_cluster_mem("MitoGeneExtractor", "12G") * attempt, get_cluster_mem("MitoGeneExtractor", "48G"))
+    retries: 3
     shell:
         """
         # Logging header
@@ -610,7 +610,7 @@ rule MitoGeneExtractor:
         echo "Started: $(date)" >> {log.out}
         echo "Node: $(hostname)" >> {log.out}
         echo "Attempt: ${{SLURM_RESTART_COUNT:-0}}" >> {log.out}
-        echo "Memory allocated: {resources.mem_mb}MB" >> {log.out}
+        echo "Memory allocated: {resources.mem}MB" >> {log.out}
         echo "===================" >> {log.out}
 
         # Log input files sizes
@@ -672,7 +672,7 @@ rule rename_and_combine_cons:
         preprocessing_mode=preprocessing_mode,
     threads: lambda wildcards: get_cluster_threads("rename_and_combine_cons", 2)
     resources:
-        mem_mb=lambda wildcards: get_cluster_mem("rename_and_combine_cons", "4G")
+        mem=lambda wildcards: get_cluster_mem("rename_and_combine_cons", "4G")
     shell:
         """ 
         # Run script
@@ -698,7 +698,7 @@ rule create_alignment_log:
         alignment_log=os.path.join(output_dir, "logs/alignment_files.log")
     threads: lambda wildcards: get_cluster_threads("create_alignment_log", 2)
     resources:
-        mem_mb=lambda wildcards: get_cluster_mem("create_alignment_log", "2G")
+        mem=lambda wildcards: get_cluster_mem("create_alignment_log", "2G")
     run:
         alignment_files = input.alignment_files
 
@@ -735,7 +735,7 @@ rule fasta_cleaner:
         os.path.join(output_dir, "logs/fasta_cleaner.log")
     threads: lambda wildcards: get_cluster_threads("fasta_cleaner", workflow.cores)
     resources:
-        mem_mb=lambda wildcards: get_cluster_mem("fasta_cleaner", "12G")
+        mem=lambda wildcards: get_cluster_mem("fasta_cleaner", "12G")
     shell:
         """
         # Debug log
@@ -816,7 +816,7 @@ rule extract_stats_to_csv:
         log_dir=os.path.join(output_dir, "logs")
     threads: lambda wildcards: get_cluster_threads("extract_stats_to_csv", workflow.cores)
     resources:
-        mem_mb=lambda wildcards: get_cluster_mem("extract_stats_to_csv", "6G")
+        mem=lambda wildcards: get_cluster_mem("extract_stats_to_csv", "6G")
     shell:
         """
 		
@@ -838,7 +838,7 @@ rule cleanup_files:
         touch(os.path.join(output_dir, "cleanup_complete.txt"))
     threads: lambda wildcards: get_cluster_threads("cleanup_files", 1)
     resources:
-        mem_mb=lambda wildcards: get_cluster_mem("cleanup_files", "1G")
+        mem=lambda wildcards: get_cluster_mem("cleanup_files", "1G")
     run:
         # Initialise
         removed_files = 0
