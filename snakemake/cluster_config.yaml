@@ -1,0 +1,83 @@
+# cluster_config.yaml
+
+# Sets the default parameters to fallback on if not listed for a specific rule.
+__default__:
+    partition: day
+    output: slurm-%j-%x.out
+    error: slurm-%j-%x.err
+    mem: 4G
+    cpus-per-task: 2
+
+# Preprocessing mode == 'merge'
+fastp_pe_merge:
+    job-name: fastp_merge
+    mem: 8G
+    cpus-per-task: 4
+
+clean_headers_merge:
+    job-name: clean_headers
+    mem: 2G
+    cpus-per-task: 4
+
+aggregate_clean_headers_logs:
+    job-name: agg_clean_logs
+    mem: 2G
+    cpus-per-task: 2
+
+# Preprocessing mode == 'concat'
+fastp_pe_concat:
+    job-name: fastp_concat
+    mem: 8G
+    cpus-per-task: 4
+
+fastq_concat:
+    job-name: fastq_concat
+    mem: 8G
+    cpus-per-task: 4
+
+aggregate_concat_logs:
+    job-name: agg_concat_logs
+    mem: 2G
+    cpus-per-task: 2
+
+quality_trim:
+    job-name: quality_trim
+    mem: 4G
+    cpus-per-task: 4
+
+aggregate_trim_galore_logs:
+    job-name: agg_trim_logs
+    mem: 2G
+    cpus-per-task: 2
+
+# MGE 
+MitoGeneExtractor:
+    job-name: MGE
+    mem: 24G
+    cpus-per-task: 4
+
+# Postprocessing
+rename_fasta_headers:
+    job-name: rename_cons
+    mem: 2G
+    cpus-per-task: 4
+
+create_alignment_log:
+    job-name: gen_align_log
+    mem: 2G
+    cpus-per-task: 4
+
+fasta_cleaner:
+    job-name: fasta_cleaner
+    mem: 24G
+    cpus-per-task: 16
+
+extract_stats_to_csv:
+    job-name: mge_stats
+    mem: 8G
+    cpus-per-task: 4
+
+cleanup_files:
+    job-name: cleanup
+    mem: 4G
+    cpus-per-task: 2
