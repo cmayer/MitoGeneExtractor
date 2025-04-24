@@ -12,16 +12,18 @@ class fastq_record
   faststring second_identifier;
   faststring qual;
 
-  public:
+public:
   // Sets state of infile to __fail_reason1 if the content is not valid
   void read_next_record(CFile &infile, unsigned processing_flag)
   {
     infile.getline(identifier);
+    if (infile.eof())
+      return;
     while (identifier.empty() )
     {
       infile.getline(identifier);
       if (infile.eof())
-	return;
+        return;
     }
 
     infile.getline(seq);
@@ -55,7 +57,7 @@ class fastq_record
   void trim(unsigned beg, unsigned end)
   {
     // The indices are the indices of the good range.
-    // end is the length of the new sequence after trimming only the back end. 
+    // end is the length of the new sequence after trimming only the back end.
     seq.shorten(end);
     qual.shorten(end);
     // beg is the number of nucleotides trimmed from the front
@@ -129,9 +131,9 @@ class fastq_record
   void print(std::ostream &os)
   {
     os << identifier << '\n'
-       << seq  << '\n'
-       << second_identifier << '\n'
-       << qual << '\n';
+    << seq  << '\n'
+    << second_identifier << '\n'
+    << qual << '\n';
   }
 
 };
