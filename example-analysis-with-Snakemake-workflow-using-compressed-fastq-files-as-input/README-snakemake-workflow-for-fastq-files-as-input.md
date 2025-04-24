@@ -69,7 +69,7 @@ For upscaling of the data analysis, you can simultaneously run several jobs (exe
 An example command for Snakemake execution on a cluster based on a SGE queuing system would look like this:
 
 ```
-module load anaconda3/2020.02 #load anaconda package manager
+# The following assumes that you have installed a conda/mamba package manager and that you installed snakemake in a conda environment called snakemake.
 conda activate snakemake  #activate the snakemake environment
 module load sratoolkit/2.10.8 #load the sratoolkit in this environment. 
 ```
