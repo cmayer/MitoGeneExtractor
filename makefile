@@ -14,14 +14,14 @@ HEADER = CDnaString3.h CSequence_Mol3.1.h CSequences3.1.h CSplit2.h Ctriple.h \
          exonerate_wrapper_and_parser.hpp Cfastq-sequences3.1.h
 
 
-all:    MitoGeneExtractor-v1.9.6beta2
+all:    MitoGeneExtractor-v1.9.6beta3
 
 
-MitoGeneExtractor-v1.9.6beta2: $(SRC) $(HEADER)
-	g++ $(CFLAGS) $(INCL) $(SRC) -o MitoGeneExtractor-v1.9.6beta2
+MitoGeneExtractor-v1.9.6beta3: $(SRC) $(HEADER)
+	g++ $(CFLAGS) $(INCL) $(SRC) -o MitoGeneExtractor-v1.9.6beta3
 
 
 clean:
-	rm -f MitoGeneExtractor-v1.9.6beta2
+	rm -f MitoGeneExtractor-v1.9.6beta3
 
 
