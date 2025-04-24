@@ -93,24 +93,12 @@ void append_fastq_files_to_exonerate_input_file(FILE *ofp, vector<string> global
       good_bye_and_exit(-27);
     }
 
-    fastq_sequences fq_in_collection;
-    fq_in_collection.read_fastq(infile, global_input_dna_fastq_filenames[i].c_str(), 1);
+    CSequences3 *pseqs = new CSequences3(SeqType_dna);
+
+    fastq_sequences fq_dummy_collection;
+    load_fastq_save_in_CSequences(infile, global_input_dna_fastq_filenames[i].c_str(), pseqs, 1);
     infile.close();
 
-    /*
-     unsigned N_seq_in_fq_file = fq_in_collection.size();
-
-     if (global_verbosity >= 1)
-     {
-     cout << "Found " << N_seq_in_fq_file << " sequences in input file " << global_input_dna_fastq_filenames[i]
-     << endl;
-     }
-     */
-
-    //    fq_in.print(cout);
-
-    CSequences3 *pseqs = new CSequences3(SeqType_dna);
-    fq_in_collection.add_sequences_to_CSequences_object(pseqs);
     pseqs->ExportSequences(ofp, 'f', UINT_MAX);
     delete pseqs;
   }
@@ -588,19 +576,19 @@ map<faststring, short>  vulgar::queryID2Index;
 
 
 /* Currently not used:
-inline size_t size_keyset_multimap(multimap<faststring, vulgar *> &mm)
-{
-  set<pair<faststring, faststring> > s;
-  multimap<faststring, vulgar *>::iterator it = mm.begin();
-  while (it != mm.end())
-  {
-    vulgar &vul = *(it->second);
-    s.insert(make_pair(vul.queryID, vul.targetID));
-    ++it;
-  }
-  return s.size();
-}
-*/
+ inline size_t size_keyset_multimap(multimap<faststring, vulgar *> &mm)
+ {
+ set<pair<faststring, faststring> > s;
+ multimap<faststring, vulgar *>::iterator it = mm.begin();
+ while (it != mm.end())
+ {
+ vulgar &vul = *(it->second);
+ s.insert(make_pair(vul.queryID, vul.targetID));
+ ++it;
+ }
+ return s.size();
+ }
+ */
 
 inline size_t number_of_entries_targetID(multimap<faststring, vulgar *> &mm, faststring targetID)
 {
@@ -1246,8 +1234,8 @@ int align_sequences_using_vulgar(const vector<faststring>  &seqnames_of_referenc
           {
             // Best hits for this read with respect to the different references are stored in hits_to_use_for_target
             hits_assigned_to_references_for_this_target[ref_index_this_hit] = (vulgar *)-1; // We only add a hit if pointer is 0.
-                                                              //        ++skipped_double_vulgar;                        // -> So we block this reference.
-                                                              // We skip two hits, one that has already been entered and the one we just tried to enter.
+                                                                                            //        ++skipped_double_vulgar;                        // -> So we block this reference.
+                                                                                            // We skip two hits, one that has already been entered and the one we just tried to enter.
             vector_of_hit_stats_for_query_reference[ref_index_this_hit].increment_skipped_double_vulgar();
             vector_of_hit_stats_for_query_reference[ref_index_this_hit].increment_skipped_double_vulgar();  // This might be incremented too often for triple hits.
           }
@@ -1308,7 +1296,7 @@ int align_sequences_using_vulgar(const vector<faststring>  &seqnames_of_referenc
     CSequence_Mol* theSeq = seqs_DNA_reads_target.get_seq_by_name(target_key);
     for (std::vector<vulgar*>::size_type ref_loop_index=0; ref_loop_index<hits_assigned_to_references_for_this_target.size(); ++ref_loop_index)
     {
-//      vulgar     *pv         = hits_to_use_for_target[i];
+      //      vulgar     *pv         = hits_to_use_for_target[i];
       vulgar *p_vul       = hits_assigned_to_references_for_this_target[ref_loop_index];
 
       if (p_vul == NULL)
@@ -1467,12 +1455,12 @@ int align_sequences_using_vulgar(const vector<faststring>  &seqnames_of_referenc
       vector<unsigned> coverage_vec;
 
       result_alignments_for_references[ref_ind]->WeightedConsensusSequence_DNA(consensus_seq,
-                                                                         global_consensus_threshold,
-                                                                         global_minimum_seq_coverage_uppercase,
-                                                                         global_minimum_seq_coverage_total,
-                                                                         &coverage_vec, global_ends_width,
-                                                                         global_weight_fraction_in_ends,
-                                                                         'N');
+                                                                               global_consensus_threshold,
+                                                                               global_minimum_seq_coverage_uppercase,
+                                                                               global_minimum_seq_coverage_total,
+                                                                               &coverage_vec, global_ends_width,
+                                                                               global_weight_fraction_in_ends,
+                                                                               'N');
       // Default: Internal gaps are encoded as tilde.
       if (global_report_gap_mode == 0)
       {
@@ -1487,10 +1475,10 @@ int align_sequences_using_vulgar(const vector<faststring>  &seqnames_of_referenc
 
       if (global_verbosity >= 100)
       {
-         cerr << "DEBUG(100): Coverage values obtained while determining the consensus sequence:\n";
-         for (unsigned i=0; i<coverage_vec.size(); ++i)
-         cerr << i << "\t" << coverage_vec[i] << endl;
-         cerr << "=====================\n";
+        cerr << "DEBUG(100): Coverage values obtained while determining the consensus sequence:\n";
+        for (unsigned i=0; i<coverage_vec.size(); ++i)
+          cerr << i << "\t" << coverage_vec[i] << endl;
+        cerr << "=====================\n";
       }
 
 
@@ -1596,7 +1584,7 @@ int main(int argc, char **argv)
     int   fd = mkstemp(tmpstr);
 
     if (global_verbosity >= 1)
-      cerr << "PROGRESS: Temporary fasta file has been created: " << tmpstr << endl;
+      cerr << "PROGRESS: Temporary fasta file will be created: " << tmpstr << endl;
 
     FILE  *ofp = fdopen(fd, "w");
     combined_input_sequence_file_created = true;
@@ -1721,8 +1709,8 @@ int main(int argc, char **argv)
   vector<map<pair<unsigned, unsigned>, unsigned> > all_maps_of_gap_sites_in_queries(seqnames_of_references.size());
   vector<stats_for_given_target>                   vector_of_hit_stats_for_query_reference(seqnames_of_references.size() );
 
-// Loop over all input files:
-// global_input_dna_fasta_filenames && global_input_dna_fastq_filenames
+  // Loop over all input files:
+  // global_input_dna_fasta_filenames && global_input_dna_fastq_filenames
 
 
   //**************************
@@ -1751,8 +1739,8 @@ int main(int argc, char **argv)
   if (error < 0)
   {
     cerr << "ERROR: Exiting: An error occurred while reading the input file: " << global_input_dna_fasta_file
-         << ". Double check that the input file exists and is in fasta format. "
-            "Note that fastq files have to be specified with the -q option not with the -d option.\n";
+    << ". Double check that the input file exists and is in fasta format. "
+    "Note that fastq files have to be specified with the -q option not with the -d option.\n";
     good_bye_and_exit(-3);
   }
 
@@ -1773,7 +1761,7 @@ int main(int argc, char **argv)
   if (global_verbosity >= 3)
   {
     cout << "PROGRESS: Finished reading input DNA sequences. Found this number of input DNA sequences: "
-         << seqs_DNA_reads_target.GetTaxaNum()  << endl;
+    << seqs_DNA_reads_target.GetTaxaNum()  << endl;
   }
 
   // Print memory usage details:
@@ -1827,31 +1815,31 @@ int main(int argc, char **argv)
 
   // Remove exonerate input file if this was created in this program
 
-/*
-  if (combined_input_sequence_file_created)
-  {
-    if (!global_keep_concatenated_input_file)
-    {
-      remove(global_input_dna_fasta_file.c_str());
-    }
-    else
-    {
-      string final_concat_name = global_input_dna_fasta_file + ".fas";
-      rename(global_input_dna_fasta_file.c_str(), final_concat_name.c_str());
-      if (global_verbosity >= 1)
-      {
-        cout << "Concatenated sequence file written to: "
-        << global_input_dna_fasta_file.c_str() << ".fas" << endl;
-      }
-    }
-  }
-*/
+  /*
+   if (combined_input_sequence_file_created)
+   {
+   if (!global_keep_concatenated_input_file)
+   {
+   remove(global_input_dna_fasta_file.c_str());
+   }
+   else
+   {
+   string final_concat_name = global_input_dna_fasta_file + ".fas";
+   rename(global_input_dna_fasta_file.c_str(), final_concat_name.c_str());
+   if (global_verbosity >= 1)
+   {
+   cout << "Concatenated sequence file written to: "
+   << global_input_dna_fasta_file.c_str() << ".fas" << endl;
+   }
+   }
+   }
+   */
 
   // Remove the vulgar file, if the user has not specified a file name to save the file permanently.
-/*
-  if (global_vulgar_file == "tmp-vulgar.txt")
-    remove("tmp-vulgar.txt");
-*/
+  /*
+   if (global_vulgar_file == "tmp-vulgar.txt")
+   remove("tmp-vulgar.txt");
+   */
 
   // Debug output:
   if (/* DISABLES CODE */ (0))
@@ -1908,16 +1896,16 @@ int main(int argc, char **argv)
    */
 
 
-//// Refeactor alignment block to function:
+  //// Refeactor alignment block to function:
 
-align_sequences_using_vulgar(seqnames_of_references,
-                             map_of_vulgar_hits_targets_as_keys,
-                             vector_of_hit_stats_for_query_reference,
-                             seqs_DNA_reads_target,
-                             map_query_prot_lengths,
-                             result_alignments_for_references,
-                             all_maps_of_insertion_sites_suggested_in_reference,
-                             all_maps_of_gap_sites_in_queries);
+  align_sequences_using_vulgar(seqnames_of_references,
+                               map_of_vulgar_hits_targets_as_keys,
+                               vector_of_hit_stats_for_query_reference,
+                               seqs_DNA_reads_target,
+                               map_query_prot_lengths,
+                               result_alignments_for_references,
+                               all_maps_of_insertion_sites_suggested_in_reference,
+                               all_maps_of_gap_sites_in_queries);
 
 
 
