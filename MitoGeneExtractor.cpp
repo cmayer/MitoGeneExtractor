@@ -1123,7 +1123,8 @@ int align_sequences_using_vulgar(const vector<faststring>  &seqnames_of_referenc
                                  vector<map<pair<unsigned, unsigned>, unsigned> > &all_maps_of_gap_sites_in_queries
                                  )
 {
-  multimap<faststring, vulgar *>::const_iterator seqs_it, equal_range_start, equal_range_end, tmp_it;
+//  multimap<faststring, vulgar *>::const_iterator seqs_it, equal_range_start, equal_range_end, tmp_it;
+  multimap<faststring, vulgar *>::const_iterator hits_it;
   //    pair<multimap<faststring, vulgar *>::iterator,multimap<faststring, vulgar *>::iterator> equal_range_its;
 
 
@@ -1151,19 +1152,23 @@ int align_sequences_using_vulgar(const vector<faststring>  &seqnames_of_referenc
   // They are called targets since exonerate treats them as targets.
 
   // For all target, i.e. read sequences do:
-  seqs_it = map_of_vulgar_hits_targets_as_keys.begin();
-  while (seqs_it !=  map_of_vulgar_hits_targets_as_keys.end())
+  hits_it = map_of_vulgar_hits_targets_as_keys.begin();
+  while (hits_it !=  map_of_vulgar_hits_targets_as_keys.end())
   {
-    const faststring &target_key = seqs_it->first;
+    const faststring &target_key = hits_it->first;
 
-    if (global_verbosity >= 4)
+    if (global_verbosity >= 0)
     {
       cerr << "PROGRESS: Creating alignments for (read) sequence ID: " << target_key << endl;
+      cerr << "Current start vulgar element: "; hits_it->second->print(cerr);
+      cerr << endl;
     }
 
     // Determine equal range. We could call equal range, but we already
     // have the beginning, so it is more efficient to only look for the end.
-    tmp_it = equal_range_start = seqs_it;
+
+//    tmp_it = equal_range_start = seqs_it;
+
     unsigned count_hits_this_read_target_before_final_filtering = 0;
 
     // A DNA input sequence might have hits with multiple references.
@@ -1177,14 +1182,15 @@ int align_sequences_using_vulgar(const vector<faststring>  &seqnames_of_referenc
     vector<vulgar *>          hits_assigned_to_references_for_this_target(seqnames_of_references.size(), 0); // Stores for all target hits the references the hits are assigned to.
 
     // Loop over all hits for this target.
-    while (tmp_it != map_of_vulgar_hits_targets_as_keys.end() && tmp_it->first == target_key)
+////    while (tmp_it != map_of_vulgar_hits_targets_as_keys.end() && tmp_it->first == target_key)
+    while (hits_it != map_of_vulgar_hits_targets_as_keys.end() && hits_it->first == target_key)
     {
-      vec_of_vulgar_hits_for_this_read_target_key.push_back(tmp_it->second);
+      vec_of_vulgar_hits_for_this_read_target_key.push_back(hits_it->second);
       ++count_hits_this_read_target_before_final_filtering;
-      add_or_count(count_hits_for_different_queries_of_this_target, (*(tmp_it->second)).get_queryID() ); // Query is reference
-      ++tmp_it;
+      add_or_count(count_hits_for_different_queries_of_this_target, (*(hits_it->second)).get_queryID() ); // Query is reference
+      ++hits_it;
     }
-    equal_range_end = tmp_it;
+//    equal_range_end = tmp_it;
 
     // This is typically not true if we have mutliple queries/references, or if queries/references appear multiple times.
     if (count_hits_this_read_target_before_final_filtering == 1)
@@ -1204,7 +1210,7 @@ int align_sequences_using_vulgar(const vector<faststring>  &seqnames_of_referenc
       // This situation is expected if we have competing references for the same gene
       // or long reads and multiple genes.
 
-      for (std::vector<vulgar*>::size_type hit_index_this_target=0; hit_index_this_target<vec_of_vulgar_hits_for_this_read_target_key.size(); ++hit_index_this_target)
+      for (std::vector<vulgar*>::size_type hit_index_this_target=0; hit_index_this_target < vec_of_vulgar_hits_for_this_read_target_key.size(); ++hit_index_this_target)
       {
         vulgar *p                = vec_of_vulgar_hits_for_this_read_target_key[hit_index_this_target];
         vulgar &vul              = *p;
@@ -1352,7 +1358,8 @@ int align_sequences_using_vulgar(const vector<faststring>  &seqnames_of_referenc
     //       cerr << "XX-Working on vulgar : ";
     //       vul.print(cerr);
     //       cerr << endl;
-    ++seqs_it;
+
+//    ++seqs_it;
   } // END  while (vec_it !=  l_keys.end())
     // Loop over all "vulgar strings", i.e. "reads with hit" and align them.
 

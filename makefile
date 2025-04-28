@@ -1,7 +1,7 @@
 # CFLAGS  = -g3 -ggdb -Wall -std=c++11
-CFLAGS = -O2 -std=c++11 # -Wall
+CFLAGS = -O2 -std=c++11 -Wno-alloc-size-larger-than # -Wall
 
-INCL =    -I . -I tclap-1.2.5/include
+INCL =    -I . -I tclap-1.2.5/include 
 #LIBS    = -lc -Wall
 
 SRC    = MitoGeneExtractor.cpp \
@@ -14,14 +14,14 @@ HEADER = CDnaString3.h CSequence_Mol3.1.h CSequences3.1.h CSplit2.h Ctriple.h \
          exonerate_wrapper_and_parser.hpp Cfastq-sequences3.1.h
 
 
-all:    MitoGeneExtractor-v1.9.6beta3
+all:    MitoGeneExtractor-v1.9.6beta4
 
 
-MitoGeneExtractor-v1.9.6beta3: $(SRC) $(HEADER)
-	g++ $(CFLAGS) $(INCL) $(SRC) -o MitoGeneExtractor-v1.9.6beta3
+MitoGeneExtractor-v1.9.6beta4: $(SRC) $(HEADER)
+	g++ $(CFLAGS) $(INCL) $(SRC) -o MitoGeneExtractor-v1.9.6beta4
 
 
 clean:
-	rm -f MitoGeneExtractor-v1.9.6beta3
+	rm -f MitoGeneExtractor-v1.9.6beta4
 
 

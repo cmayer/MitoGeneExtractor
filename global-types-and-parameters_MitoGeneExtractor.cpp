@@ -385,8 +385,6 @@ void read_and_init_parameters(int argc, char** argv)
     good_bye_and_exit(-1);
   }
 
-  //  if (global_)
-
   if (global_input_dna_fasta_filenames.size() + global_input_dna_fastq_filenames.size() == 0)
   {
     cerr << "ERROR: At least one input filename needs to be specified with the "

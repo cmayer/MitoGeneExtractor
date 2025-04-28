@@ -907,6 +907,12 @@ public:
     if (_capacity >= s)
       return;
     
+    if (s > 1000000000000)
+    {
+      std::cerr << "Requested string size exceeds 1TB limit.\n";
+      exit(-1);
+    }
+
     ++s;   // Reserve one more char in case we have to append a \0 at end of string later.
            // Well this could be seen as a wast of memory.
     if (_buf == NULL)
