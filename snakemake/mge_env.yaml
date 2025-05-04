@@ -1,0 +1,22 @@
+name: mge_env
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - git=2.45.2
+  - exonerate=2.4.0
+  - mamba=1.5.8
+  - snakemake=8.18.1
+  - trim-galore=0.6.10
+  - cutadapt=4.9
+  - fastp=0.23.4
+  - pigz=2.8
+  - pandas=2.2.2
+  - bbmap=39.01
+  - parallel=20240922
+  - pip=24.2
+  - pip:
+      - biopython==1.84
+      - ratelimit==2.2.1
+      - requests==2.32.0
+
