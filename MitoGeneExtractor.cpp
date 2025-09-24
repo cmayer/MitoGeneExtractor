@@ -1767,11 +1767,7 @@ int main(int argc, char **argv)
 
   if (global_verbosity >= 3)
   {
-<<<<<<< HEAD
-    cout << "PROGRESS: Finished reading input DNA sequences. Found this number of input DNA sequences: "
-=======
     cerr << "PROGRESS: Finished reading input DNA sequences. Found this number of input DNA sequences: "
->>>>>>> refactor-bugfix-v1.9.6
     << seqs_DNA_reads_target.GetTaxaNum()  << endl;
   }
 
